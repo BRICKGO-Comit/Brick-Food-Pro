@@ -79,7 +79,7 @@ export default function MobileApp() {
     return (
       <View style={styles.authContainer}>
         <View style={styles.authHeader}>
-          <Image source={require('../assets/icon.png')} style={styles.logoImage} />
+          <Image source={require('../../assets/icon.png')} style={styles.logoImage} />
           <Text style={styles.logoText}>BRICK<Text style={{ color: Colors.primary }}>FOOD</Text></Text>
         </View>
         <Text style={styles.authSubtitle}>Le système digital qui optimise la restauration en Afrique.</Text>
