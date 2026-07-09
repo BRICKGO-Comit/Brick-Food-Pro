@@ -10,6 +10,8 @@ import {
   Modal,
   Alert
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from './_layout';
 import { Colors } from '../theme/colors';
 
@@ -104,7 +106,7 @@ export default function MobileApp() {
   // --- VIEW 2: CLIENT PORTAL ---
   if (role === 'client') {
     return (
-      <View style={styles.mainContainer}>
+      <SafeAreaView style={styles.mainContainer} edges={['top', 'bottom']}>
         {/* Top Header */}
         <View style={styles.header}>
           <View>
@@ -230,16 +232,19 @@ export default function MobileApp() {
         {/* Client Bottom Navigation */}
         <View style={styles.bottomNav}>
           <TouchableOpacity style={styles.navBtn} onPress={() => setClientTab('home')}>
-            <Text style={[styles.navBtnText, clientTab === 'home' && styles.activeNavText]}>🏠 Accueil</Text>
+            <Ionicons name={clientTab === 'home' ? 'home' : 'home-outline'} size={22} color={clientTab === 'home' ? Colors.primary : Colors.textSecondary} />
+            <Text style={[styles.navBtnText, clientTab === 'home' && styles.activeNavText]}>Accueil</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.scanBtn} onPress={() => Alert.alert('Scanner QR Code', 'Ouverture de la caméra pour scanner le QR Code au restaurant.')}>
-            <Text style={styles.scanBtnText}>QR</Text>
+            <Ionicons name="qr-code" size={24} color="white" />
           </TouchableOpacity>
           <TouchableOpacity style={styles.navBtn} onPress={() => setClientTab('reservations')}>
-            <Text style={[styles.navBtnText, clientTab === 'reservations' && styles.activeNavText]}>📅 Réservations</Text>
+            <Ionicons name={clientTab === 'reservations' ? 'calendar' : 'calendar-outline'} size={22} color={clientTab === 'reservations' ? Colors.primary : Colors.textSecondary} />
+            <Text style={[styles.navBtnText, clientTab === 'reservations' && styles.activeNavText]}>Réservations</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.navBtn} onPress={() => setClientTab('profile')}>
-            <Text style={[styles.navBtnText, clientTab === 'profile' && styles.activeNavText]}>👤 Profil</Text>
+            <Ionicons name={clientTab === 'profile' ? 'person' : 'person-outline'} size={22} color={clientTab === 'profile' ? Colors.primary : Colors.textSecondary} />
+            <Text style={[styles.navBtnText, clientTab === 'profile' && styles.activeNavText]}>Profil</Text>
           </TouchableOpacity>
         </View>
 
@@ -361,14 +366,14 @@ export default function MobileApp() {
             )}
           </View>
         </Modal>
-      </View>
+      </SafeAreaView>
     );
   }
 
   // --- VIEW 3: AGENT PORTAL ---
   if (role === 'agent') {
     return (
-      <View style={styles.mainContainer}>
+      <SafeAreaView style={styles.mainContainer} edges={['top', 'bottom']}>
         <View style={styles.header}>
           <View>
             <Text style={styles.greetingText}>Espace Agent Commercial</Text>
@@ -466,23 +471,26 @@ export default function MobileApp() {
         {/* Agent Bottom Navigation */}
         <View style={styles.bottomNav}>
           <TouchableOpacity style={styles.navBtn} onPress={() => setAgentTab('home')}>
-            <Text style={[styles.navBtnText, agentTab === 'home' && styles.activeNavText]}>🏠 Accueil</Text>
+            <Ionicons name={agentTab === 'home' ? 'home' : 'home-outline'} size={22} color={agentTab === 'home' ? Colors.primary : Colors.textSecondary} />
+            <Text style={[styles.navBtnText, agentTab === 'home' && styles.activeNavText]}>Accueil</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.navBtn} onPress={() => setAgentTab('proposals')}>
-            <Text style={[styles.navBtnText, agentTab === 'proposals' && styles.activeNavText]}>📄 Proposition</Text>
+            <Ionicons name={agentTab === 'proposals' ? 'document-text' : 'document-text-outline'} size={22} color={agentTab === 'proposals' ? Colors.primary : Colors.textSecondary} />
+            <Text style={[styles.navBtnText, agentTab === 'proposals' && styles.activeNavText]}>Proposition</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.navBtn} onPress={() => setAgentTab('profile')}>
-            <Text style={[styles.navBtnText, agentTab === 'profile' && styles.activeNavText]}>👤 Profil</Text>
+            <Ionicons name={agentTab === 'profile' ? 'person' : 'person-outline'} size={22} color={agentTab === 'profile' ? Colors.primary : Colors.textSecondary} />
+            <Text style={[styles.navBtnText, agentTab === 'profile' && styles.activeNavText]}>Profil</Text>
           </TouchableOpacity>
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   // --- VIEW 4: RESTAURANT PORTAL ---
   if (role === 'restaurant') {
     return (
-      <View style={styles.mainContainer}>
+      <SafeAreaView style={styles.mainContainer} edges={['top', 'bottom']}>
         <View style={styles.header}>
           <View>
             <Text style={styles.greetingText}>Restaurant : Le Bateau Ivoire</Text>
@@ -558,16 +566,19 @@ export default function MobileApp() {
         {/* Restaurant Bottom Navigation */}
         <View style={styles.bottomNav}>
           <TouchableOpacity style={styles.navBtn} onPress={() => setRestaurantTab('home')}>
-            <Text style={[styles.navBtnText, restaurantTab === 'home' && styles.activeNavText]}>🏠 Accueil</Text>
+            <Ionicons name={restaurantTab === 'home' ? 'home' : 'home-outline'} size={22} color={restaurantTab === 'home' ? Colors.primary : Colors.textSecondary} />
+            <Text style={[styles.navBtnText, restaurantTab === 'home' && styles.activeNavText]}>Accueil</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.navBtn} onPress={() => setRestaurantTab('orders')}>
-            <Text style={[styles.navBtnText, restaurantTab === 'orders' && styles.activeNavText]}>📦 Commandes</Text>
+            <Ionicons name={restaurantTab === 'orders' ? 'receipt' : 'receipt-outline'} size={22} color={restaurantTab === 'orders' ? Colors.primary : Colors.textSecondary} />
+            <Text style={[styles.navBtnText, restaurantTab === 'orders' && styles.activeNavText]}>Commandes</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.navBtn} onPress={() => setRestaurantTab('profile')}>
-            <Text style={[styles.navBtnText, restaurantTab === 'profile' && styles.activeNavText]}>👤 Profil</Text>
+            <Ionicons name={restaurantTab === 'profile' ? 'person' : 'person-outline'} size={22} color={restaurantTab === 'profile' ? Colors.primary : Colors.textSecondary} />
+            <Text style={[styles.navBtnText, restaurantTab === 'profile' && styles.activeNavText]}>Profil</Text>
           </TouchableOpacity>
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
@@ -642,7 +653,6 @@ const styles = StyleSheet.create({
   mainContainer: {
     flex: 1,
     backgroundColor: '#F8F9FA',
-    paddingTop: 50,
   },
   header: {
     flexDirection: 'row',

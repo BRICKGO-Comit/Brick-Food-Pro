@@ -1,6 +1,7 @@
 import React, { createContext, useState, useContext } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Slot } from 'expo-router';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 // Create a mock authentication context for roles testing
 interface AuthContextType {
@@ -24,9 +25,11 @@ export default function RootLayout() {
 
   return (
     <AuthContext.Provider value={{ role, setRole, isLoggedIn, setIsLoggedIn }}>
-      <View style={styles.container}>
-        <Slot />
-      </View>
+      <SafeAreaProvider>
+        <View style={styles.container}>
+          <Slot />
+        </View>
+      </SafeAreaProvider>
     </AuthContext.Provider>
   );
 }
