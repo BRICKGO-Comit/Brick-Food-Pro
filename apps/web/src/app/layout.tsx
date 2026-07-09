@@ -1,5 +1,6 @@
 import './globals.css';
 import React from 'react';
+import SidebarNav from './components/SidebarNav';
 
 export const metadata = {
   title: 'Brick Food Pro - Administration',
@@ -24,26 +25,7 @@ export default function RootLayout({
               </div>
             </div>
             
-            <nav className="nav-links">
-              <a href="/" className="nav-item active">
-                <span style={{ fontSize: '18px' }}>🏠</span> Accueil
-              </a>
-              <a href="/proposals" className="nav-item">
-                <span style={{ fontSize: '18px' }}>📄</span> Propositions
-              </a>
-              <a href="#" className="nav-item">
-                <span style={{ fontSize: '18px' }}>🏪</span> Restaurants
-              </a>
-              <a href="#" className="nav-item">
-                <span style={{ fontSize: '18px' }}>👤</span> Agents
-              </a>
-              <a href="#" className="nav-item">
-                <span style={{ fontSize: '18px' }}>🛍️</span> Commandes
-              </a>
-              <a href="#" className="nav-item">
-                <span style={{ fontSize: '18px' }}>📊</span> Statistiques
-              </a>
-            </nav>
+            <SidebarNav />
           </aside>
 
           {/* Main Area */}
