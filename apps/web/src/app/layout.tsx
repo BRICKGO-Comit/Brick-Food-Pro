@@ -19,7 +19,7 @@ export default function RootLayout({
           {/* Sidebar */}
           <aside className="sidebar">
             <div className="logo-container">
-              <div className="logo-mark">B</div>
+              <img src="/logo.png" alt="Logo" style={{ width: '40px', height: '40px', objectFit: 'contain' }} />
               <div className="logo-text">
                 BRICK<span>FOOD</span>
               </div>
