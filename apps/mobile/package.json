@@ -2,6 +2,7 @@
   "name": "brick-food-mobile",
   "version": "1.0.0",
   "private": true,
+  "main": "node_modules/expo-router/entry",
   "scripts": {
     "start": "expo start",
     "android": "expo start --android",
