@@ -27,6 +27,34 @@ export default function MobileApp() {
   const [selectedFlash, setSelectedFlash] = useState<any | null>(null);
   const [selectedDeal, setSelectedDeal] = useState<any | null>(null);
   const [bookingStep, setBookingStep] = useState<number>(1); // 1: Date/Time, 2: Resume, 3: Payment, 4: Success
+
+  // Auth flow states
+  const [showClientAuthModal, setShowClientAuthModal] = useState(false);
+  const [showProLoginModal, setShowProLoginModal] = useState(false);
+  const [isSignup, setIsSignup] = useState(false);
+
+  // Client info state
+  const [clientName, setClientName] = useState('Eric Kouassi');
+  const [clientEmail, setClientEmail] = useState('');
+  const [clientPassword, setClientPassword] = useState('');
+  const [clientPhone, setClientPhone] = useState('+225 07 45 89 12 36');
+
+  // Pro info state
+  const [proEmail, setProEmail] = useState('');
+  const [proPassword, setProPassword] = useState('');
+
+  // Local state for registered restaurants
+  const [restaurantsList, setRestaurantsList] = useState([
+    { id: 'resto_001', name: 'Le Bateau Ivoire', address: 'Cocody 2 Plateaux', phone: '+225 07 58 45 12 36', description: 'Spécialités ivoiriennes.', ownerEmail: 'owner.bateau@email.com' },
+    { id: 'resto_002', name: 'Le QG Lounge', address: 'Riviera Palmeraie', phone: '+225 07 01 02 03 04', description: 'Grillades et bar lounge.', ownerEmail: 'owner.qg@email.com' }
+  ]);
+  const [showAddRestoModal, setShowAddRestoModal] = useState(false);
+  const [newRestoName, setNewRestoName] = useState('');
+  const [newRestoAddress, setNewRestoAddress] = useState('');
+  const [newRestoPhone, setNewRestoPhone] = useState('');
+  const [newRestoDesc, setNewRestoDesc] = useState('');
+  const [newRestoOwnerEmail, setNewRestoOwnerEmail] = useState('');
+  const [newRestoOwnerPassword, setNewRestoOwnerPassword] = useState('');
   
   // Form booking selections
   const [bookingDate, setBookingDate] = useState<string>('Demain 16 Août');
@@ -110,12 +138,18 @@ export default function MobileApp() {
         {/* Top Header */}
         <View style={styles.header}>
           <View>
-            <Text style={styles.greetingText}>Bonjour Eric 👋</Text>
+            <Text style={styles.greetingText}>{isLoggedIn ? `Bonjour ${clientName.split(' ')[0]} 👋` : 'Bonjour Invité 👋'}</Text>
             <Text style={styles.locationText}>📍 Cocody, Abidjan ▾</Text>
           </View>
-          <TouchableOpacity style={styles.logoutBadge} onPress={() => setIsLoggedIn(false)}>
-            <Text style={styles.logoutText}>Déconnexion</Text>
-          </TouchableOpacity>
+          {isLoggedIn ? (
+            <TouchableOpacity style={styles.logoutBadge} onPress={() => { setIsLoggedIn(false); setRole('client'); }}>
+              <Text style={styles.logoutText}>Déconnexion</Text>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity style={[styles.logoutBadge, { backgroundColor: Colors.primary }]} onPress={() => { setIsSignup(false); setShowClientAuthModal(true); }}>
+              <Text style={[styles.logoutText, { color: 'white' }]}>Se connecter</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         {clientTab === 'home' && (
@@ -192,41 +226,76 @@ export default function MobileApp() {
         )}
 
         {clientTab === 'reservations' && (
-          <ScrollView style={styles.scrollArea}>
-            <Text style={styles.sectionTitle}>Mes Réservations</Text>
-            
-            <View style={styles.orderListItem}>
-              <View style={styles.orderListHeader}>
-                <Text style={styles.orderListResto}>Le QG Lounge</Text>
-                <View style={[styles.statusBadge, { backgroundColor: Colors.warningLight }]}><Text style={[styles.statusText, { color: Colors.warning }]}>En préparation</Text></View>
+          isLoggedIn ? (
+            <ScrollView style={styles.scrollArea}>
+              <Text style={styles.sectionTitle}>Mes Réservations</Text>
+              
+              <View style={styles.orderListItem}>
+                <View style={styles.orderListHeader}>
+                  <Text style={styles.orderListResto}>Le QG Lounge</Text>
+                  <View style={[styles.statusBadge, { backgroundColor: Colors.warningLight }]}><Text style={[styles.statusText, { color: Colors.warning }]}>En préparation</Text></View>
+                </View>
+                <Text style={styles.orderListDetail}>Menu Burger Duo • 16 Août 2024, 15h00</Text>
+                <Text style={styles.orderListTotal}>Montant payé : 7 500 FCFA (Réf: BF12458)</Text>
               </View>
-              <Text style={styles.orderListDetail}>Menu Burger Duo • 16 Août 2024, 15h00</Text>
-              <Text style={styles.orderListTotal}>Montant payé : 7 500 FCFA (Réf: BF12458)</Text>
-            </View>
 
-            <View style={styles.orderListItem}>
-              <View style={styles.orderListHeader}>
-                <Text style={styles.orderListResto}>Le Bateau Ivoire</Text>
-                <View style={[styles.statusBadge, { backgroundColor: Colors.successLight }]}><Text style={[styles.statusText, { color: Colors.success }]}>Confirmée</Text></View>
+              <View style={styles.orderListItem}>
+                <View style={styles.orderListHeader}>
+                  <Text style={styles.orderListResto}>Le Bateau Ivoire</Text>
+                  <View style={[styles.statusBadge, { backgroundColor: Colors.successLight }]}><Text style={[styles.statusText, { color: Colors.success }]}>Confirmée</Text></View>
+                </View>
+                <Text style={styles.orderListDetail}>Pack Couple Romantique • 17 Août 2024, 19h00</Text>
+                <Text style={styles.orderListTotal}>Montant payé : 25 000 FCFA (Réf: BD12548)</Text>
               </View>
-              <Text style={styles.orderListDetail}>Pack Couple Romantique • 17 Août 2024, 19h00</Text>
-              <Text style={styles.orderListTotal}>Montant payé : 25 000 FCFA (Réf: BD12548)</Text>
+            </ScrollView>
+          ) : (
+            <View style={[styles.scrollArea, { alignItems: 'center', justifyContent: 'center', gap: 16, flex: 1, paddingVertical: 80 }]}>
+              <Ionicons name="lock-closed-outline" size={60} color={Colors.textSecondary} />
+              <Text style={{ fontSize: 18, fontWeight: '700', textAlign: 'center', color: Colors.textPrimary }}>Connexion requise</Text>
+              <Text style={{ fontSize: 14, color: Colors.textSecondary, textAlign: 'center', paddingHorizontal: 40 }}>
+                Connectez-vous pour visualiser et présenter vos QR codes de réservation au restaurant.
+              </Text>
+              <TouchableOpacity style={[styles.loginBtn, { width: '80%', marginTop: 12 }]} onPress={() => { setIsSignup(false); setShowClientAuthModal(true); }}>
+                <Text style={styles.loginBtnText}>Se connecter / S'inscrire</Text>
+              </TouchableOpacity>
             </View>
-          </ScrollView>
+          )
         )}
 
         {clientTab === 'profile' && (
-          <View style={styles.scrollArea}>
-            <Text style={styles.sectionTitle}>Mon Profil</Text>
-            <View style={styles.profileCard}>
-              <Text style={styles.profileName}>Eric Kouassi</Text>
-              <Text style={styles.profileEmail}>eric.kouassi@email.com</Text>
-              <Text style={styles.profilePhone}>+225 07 45 89 12 36</Text>
+          isLoggedIn ? (
+            <View style={styles.scrollArea}>
+              <Text style={styles.sectionTitle}>Mon Profil</Text>
+              <View style={styles.profileCard}>
+                <Text style={styles.profileName}>{clientName}</Text>
+                <Text style={styles.profileEmail}>{clientEmail || 'client.test@brickfood.com'}</Text>
+                <Text style={styles.profilePhone}>{clientPhone}</Text>
+              </View>
+              <TouchableOpacity style={styles.logoutBtn} onPress={() => { setIsLoggedIn(false); setRole('client'); }}>
+                <Text style={styles.logoutBtnText}>Se déconnecter</Text>
+              </TouchableOpacity>
             </View>
-            <TouchableOpacity style={styles.logoutBtn} onPress={() => setIsLoggedIn(false)}>
-              <Text style={styles.logoutBtnText}>Se déconnecter</Text>
-            </TouchableOpacity>
-          </View>
+          ) : (
+            <View style={[styles.scrollArea, { justifyContent: 'space-between', paddingBottom: 24, flex: 1 }]}>
+              <View style={{ gap: 24 }}>
+                <Text style={styles.sectionTitle}>Mon Profil</Text>
+                <View style={[styles.profileCard, { alignItems: 'center', paddingVertical: 32, gap: 12 }]}>
+                  <Ionicons name="person-circle-outline" size={80} color="#CCC" />
+                  <Text style={{ fontSize: 16, fontWeight: '600', color: Colors.textSecondary }}>Vous êtes en mode invité</Text>
+                  <TouchableOpacity style={[styles.loginBtn, { width: '90%' }]} onPress={() => { setIsSignup(false); setShowClientAuthModal(true); }}>
+                    <Text style={styles.loginBtnText}>Créer un compte / Se connecter</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              {/* Link to Pro space */}
+              <TouchableOpacity style={{ alignSelf: 'center', padding: 12 }} onPress={() => { setProEmail(''); setProPassword(''); setShowProLoginModal(true); }}>
+                <Text style={{ color: Colors.primary, fontWeight: '700', fontSize: 13, textDecorationLine: 'underline' }}>
+                  🔑 Espace Professionnel (Commerciaux & Restaurants)
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )
         )}
 
         {/* Client Bottom Navigation */}
@@ -322,7 +391,14 @@ export default function MobileApp() {
                   </Text>
                 </View>
 
-                <TouchableOpacity style={styles.actionBtn} onPress={() => setBookingStep(3)}>
+                <TouchableOpacity style={styles.actionBtn} onPress={() => {
+                  if (!isLoggedIn) {
+                    setIsSignup(false);
+                    setShowClientAuthModal(true);
+                  } else {
+                    setBookingStep(3);
+                  }
+                }}>
                   <Text style={styles.actionBtnText}>Confirmer et passer au paiement</Text>
                 </TouchableOpacity>
               </View>
@@ -366,6 +442,133 @@ export default function MobileApp() {
             )}
           </View>
         </Modal>
+
+        {/* PRO LOGIN MODAL (Agents & Restaurants) */}
+        <Modal visible={showProLoginModal} animationType="slide">
+          <SafeAreaView style={{ flex: 1, backgroundColor: '#0F0F10', padding: 20 }}>
+            <View style={[styles.modalHeader, { borderBottomColor: '#222', paddingBottom: 12 }]}>
+              <Text style={[styles.modalTitle, { color: 'white' }]}>Connexion Professionnelle</Text>
+              <TouchableOpacity onPress={() => setShowProLoginModal(false)}>
+                <Text style={[styles.closeBtn, { color: 'white' }]}>✕</Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={{ flex: 1, justifyContent: 'center', gap: 16 }}>
+              <View style={{ alignItems: 'center', marginBottom: 24 }}>
+                <Image source={require('../../assets/icon.png')} style={{ width: 64, height: 64, resizeMode: 'contain' }} />
+                <Text style={{ color: 'white', fontSize: 24, fontWeight: '900', marginTop: 8 }}>BRICK<Text style={{ color: Colors.primary }}>FOOD STAFF</Text></Text>
+                <Text style={{ color: '#7D7D7D', fontSize: 13, textAlign: 'center', marginTop: 4 }}>Connectez-vous à votre espace commercial ou partenaire</Text>
+              </View>
+
+              <Text style={{ color: 'white', fontWeight: '600' }}>Adresse email professionnelle</Text>
+              <TextInput 
+                style={[styles.input, { backgroundColor: '#222', color: 'white', borderColor: '#444', height: 48, borderRadius: 8, paddingHorizontal: 12 }]} 
+                placeholder="agent@brickfood.com ou owner@resto.com" 
+                placeholderTextColor="#777"
+                value={proEmail} 
+                onChangeText={setProEmail} 
+                autoCapitalize="none"
+                keyboardType="email-address"
+              />
+
+              <Text style={{ color: 'white', fontWeight: '600' }}>Mot de passe</Text>
+              <TextInput 
+                style={[styles.input, { backgroundColor: '#222', color: 'white', borderColor: '#444', height: 48, borderRadius: 8, paddingHorizontal: 12 }]} 
+                placeholder="Mot de passe" 
+                placeholderTextColor="#777"
+                value={proPassword} 
+                onChangeText={setProPassword} 
+                secureTextEntry 
+              />
+
+              <TouchableOpacity style={[styles.actionBtn, { marginTop: 24 }]} onPress={() => {
+                if (!proEmail || !proPassword) {
+                  Alert.alert('Erreur', 'Veuillez saisir votre email et votre mot de passe.');
+                  return;
+                }
+                const email = proEmail.toLowerCase().trim();
+                if (email.includes('agent') || email === 'eric@brickfood.com') {
+                  setRole('agent');
+                  setAgentTab('home');
+                  setIsLoggedIn(true);
+                  setShowProLoginModal(false);
+                  Alert.alert('Connexion Réussie', 'Bienvenue dans votre espace Agent Commercial.');
+                } else if (email.includes('owner') || email.includes('resto') || email.includes('bateau')) {
+                  setRole('restaurant');
+                  setRestaurantTab('home');
+                  setIsLoggedIn(true);
+                  setShowProLoginModal(false);
+                  Alert.alert('Connexion Réussie', 'Bienvenue dans l\'espace Restaurant Partenaire.');
+                } else {
+                  Alert.alert('Erreur de connexion', 'Identifiants professionnels non reconnus. Veuillez utiliser les identifiants transmis.');
+                }
+              }}>
+                <Text style={styles.actionBtnText}>Se connecter au Staff</Text>
+              </TouchableOpacity>
+            </View>
+          </SafeAreaView>
+        </Modal>
+
+        {/* CLIENT AUTHENTICATION MODAL (Checkout / Profile Connection) */}
+        <Modal visible={showClientAuthModal} animationType="slide">
+          <SafeAreaView style={{ flex: 1, backgroundColor: 'white', padding: 20 }}>
+            <View style={[styles.modalHeader, { paddingBottom: 12 }]}>
+              <Text style={styles.modalTitle}>{isSignup ? 'Créer un compte Client' : 'Connexion Client'}</Text>
+              <TouchableOpacity onPress={() => setShowClientAuthModal(false)}>
+                <Text style={styles.closeBtn}>✕</Text>
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView contentContainerStyle={{ flex: 1, justifyContent: 'center', gap: 16 }}>
+              <View style={{ alignItems: 'center', marginBottom: 12 }}>
+                <Image source={require('../../assets/icon.png')} style={{ width: 50, height: 50, resizeMode: 'contain' }} />
+                <Text style={{ fontSize: 20, fontWeight: '900', marginTop: 4 }}>BRICK<Text style={{ color: Colors.primary }}>FOOD</Text></Text>
+                <Text style={{ color: Colors.textSecondary, fontSize: 13 }}>{isSignup ? 'Inscrivez-vous pour valider votre commande' : 'Connectez-vous pour valider votre commande'}</Text>
+              </View>
+
+              {isSignup && (
+                <>
+                  <Text style={styles.inputLabel}>Nom complet</Text>
+                  <TextInput style={styles.input} placeholder="ex: Eric Kouassi" value={clientName} onChangeText={setClientName} />
+                  
+                  <Text style={styles.inputLabel}>Numéro de téléphone</Text>
+                  <TextInput style={styles.input} placeholder="ex: +225 07 45 89 12 36" value={clientPhone} onChangeText={setClientPhone} keyboardType="phone-pad" />
+                </>
+              )}
+
+              <Text style={styles.inputLabel}>Adresse Email</Text>
+              <TextInput style={styles.input} placeholder="client@email.com" value={clientEmail} onChangeText={setClientEmail} keyboardType="email-address" autoCapitalize="none" />
+
+              <Text style={styles.inputLabel}>Mot de passe</Text>
+              <TextInput style={styles.input} placeholder="Mot de passe" value={clientPassword} onChangeText={setClientPassword} secureTextEntry />
+
+              <TouchableOpacity style={[styles.actionBtn, { marginTop: 12 }]} onPress={() => {
+                if (!clientEmail || !clientPassword || (isSignup && !clientName)) {
+                  Alert.alert('Champs requis', 'Veuillez remplir tous les champs nécessaires.');
+                  return;
+                }
+                setRole('client');
+                setIsLoggedIn(true);
+                setShowClientAuthModal(false);
+                Alert.alert(
+                  isSignup ? 'Compte créé !' : 'Connexion réussie !',
+                  `Bienvenue ${isSignup ? clientName : 'de retour'} ! Vous pouvez maintenant finaliser votre paiement.`
+                );
+                if (selectedFlash || selectedDeal) {
+                  setBookingStep(3);
+                }
+              }}>
+                <Text style={styles.actionBtnText}>{isSignup ? 'Créer mon compte' : 'Se connecter'}</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity style={{ alignSelf: 'center', marginTop: 12 }} onPress={() => setIsSignup(!isSignup)}>
+                <Text style={{ color: Colors.primary, fontWeight: '600' }}>
+                  {isSignup ? 'Déjà un compte ? Connectez-vous' : 'Nouveau sur Brick Food ? Inscrivez-vous'}
+                </Text>
+              </TouchableOpacity>
+            </ScrollView>
+          </SafeAreaView>
+        </Modal>
       </SafeAreaView>
     );
   }
@@ -392,15 +595,42 @@ export default function MobileApp() {
               <Text style={styles.agentStatsSub}>Objectif de vente : 34 / 50 Commandes (68%)</Text>
             </View>
 
-            <Text style={styles.sectionTitle}>🏢 Mes Restaurants (18)</Text>
-            <View style={styles.partnerItem}>
-              <Text style={styles.partnerName}>Le Bateau Ivoire</Text>
-              <Text style={styles.partnerSub}>Cocody 2 Plateaux • 12 offres actives</Text>
+            <Text style={styles.sectionTitle}>🏢 Mes Restaurants ({restaurantsList.length})</Text>
+            {restaurantsList.map((resto) => (
+              <View key={resto.id} style={styles.partnerItem}>
+                <Text style={styles.partnerName}>{resto.name}</Text>
+                <Text style={styles.partnerSub}>{resto.address} • {resto.phone}</Text>
+              </View>
+            ))}
+          </ScrollView>
+        )}
+
+        {agentTab === 'restaurants' && (
+          <ScrollView style={styles.scrollArea}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <Text style={styles.sectionTitle}>Inscriptions Terrain</Text>
+              <TouchableOpacity style={[styles.loginBtn, { width: 'auto', paddingHorizontal: 12, height: 36 }]} onPress={() => {
+                setNewRestoName('');
+                setNewRestoAddress('');
+                setNewRestoPhone('');
+                setNewRestoDesc('');
+                setNewRestoOwnerEmail('');
+                setNewRestoOwnerPassword('');
+                setShowAddRestoModal(true);
+              }}>
+                <Text style={[styles.loginBtnText, { fontSize: 13 }]}>➕ Inscrire un resto</Text>
+              </TouchableOpacity>
             </View>
-            <View style={styles.partnerItem}>
-              <Text style={styles.partnerName}>Toni Fast Food</Text>
-              <Text style={styles.partnerSub}>Riviera Bonoumin • 8 offres actives</Text>
-            </View>
+
+            {restaurantsList.map((resto) => (
+              <View key={resto.id} style={styles.partnerItem}>
+                <Text style={styles.partnerName}>{resto.name}</Text>
+                <Text style={styles.partnerSub}>{resto.address} • {resto.phone}</Text>
+                <Text style={{ fontSize: 11, color: Colors.textSecondary, marginTop: 4, fontWeight: '600' }}>
+                  ✉️ Compte gérant : {resto.ownerEmail}
+                </Text>
+              </View>
+            ))}
           </ScrollView>
         )}
 
@@ -474,6 +704,10 @@ export default function MobileApp() {
             <Ionicons name={agentTab === 'home' ? 'home' : 'home-outline'} size={22} color={agentTab === 'home' ? Colors.primary : Colors.textSecondary} />
             <Text style={[styles.navBtnText, agentTab === 'home' && styles.activeNavText]}>Accueil</Text>
           </TouchableOpacity>
+          <TouchableOpacity style={styles.navBtn} onPress={() => setAgentTab('restaurants')}>
+            <Ionicons name={agentTab === 'restaurants' ? 'business' : 'business-outline'} size={22} color={agentTab === 'restaurants' ? Colors.primary : Colors.textSecondary} />
+            <Text style={[styles.navBtnText, agentTab === 'restaurants' && styles.activeNavText]}>Restaurants</Text>
+          </TouchableOpacity>
           <TouchableOpacity style={styles.navBtn} onPress={() => setAgentTab('proposals')}>
             <Ionicons name={agentTab === 'proposals' ? 'document-text' : 'document-text-outline'} size={22} color={agentTab === 'proposals' ? Colors.primary : Colors.textSecondary} />
             <Text style={[styles.navBtnText, agentTab === 'proposals' && styles.activeNavText]}>Proposition</Text>
@@ -483,6 +717,65 @@ export default function MobileApp() {
             <Text style={[styles.navBtnText, agentTab === 'profile' && styles.activeNavText]}>Profil</Text>
           </TouchableOpacity>
         </View>
+
+        {/* ADD RESTAURANT MODAL (Agent exclusive) */}
+        <Modal visible={showAddRestoModal} animationType="slide">
+          <SafeAreaView style={{ flex: 1, backgroundColor: 'white', padding: 20 }}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Inscrire un Établissement</Text>
+              <TouchableOpacity onPress={() => setShowAddRestoModal(false)}>
+                <Text style={styles.closeBtn}>✕</Text>
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={{ flex: 1, marginTop: 10 }}>
+              <Text style={styles.inputLabel}>Nom de l'établissement</Text>
+              <TextInput style={styles.input} placeholder="ex: Chez Georges" value={newRestoName} onChangeText={setNewRestoName} />
+
+              <Text style={styles.inputLabel}>Adresse complète</Text>
+              <TextInput style={styles.input} placeholder="ex: Zone 4, Rue des Jardins" value={newRestoAddress} onChangeText={setNewRestoAddress} />
+
+              <Text style={styles.inputLabel}>Téléphone de contact</Text>
+              <TextInput style={styles.input} placeholder="ex: +225 07 01 02 03" value={newRestoPhone} onChangeText={setNewRestoPhone} keyboardType="phone-pad" />
+
+              <Text style={styles.inputLabel}>Description / Spécialités</Text>
+              <TextInput style={styles.input} placeholder="ex: Poulet braisé, allocos, cuisine locale" value={newRestoDesc} onChangeText={setNewRestoDesc} />
+
+              <View style={{ borderTopWidth: 1, borderTopColor: '#EEE', marginVertical: 20, paddingTop: 10 }}>
+                <Text style={{ fontSize: 14, fontWeight: '700', color: Colors.primary, marginBottom: 12 }}>Identifiants de connexion du propriétaire</Text>
+                
+                <Text style={styles.inputLabel}>Adresse Email du Propriétaire</Text>
+                <TextInput style={styles.input} placeholder="ex: owner.georges@email.com" value={newRestoOwnerEmail} onChangeText={setNewRestoOwnerEmail} keyboardType="email-address" autoCapitalize="none" />
+
+                <Text style={styles.inputLabel}>Mot de passe temporaire</Text>
+                <TextInput style={styles.input} placeholder="Définir un mot de passe" value={newRestoOwnerPassword} onChangeText={setNewRestoOwnerPassword} secureTextEntry />
+              </View>
+
+              <TouchableOpacity style={[styles.actionBtn, { marginTop: 10 }]} onPress={() => {
+                if (!newRestoName || !newRestoOwnerEmail || !newRestoOwnerPassword) {
+                  Alert.alert('Champs requis', 'Veuillez renseigner au moins le nom du resto et les identifiants de connexion.');
+                  return;
+                }
+                const newRestoObj = {
+                  id: `resto_00${restaurantsList.length + 1}`,
+                  name: newRestoName,
+                  address: newRestoAddress,
+                  phone: newRestoPhone,
+                  description: newRestoDesc,
+                  ownerEmail: newRestoOwnerEmail
+                };
+                setRestaurantsList([...restaurantsList, newRestoObj]);
+                Alert.alert(
+                  'Établissement enregistré !',
+                  `Veuillez transmettre ces coordonnées au propriétaire pour se connecter sur l'app :\n\nEmail : ${newRestoOwnerEmail}\nMot de passe : ${newRestoOwnerPassword}`
+                );
+                setShowAddRestoModal(false);
+              }}>
+                <Text style={styles.actionBtnText}>Créer le compte et le restaurant</Text>
+              </TouchableOpacity>
+            </ScrollView>
+          </SafeAreaView>
+        </Modal>
       </SafeAreaView>
     );
   }
