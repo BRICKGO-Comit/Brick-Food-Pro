@@ -104,32 +104,8 @@ export default function MobileApp() {
     });
   };
 
-  // --- VIEW 1: AUTH LOGIN GATEWAY ---
-  if (!isLoggedIn) {
-    return (
-      <View style={styles.authContainer}>
-        <View style={styles.authHeader}>
-          <Image source={require('../../assets/icon.png')} style={styles.logoImage} />
-          <Text style={styles.logoText}>BRICK<Text style={{ color: Colors.primary }}>FOOD</Text></Text>
-        </View>
-        <Text style={styles.authSubtitle}>Le système digital qui optimise la restauration en Afrique.</Text>
-
-        <View style={styles.loginForm}>
-          <TouchableOpacity style={styles.loginBtn} onPress={() => { setRole('client'); setIsLoggedIn(true); }}>
-            <Text style={styles.loginBtnText}>Se connecter en tant que Client</Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity style={[styles.loginBtn, { backgroundColor: '#333' }]} onPress={() => { setRole('agent'); setIsLoggedIn(true); }}>
-            <Text style={styles.loginBtnText}>Espace Agent Commercial</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={[styles.loginBtn, { backgroundColor: '#555' }]} onPress={() => { setRole('restaurant'); setIsLoggedIn(true); }}>
-            <Text style={styles.loginBtnText}>Espace Restaurant Partenaire</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    );
-  }
+  // --- VIEW 1: AUTH LOGIN GATEWAY REMOVED ---
+  // Guest Client is shown by default at startup
 
   // --- VIEW 2: CLIENT PORTAL ---
   if (role === 'client') {
