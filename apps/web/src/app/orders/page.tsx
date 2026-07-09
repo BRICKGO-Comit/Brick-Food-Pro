@@ -123,7 +123,7 @@ export default function OrdersManagement() {
     }));
     
     if (selectedOrder && selectedOrder.id === id) {
-      setSelectedOrder(prev => {
+      setSelectedOrder((prev: any) => {
         const now = new Date();
         const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
         return {
