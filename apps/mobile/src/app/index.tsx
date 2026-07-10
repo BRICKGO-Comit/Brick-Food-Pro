@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   StyleSheet, 
   Text, 
@@ -15,6 +15,29 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from './_layout';
 import { Colors } from '../theme/colors';
 
+// Helper functions for dynamic French dates
+const getFrenchDate = (daysToAdd: number) => {
+  const date = new Date();
+  date.setDate(date.getDate() + daysToAdd);
+  const months = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
+  const dayNum = date.getDate();
+  const monthName = months[date.getMonth()];
+  return `${dayNum} ${monthName}`;
+};
+
+const getTodayFormatted = () => {
+  const date = new Date();
+  const months = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
+  return `${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear()}`;
+};
+
+const getFutureFormatted = (daysToAdd: number) => {
+  const date = new Date();
+  date.setDate(date.getDate() + daysToAdd);
+  const months = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
+  return `${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear()}`;
+};
+
 // Mock datasets for rich UI rendering
 const flashOffers = [
   {
@@ -30,7 +53,10 @@ const flashOffers = [
     discount: '-37%',
     description: '1 Burger au choix + Frites + 1 Boisson 33cl',
     startHour: '14h00',
-    endHour: '17h00'
+    endHour: '17h00',
+    countdownHours: 1,
+    countdownMinutes: 42,
+    countdownSeconds: 18
   },
   {
     id: 'flash_2',
@@ -45,7 +71,10 @@ const flashOffers = [
     discount: '-36%',
     description: '10 morceaux de poulet + frites familiales + boisson 1L',
     startHour: '12h00',
-    endHour: '15h00'
+    endHour: '15h00',
+    countdownHours: 2,
+    countdownMinutes: 15,
+    countdownSeconds: 0
   },
   {
     id: 'flash_3',
@@ -60,7 +89,10 @@ const flashOffers = [
     discount: '-35%',
     description: 'Pizza Royale diamètre 40cm (jambon, champignons, fromage)',
     startHour: '18h00',
-    endHour: '21h00'
+    endHour: '21h00',
+    countdownHours: 0,
+    countdownMinutes: 55,
+    countdownSeconds: 0
   }
 ];
 
@@ -75,7 +107,14 @@ const dealOffers = [
     validity: 'Jusqu\'au 30 Août',
     persons: 2,
     image: 'https://images.unsplash.com/photo-1544025162-d76694265947?w=500&auto=format&fit=crop&q=60',
-    discount: '-30%'
+    discount: '-30%',
+    inclusions: [
+      'Entrée assortie',
+      '2 Plats au choix',
+      '2 Boissons',
+      '1 Dessert',
+      'Décoration de table'
+    ]
   },
   {
     id: 'deal_2',
@@ -87,7 +126,13 @@ const dealOffers = [
     validity: 'Tous les dimanches',
     persons: 4,
     image: 'https://images.unsplash.com/photo-1555244162-803834f70033?w=500&auto=format&fit=crop&q=60',
-    discount: '-33%'
+    discount: '-33%',
+    inclusions: [
+      'Buffet chaud & froid à volonté',
+      'Boissons locales gratuites',
+      'Espace de jeux pour enfants',
+      'Animation musicale live'
+    ]
   }
 ];
 
@@ -133,11 +178,73 @@ export default function MobileApp() {
   const [newRestoOwnerPassword, setNewRestoOwnerPassword] = useState('');
   
   // Form booking selections
-  const [bookingDate, setBookingDate] = useState<string>('Demain 16 Août');
-  const [bookingTime, setBookingTime] = useState<string>('19h00');
+  const [bookingDate, setBookingDate] = useState<string>('');
+  const [bookingTime, setBookingTime] = useState<string>('');
   const [bookingQty, setBookingQty] = useState<number>(1);
   const [deliveryMode, setDeliveryMode] = useState<'retrait' | 'livraison'>('retrait');
-  const [paymentMethod, setPaymentMethod] = useState<'wave' | 'orange' | 'mtn'>('wave');
+  const [paymentMethod, setPaymentMethod] = useState<'wave' | 'orange' | 'mtn' | 'cb'>('wave');
+
+  // Real-time details state variables
+  const [reservationId, setReservationId] = useState<string>('BD125487');
+  const [countdown, setCountdown] = useState({ hours: 1, minutes: 42, seconds: 18 });
+
+  // Ticking countdown timer for Flash offers
+  useEffect(() => {
+    let timer: any;
+    if (selectedFlash) {
+      setCountdown({
+        hours: selectedFlash.countdownHours || 1,
+        minutes: selectedFlash.countdownMinutes || 42,
+        seconds: selectedFlash.countdownSeconds || 18
+      });
+
+      timer = setInterval(() => {
+        setCountdown(prev => {
+          let { hours, minutes, seconds } = prev;
+          if (seconds > 0) {
+            seconds--;
+          } else {
+            seconds = 59;
+            if (minutes > 0) {
+              minutes--;
+            } else {
+              minutes = 59;
+              if (hours > 0) {
+                hours--;
+              } else {
+                clearInterval(timer);
+              }
+            }
+          }
+          return { hours, minutes, seconds };
+        });
+      }, 1000);
+    }
+    return () => {
+      if (timer) clearInterval(timer);
+    };
+  }, [selectedFlash]);
+
+  // Action helpers to initialize date/time/resID dynamically
+  const handleSelectFlash = (item: any) => {
+    setSelectedFlash(item);
+    setBookingStep(0);
+    setBookingDate('Demain ' + getFrenchDate(1));
+    setBookingTime(item.startHour);
+    setBookingQty(1);
+    setDeliveryMode('retrait');
+    setReservationId('BD' + Math.floor(100000 + Math.random() * 900000));
+  };
+
+  const handleSelectDeal = (item: any) => {
+    setSelectedDeal(item);
+    setBookingStep(0);
+    setBookingDate('Demain ' + getFrenchDate(1));
+    setBookingTime('19h00');
+    setBookingQty(1);
+    setDeliveryMode('retrait');
+    setReservationId('BD' + Math.floor(100000 + Math.random() * 900000));
+  };
 
   // Agent proposal state
   const [proposalType, setProposalType] = useState<'flash' | 'deal'>('flash');
@@ -185,6 +292,512 @@ export default function MobileApp() {
 
   // --- VIEW 2: CLIENT PORTAL ---
   if (role === 'client') {
+    if (selectedFlash || selectedDeal) {
+      return (
+        <SafeAreaView style={styles.modalContainer} edges={['top', 'bottom']}>
+          {/* STEP 0: DETAILS VIEW */}
+          {bookingStep === 0 && (
+            <View style={{ flex: 1 }}>
+              {/* Custom Header for Step 0 */}
+              <View style={[styles.detailHeader, selectedFlash && { borderBottomWidth: 0, paddingBottom: 0 }]}>
+                <TouchableOpacity onPress={() => { setSelectedDeal(null); setSelectedFlash(null); }}>
+                  <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
+                </TouchableOpacity>
+                <View style={{ alignItems: 'center' }}>
+                  <Text style={styles.detailHeaderTitle}>{selectedFlash ? 'Brick Flash' : 'Brick Deal'}</Text>
+                  {selectedFlash && <Text style={styles.detailHeaderSubtitle}>📍 Cocody, Abidjan</Text>}
+                </View>
+                <TouchableOpacity style={styles.bellIconContainer}>
+                  <Ionicons name="notifications-outline" size={24} color={Colors.textPrimary} />
+                  <View style={styles.bellBadge}><Text style={styles.bellBadgeText}>3</Text></View>
+                </TouchableOpacity>
+              </View>
+
+              <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
+                {/* Image container */}
+                <View style={styles.detailImageContainer}>
+                  <Image source={{ uri: selectedFlash ? selectedFlash.image : selectedDeal?.image }} style={styles.detailImage} />
+                  <View style={selectedFlash ? [styles.bestDealBadge, { backgroundColor: '#E30613' }] : styles.bestDealBadge}>
+                    <Text style={styles.bestDealBadgeText}>{selectedFlash ? selectedFlash.discount : 'MEILLEUR DEAL'}</Text>
+                  </View>
+                  <TouchableOpacity style={styles.favoriteBtn}>
+                    <Ionicons name="heart-outline" size={20} color="black" />
+                  </TouchableOpacity>
+                </View>
+
+                {/* Content Area */}
+                <View style={styles.detailContent}>
+                  <View style={styles.titleRow}>
+                    <Text style={styles.detailTitle}>{selectedFlash ? selectedFlash.title : selectedDeal?.title}</Text>
+                    {!selectedFlash && (
+                      <View style={styles.discountLabel}>
+                        <Text style={styles.discountLabelText}>{selectedDeal?.discount}</Text>
+                      </View>
+                    )}
+                  </View>
+
+                  <Text style={styles.detailSubtitle}>
+                    <Text style={{ fontWeight: '700', color: Colors.textPrimary }}>{selectedFlash ? selectedFlash.restaurant : selectedDeal?.restaurant}</Text>
+                    <Text style={styles.ratingTextSecondary}>  ⭐ {selectedFlash ? '4,6 (128 avis)' : '4,8 (256 avis)'}</Text>
+                  </Text>
+
+                  {selectedFlash && (
+                    <Text style={styles.descriptionText}>{selectedFlash.description}</Text>
+                  )}
+
+                  <View style={styles.priceRow}>
+                    <Text style={styles.priceOld}>{(selectedFlash ? selectedFlash.priceOld : selectedDeal?.priceOld)?.toLocaleString()} FCFA</Text>
+                    <Text style={styles.priceBold}>{(selectedFlash ? selectedFlash.priceNew : selectedDeal?.priceNew)?.toLocaleString()} FCFA</Text>
+                    {selectedFlash && (
+                      <View style={styles.savingsBadge}>
+                        <Text style={styles.savingsBadgeText}>Économisez {(selectedFlash.priceOld - selectedFlash.priceNew).toLocaleString()} FCFA</Text>
+                      </View>
+                    )}
+                  </View>
+
+                  <View style={styles.peopleBadge}>
+                    <Ionicons name="people-outline" size={16} color={Colors.primary} />
+                    <Text style={styles.peopleBadgeText}>{selectedFlash ? 'Pour 1 personne' : 'Pour 2 personnes'}</Text>
+                  </View>
+
+                  {/* What's included block for Deal */}
+                  {!selectedFlash ? (
+                    <View style={styles.inclusionsContainer}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.inclusionsTitle}>Ce pack comprend :</Text>
+                        {selectedDeal?.inclusions?.map((inc: string, idx: number) => (
+                          <View key={idx} style={styles.inclusionRow}>
+                            <Text style={styles.checkIcon}>✓</Text>
+                            <Text style={styles.inclusionText}>{inc}</Text>
+                          </View>
+                        ))}
+                      </View>
+                      
+                      {/* Restaurant logo card */}
+                      <View style={styles.restoLogoCard}>
+                        <View style={styles.restoLogoCardIcon}>
+                          <Ionicons name="restaurant-outline" size={20} color={Colors.textPrimary} />
+                        </View>
+                        <Text style={styles.restoLogoText}>{selectedDeal?.restaurant?.toUpperCase()}</Text>
+                        <Text style={styles.restoLogoSub}>Restaurant</Text>
+                      </View>
+                    </View>
+                  ) : null}
+
+                  {/* Availability Box */}
+                  <View style={selectedFlash ? styles.flashAvailabilityBox : styles.availabilityBox}>
+                    <View style={styles.availabilityHalf}>
+                      <Text style={styles.availabilityLabel}>{selectedFlash ? 'Début' : 'Disponible du'}</Text>
+                      <Text style={styles.availabilityVal}>
+                        {selectedFlash ? `📅 ${getTodayFormatted()}\n${selectedFlash.startHour}` : `📅 ${getTodayFormatted()}\n12h00`}
+                      </Text>
+                    </View>
+                    <View style={styles.separatorLine} />
+                    <View style={styles.availabilityHalf}>
+                      <Text style={styles.availabilityLabel}>{selectedFlash ? 'Fin' : 'Au'}</Text>
+                      <Text style={styles.availabilityVal}>
+                        {selectedFlash ? `📅 ${getTodayFormatted()}\n${selectedFlash.endHour}` : `📅 ${getFutureFormatted(15)}\n23h00`}
+                      </Text>
+                    </View>
+                  </View>
+
+                  {/* Additional boxes for Flash */}
+                  {selectedFlash ? (
+                    <View style={{ flexDirection: 'row', gap: 12, marginBottom: 16 }}>
+                      {/* Box 1: Fin dans */}
+                      <View style={styles.countdownBox}>
+                        <Text style={{ fontSize: 10, color: Colors.textSecondary }}>Fin dans</Text>
+                        <View style={styles.countdownValRow}>
+                          <Ionicons name="time-outline" size={14} color={Colors.primary} style={{ marginRight: 4 }} />
+                          <Text style={styles.countdownValText}>
+                            {String(countdown.hours).padStart(2, '0')} : {String(countdown.minutes).padStart(2, '0')} : {String(countdown.seconds).padStart(2, '0')}
+                          </Text>
+                        </View>
+                        <View style={styles.countdownLabelsRow}>
+                          <Text style={styles.countdownLabelText}>H</Text>
+                          <Text style={styles.countdownLabelText}>MIN</Text>
+                          <Text style={styles.countdownLabelText}>SEC</Text>
+                        </View>
+                      </View>
+
+                      {/* Box 2: Offres dispo */}
+                      <View style={[styles.countdownBox, { backgroundColor: '#FFFDF9', borderColor: '#FDF2E2' }]}>
+                        <Text style={{ fontSize: 10, color: Colors.textSecondary }}>Plus que</Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8 }}>
+                          <Ionicons name="cube-outline" size={14} color="#D97706" style={{ marginRight: 4 }} />
+                          <Text style={{ fontSize: 13, fontWeight: '700', color: '#1A1A1A' }}>
+                            <Text style={{ color: Colors.primary, fontWeight: '800' }}>{selectedFlash.quantityRemaining}</Text> offres
+                          </Text>
+                        </View>
+                        <Text style={{ fontSize: 8, color: Colors.textSecondary, marginTop: 4, fontWeight: '600' }}>disponibles</Text>
+                      </View>
+                    </View>
+                  ) : (
+                    /* Left availability count for Deal */
+                    <View style={styles.warningRow}>
+                      <Ionicons name="people" size={16} color={Colors.primary} />
+                      <Text style={styles.warningText}>
+                        Plus que <Text style={{ color: Colors.primary, fontWeight: '700' }}>23</Text> réservations disponibles
+                      </Text>
+                    </View>
+                  )}
+
+                  <TouchableOpacity style={styles.actionBtn} onPress={() => setBookingStep(1)}>
+                    <Text style={styles.actionBtnText}>
+                      {selectedFlash ? '⚡ J\'en profite' : '❤️ Je réserve'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </ScrollView>
+            </View>
+          )}
+
+          {/* STEP 1: OPTIONS / DATE & TIME */}
+          {bookingStep === 1 && (
+            <View style={{ flex: 1 }}>
+              {/* Header for Step 1 */}
+              <View style={styles.detailHeader}>
+                <TouchableOpacity onPress={() => setBookingStep(0)}>
+                  <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
+                </TouchableOpacity>
+                <Text style={styles.detailHeaderTitle}>{selectedFlash ? "J'en profite" : "Je réserve"}</Text>
+                <View style={{ width: 24 }} />
+              </View>
+
+              <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
+                <Text style={styles.formTitle}>1. Choisissez votre date</Text>
+                {selectedFlash ? (
+                  /* Stacked vertical radio group for Flash */
+                  <View style={styles.verticalRadioGroup}>
+                    <TouchableOpacity style={[styles.verticalRadioItem, bookingDate === ('Aujourd\'hui ' + getFrenchDate(0)) && styles.verticalRadioActive]} onPress={() => setBookingDate('Aujourd\'hui ' + getFrenchDate(0))}>
+                      <Text style={[styles.verticalRadioItemText, bookingDate === ('Aujourd\'hui ' + getFrenchDate(0)) && { color: 'white', fontWeight: '700' }]}>Aujourd'hui {getFrenchDate(0)}</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={[styles.verticalRadioItem, bookingDate === ('Demain ' + getFrenchDate(1)) && styles.verticalRadioActive]} onPress={() => setBookingDate('Demain ' + getFrenchDate(1))}>
+                      <Text style={[styles.verticalRadioItemText, bookingDate === ('Demain ' + getFrenchDate(1)) && { color: 'white', fontWeight: '700' }]}>Demain {getFrenchDate(1)}</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={[styles.verticalRadioItem, bookingDate === getFrenchDate(2) && styles.verticalRadioActive]} onPress={() => setBookingDate(getFrenchDate(2))}>
+                      <Text style={[styles.verticalRadioItemText, bookingDate === getFrenchDate(2) && { color: 'white', fontWeight: '700' }]}>Autre date ({getFrenchDate(2)})</Text>
+                      <Ionicons name="calendar-outline" size={16} color={bookingDate === getFrenchDate(2) ? 'white' : Colors.textSecondary} />
+                    </TouchableOpacity>
+                  </View>
+                ) : (
+                  /* Side-by-side radio group for Deal */
+                  <View style={styles.radioGroup}>
+                    <TouchableOpacity style={[styles.radioItem, bookingDate === ('Aujourd\'hui ' + getFrenchDate(0)) && styles.radioActive]} onPress={() => setBookingDate('Aujourd\'hui ' + getFrenchDate(0))}>
+                      <Text style={[styles.radioItemText, bookingDate === ('Aujourd\'hui ' + getFrenchDate(0)) && { color: Colors.primary, fontWeight: '700' }]}>Aujourd'hui {getFrenchDate(0)}</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={[styles.radioItem, bookingDate === ('Demain ' + getFrenchDate(1)) && styles.radioActive]} onPress={() => setBookingDate('Demain ' + getFrenchDate(1))}>
+                      <Text style={[styles.radioItemText, bookingDate === ('Demain ' + getFrenchDate(1)) && { color: Colors.primary, fontWeight: '700' }]}>Demain {getFrenchDate(1)}</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={[styles.radioItem, bookingDate === getFrenchDate(2) && styles.radioActive]} onPress={() => setBookingDate(getFrenchDate(2))}>
+                      <Text style={[styles.radioItemText, bookingDate === getFrenchDate(2) && { color: Colors.primary, fontWeight: '700' }]}>Autre date ({getFrenchDate(2)})</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+
+                <Text style={styles.formTitle}>2. Choisissez l'heure</Text>
+                <View style={styles.timeGrid}>
+                  {(selectedFlash ? ['14h00', '15h00', '16h00', '17h00', '18h00'] : ['12h00', '13h00', '14h00', '19h00', '20h00', '21h00']).map(t => (
+                    <TouchableOpacity key={t} style={[styles.timeItem, bookingTime === t && styles.timeActive]} onPress={() => setBookingTime(t)}>
+                      <Text style={[styles.timeItemText, bookingTime === t && { color: 'white', fontWeight: '700' }]}>{t}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+
+                {/* Quantity and comment récupérer for Flash */}
+                {selectedFlash && (
+                  <>
+                    <Text style={styles.formTitle}>3. Quantité</Text>
+                    <View style={styles.qtyRow}>
+                      <TouchableOpacity style={styles.qtyBtn} onPress={() => setBookingQty(q => Math.max(1, q - 1))}><Text>-</Text></TouchableOpacity>
+                      <Text style={styles.qtyVal}>{bookingQty}</Text>
+                      <TouchableOpacity style={styles.qtyBtn} onPress={() => setBookingQty(q => q + 1)}><Text>+</Text></TouchableOpacity>
+                    </View>
+                    
+                    <Text style={styles.formTitle}>4. Comment récupérer ?</Text>
+                    <View style={{ marginVertical: 8 }}>
+                      <TouchableOpacity style={[styles.deliveryOptionRow, deliveryMode === 'retrait' && styles.deliveryOptionActive]} onPress={() => setDeliveryMode('retrait')}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                          <View style={styles.radioOutlineSmall}>
+                            {deliveryMode === 'retrait' && <View style={styles.radioDotSmall} />}
+                          </View>
+                          <Text style={styles.deliveryOptionLabel}>Je récupère au restaurant</Text>
+                        </View>
+                      </TouchableOpacity>
+                      <TouchableOpacity style={[styles.deliveryOptionRow, deliveryMode === 'livraison' && styles.deliveryOptionActive]} onPress={() => setDeliveryMode('livraison')}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                          <View style={styles.radioOutlineSmall}>
+                            {deliveryMode === 'livraison' && <View style={styles.radioDotSmall} />}
+                          </View>
+                          <Text style={styles.deliveryOptionLabel}>Livraison à domicile</Text>
+                        </View>
+                      </TouchableOpacity>
+                    </View>
+                  </>
+                )}
+
+                {/* Selected Pack Card Summary */}
+                <Text style={styles.formTitle}>Pack sélectionné</Text>
+                <View style={styles.selectedPackCard}>
+                  <Image source={{ uri: selectedFlash ? selectedFlash.image : selectedDeal?.image }} style={styles.selectedPackImg} />
+                  <View style={styles.selectedPackInfo}>
+                    <Text style={styles.selectedPackTitle}>{selectedFlash ? selectedFlash.title : selectedDeal?.title}</Text>
+                    <Text style={styles.selectedPackResto}>{selectedFlash ? selectedFlash.restaurant : selectedDeal?.restaurant}</Text>
+                    <Text style={styles.selectedPackPeople}>{selectedFlash ? 'Pour 1 personne' : 'Pour 2 personnes'}</Text>
+                  </View>
+                </View>
+
+                <Text style={{ fontSize: 13, color: Colors.textSecondary, marginTop: 16 }}>
+                  Disponibilités restantes : <Text style={{ fontWeight: '700', color: Colors.primary }}>{selectedFlash ? selectedFlash.quantityRemaining : 23}</Text>
+                </Text>
+
+                <TouchableOpacity style={styles.actionBtn} onPress={() => setBookingStep(2)}>
+                  <Text style={styles.actionBtnText}>Continuer</Text>
+                </TouchableOpacity>
+              </ScrollView>
+            </View>
+          )}
+
+          {/* STEP 2: RESUME */}
+          {bookingStep === 2 && (
+            <View style={{ flex: 1 }}>
+              {/* Header for Step 2 */}
+              <View style={styles.detailHeader}>
+                <TouchableOpacity onPress={() => setBookingStep(1)}>
+                  <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
+                </TouchableOpacity>
+                <Text style={styles.detailHeaderTitle}>Résumé</Text>
+                <View style={{ width: 24 }} />
+              </View>
+
+              <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
+                {/* Summary Card */}
+                <View style={styles.selectedPackCard}>
+                  <Image source={{ uri: selectedFlash ? selectedFlash.image : selectedDeal?.image }} style={styles.selectedPackImg} />
+                  <View style={styles.selectedPackInfo}>
+                    <Text style={styles.selectedPackTitle}>{selectedFlash ? selectedFlash.title : selectedDeal?.title}</Text>
+                    <Text style={styles.selectedPackResto}>{selectedFlash ? selectedFlash.restaurant : selectedDeal?.restaurant}</Text>
+                    <Text style={styles.selectedPackPeople}>{selectedFlash ? 'Pour 1 personne' : 'Pour 2 personnes'}</Text>
+                  </View>
+                </View>
+
+                {/* Summary Details */}
+                <View style={styles.resumeDetailsContainer}>
+                  <View style={styles.resumeRow}>
+                    <Text style={styles.resumeLabel}>Date</Text>
+                    <Text style={styles.resumeVal}>{bookingDate}</Text>
+                  </View>
+                  <View style={styles.resumeRow}>
+                    <Text style={styles.resumeLabel}>Heure</Text>
+                    <Text style={styles.resumeVal}>{bookingTime}</Text>
+                  </View>
+                  {selectedFlash ? (
+                    <>
+                      <View style={styles.resumeRow}>
+                        <Text style={styles.resumeLabel}>Quantité</Text>
+                        <Text style={styles.resumeVal}>{bookingQty}</Text>
+                      </View>
+                      <View style={styles.resumeRow}>
+                        <Text style={styles.resumeLabel}>Mode</Text>
+                        <Text style={styles.resumeVal}>
+                          {deliveryMode === 'retrait' ? 'Je récupère au restaurant' : 'Livraison à domicile'}
+                        </Text>
+                      </View>
+                    </>
+                  ) : (
+                    <View style={styles.resumeRow}>
+                      <Text style={styles.resumeLabel}>Nombre de personnes</Text>
+                      <Text style={styles.resumeVal}>2 personnes</Text>
+                    </View>
+                  )}
+
+                  {!selectedFlash && (
+                    <View style={{ marginTop: 12, borderTopWidth: 1, borderTopColor: '#EEE', paddingTop: 12 }}>
+                      <Text style={[styles.inclusionsTitle, { fontSize: 13, marginBottom: 8 }]}>Inclus dans le pack</Text>
+                      {selectedDeal?.inclusions?.map((inc: string, idx: number) => (
+                        <View key={idx} style={styles.inclusionRow}>
+                          <Text style={styles.checkIcon}>✓</Text>
+                          <Text style={styles.inclusionText}>{inc}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+
+                  <View style={styles.totalRow}>
+                    <Text style={styles.totalLabel}>Total</Text>
+                    <Text style={styles.totalVal}>
+                      {selectedFlash ? (selectedFlash.priceNew * bookingQty).toLocaleString() : selectedDeal?.priceNew?.toLocaleString()} FCFA
+                    </Text>
+                  </View>
+                </View>
+
+                <TouchableOpacity style={styles.actionBtn} onPress={() => {
+                  if (!isLoggedIn) {
+                    setIsSignup(false);
+                    setShowClientAuthModal(true);
+                  } else {
+                    setBookingStep(3);
+                  }
+                }}>
+                  <Text style={styles.actionBtnText}>
+                    {selectedFlash ? 'Je bloque mon avantage' : 'Je confirme ma réservation'}
+                  </Text>
+                </TouchableOpacity>
+              </ScrollView>
+            </View>
+          )}
+
+          {/* STEP 3: PAYMENT */}
+          {bookingStep === 3 && (
+            <View style={{ flex: 1 }}>
+              {/* Header for Step 3 */}
+              <View style={styles.detailHeader}>
+                <TouchableOpacity onPress={() => setBookingStep(2)}>
+                  <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
+                </TouchableOpacity>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Ionicons name="lock-closed" size={18} color={Colors.textPrimary} />
+                  <Text style={styles.detailHeaderTitle}>Paiement sécurisé</Text>
+                </View>
+                <View style={{ width: 24 }} />
+              </View>
+
+              <View style={styles.modalBody}>
+                <View style={{ alignItems: 'center', marginVertical: 20 }}>
+                  <Text style={{ fontSize: 13, color: Colors.textSecondary }}>Montant à payer</Text>
+                  <Text style={{ fontSize: 28, fontWeight: '900', color: Colors.primary, marginTop: 4 }}>
+                    {selectedFlash ? (selectedFlash.priceNew * bookingQty).toLocaleString() : selectedDeal?.priceNew?.toLocaleString()} FCFA
+                  </Text>
+                </View>
+
+                <Text style={styles.formTitle}>Choisissez votre moyen de paiement</Text>
+                
+                <TouchableOpacity style={[styles.paymentRadioRow, paymentMethod === 'wave' && styles.paymentRadioActive]} onPress={() => setPaymentMethod('wave')}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                    <View style={[styles.paymentIconBox, { backgroundColor: '#3B82F6' }]}><Text style={{ color: 'white', fontWeight: '900', fontSize: 12 }}>W</Text></View>
+                    <Text style={styles.paymentRadioLabel}>Wave</Text>
+                  </View>
+                  <View style={styles.radioOutline}>
+                    {paymentMethod === 'wave' && <View style={styles.radioDot} />}
+                  </View>
+                </TouchableOpacity>
+
+                <TouchableOpacity style={[styles.paymentRadioRow, paymentMethod === 'orange' && styles.paymentRadioActive]} onPress={() => setPaymentMethod('orange')}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                    <View style={[styles.paymentIconBox, { backgroundColor: '#F97316' }]}><Text style={{ color: 'white', fontWeight: '900', fontSize: 12 }}>OM</Text></View>
+                    <Text style={styles.paymentRadioLabel}>Orange Money</Text>
+                  </View>
+                  <View style={styles.radioOutline}>
+                    {paymentMethod === 'orange' && <View style={styles.radioDot} />}
+                  </View>
+                </TouchableOpacity>
+
+                <TouchableOpacity style={[styles.paymentRadioRow, paymentMethod === 'mtn' && styles.paymentRadioActive]} onPress={() => setPaymentMethod('mtn')}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                    <View style={[styles.paymentIconBox, { backgroundColor: '#EAB308' }]}><Text style={{ color: 'black', fontWeight: '900', fontSize: 12 }}>MoMo</Text></View>
+                    <Text style={styles.paymentRadioLabel}>MTN Mobile Money</Text>
+                  </View>
+                  <View style={styles.radioOutline}>
+                    {paymentMethod === 'mtn' && <View style={styles.radioDot} />}
+                  </View>
+                </TouchableOpacity>
+
+                <TouchableOpacity style={[styles.paymentRadioRow, paymentMethod === 'cb' && styles.paymentRadioActive]} onPress={() => setPaymentMethod('cb')}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                    <View style={[styles.paymentIconBox, { backgroundColor: '#6B7280' }]}><Ionicons name="card-outline" size={16} color="white" /></View>
+                    <Text style={styles.paymentRadioLabel}>Carte bancaire  <Text style={{ fontSize: 10, color: Colors.textSecondary }}>VISA / MC</Text></Text>
+                  </View>
+                  <View style={styles.radioOutline}>
+                    {paymentMethod === 'cb' && <View style={styles.radioDot} />}
+                  </View>
+                </TouchableOpacity>
+
+                <TouchableOpacity style={[styles.actionBtn, { marginTop: 32 }]} onPress={() => setBookingStep(4)}>
+                  <Text style={styles.actionBtnText}>Payer maintenant</Text>
+                </TouchableOpacity>
+
+                <View style={styles.securePaymentFooter}>
+                  <Ionicons name="shield-checkmark" size={16} color={Colors.success} />
+                  <Text style={{ fontSize: 12, color: Colors.textSecondary, fontWeight: '500' }}>Paiement 100% sécurisé</Text>
+                </View>
+              </View>
+            </View>
+          )}
+
+          {/* STEP 4: SUCCESS */}
+          {bookingStep === 4 && (
+            <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingVertical: 40 }} showsVerticalScrollIndicator={false}>
+              <View style={{ alignItems: 'center', paddingHorizontal: 24 }}>
+                <View style={styles.successCheckContainer}>
+                  <Ionicons name="checkmark" size={40} color="white" />
+                </View>
+                <Text style={styles.successTitle}>Réservation confirmée !</Text>
+                <Text style={styles.successSubtitle}>
+                  {selectedFlash ? 'Votre Brick Flash est réservé.' : 'Votre Brick Deal est réservé.'}
+                </Text>
+                
+                {/* Detailed Receipt Card */}
+                <View style={styles.receiptCard}>
+                  <View style={styles.receiptRow}>
+                    <Text style={styles.receiptLabel}>Offre</Text>
+                    <Text style={styles.receiptVal}>{selectedFlash ? selectedFlash.title : selectedDeal?.title}</Text>
+                  </View>
+                  <View style={styles.receiptRow}>
+                    <Text style={styles.receiptLabel}>Restaurant</Text>
+                    <Text style={styles.receiptVal}>{selectedFlash ? selectedFlash.restaurant : selectedDeal?.restaurant}</Text>
+                  </View>
+                  <View style={styles.receiptRow}>
+                    <Text style={styles.receiptLabel}>Date</Text>
+                    <Text style={styles.receiptVal}>{bookingDate}</Text>
+                  </View>
+                  <View style={styles.receiptRow}>
+                    <Text style={styles.receiptLabel}>Heure</Text>
+                    <Text style={styles.receiptVal}>{bookingTime}</Text>
+                  </View>
+                  <View style={styles.receiptRow}>
+                    <Text style={styles.receiptLabel}>Nombre de personnes</Text>
+                    <Text style={styles.receiptVal}>{selectedFlash ? `${bookingQty} personne(s)` : '2 personnes'}</Text>
+                  </View>
+                  <View style={styles.receiptRow}>
+                    <Text style={styles.receiptLabel}>Montant payé</Text>
+                    <Text style={[styles.receiptVal, { color: Colors.primary, fontWeight: '700' }]}>
+                      {selectedFlash ? (selectedFlash.priceNew * bookingQty).toLocaleString() : selectedDeal?.priceNew?.toLocaleString()} FCFA
+                    </Text>
+                  </View>
+                  <View style={[styles.receiptRow, { borderTopWidth: 1, borderTopColor: '#EEE', paddingTop: 10, marginTop: 10 }]}>
+                    <Text style={styles.receiptLabel}>N° Réservation</Text>
+                    <Text style={[styles.receiptVal, { fontWeight: '700' }]}>{reservationId}</Text>
+                  </View>
+                </View>
+
+                {/* QR Code premium mock box */}
+                <View style={styles.qrCodeBox}>
+                  <View style={{ width: 140, height: 140, padding: 8, backgroundColor: 'white', borderWidth: 1, borderColor: '#DDD', alignItems: 'center', justifyContent: 'center' }}>
+                    <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap', width: 120, height: 120 }}>
+                      <View style={{ width: 30, height: 30, borderWidth: 4, borderColor: 'black', backgroundColor: 'transparent' }} />
+                      <View style={{ width: 30, height: 30, backgroundColor: 'black' }} />
+                      <View style={{ width: 30, height: 30, borderWidth: 4, borderColor: 'black', backgroundColor: 'transparent' }} />
+                      <View style={{ width: 30, height: 30, backgroundColor: 'black' }} />
+                      <View style={{ width: 30, height: 30, borderWidth: 4, borderColor: 'black', backgroundColor: 'transparent' }} />
+                      <View style={{ width: 30, height: 30, backgroundColor: 'black' }} />
+                      <View style={{ width: 30, height: 30, backgroundColor: 'black' }} />
+                      <View style={{ width: 30, height: 30, backgroundColor: 'black' }} />
+                      <View style={{ width: 30, height: 30, borderWidth: 4, borderColor: 'black', backgroundColor: 'transparent' }} />
+                    </View>
+                  </View>
+                  <Text style={[styles.qrCodeVal, { fontSize: 13, letterSpacing: 1, marginTop: 12, color: Colors.textSecondary }]}>{reservationId}</Text>
+                </View>
+
+                <TouchableOpacity style={[styles.actionBtn, { backgroundColor: '#10B981', width: '100%', marginTop: 0 }]} onPress={() => { setSelectedFlash(null); setSelectedDeal(null); setClientTab('reservations'); }}>
+                  <Text style={styles.actionBtnText}>Voir mes réservations</Text>
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
+          )}
+        </SafeAreaView>
+      );
+    }
+
     return (
       <SafeAreaView style={styles.mainContainer} edges={['top', 'bottom']}>
         {/* Top Header */}
@@ -253,9 +866,9 @@ export default function MobileApp() {
               </TouchableOpacity>
             </View>
             
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.horizontalScroll}>
+             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.horizontalScroll}>
               {flashOffers.map((item) => (
-                <TouchableOpacity key={item.id} style={styles.dealCard} onPress={() => { setSelectedFlash(item); setBookingStep(0); }}>
+                <TouchableOpacity key={item.id} style={styles.dealCard} onPress={() => handleSelectFlash(item)}>
                   <Image source={{ uri: item.image }} style={styles.cardImage} />
                   <View style={styles.cardBadge}>
                     <Text style={styles.badgeText}>{item.discount}</Text>
@@ -296,7 +909,7 @@ export default function MobileApp() {
 
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.horizontalScroll}>
               {dealOffers.map((item) => (
-                <TouchableOpacity key={item.id} style={styles.dealCard} onPress={() => { setSelectedDeal(item); setBookingStep(0); }}>
+                <TouchableOpacity key={item.id} style={styles.dealCard} onPress={() => handleSelectDeal(item)}>
                   <Image source={{ uri: item.image }} style={styles.cardImage} />
                   <View style={[styles.cardBadge, { backgroundColor: '#F59E0B' }]}>
                     <Text style={styles.badgeText}>{item.discount}</Text>
@@ -448,535 +1061,6 @@ export default function MobileApp() {
           </TouchableOpacity>
         </View>
 
-        {/* --- BOOKING & CHECKOUT MODAL FLOW (Brick Flash / Brick Deal) --- */}
-        <Modal visible={!!selectedFlash || !!selectedDeal} animationType="slide">
-          <SafeAreaView style={styles.modalContainer} edges={['top', 'bottom']}>
-            
-            {/* STEP 0: DETAILS VIEW */}
-            {bookingStep === 0 && (
-              <View style={{ flex: 1 }}>
-                {/* Custom Header for Step 0 */}
-                <View style={[styles.detailHeader, selectedFlash && { borderBottomWidth: 0, paddingBottom: 0 }]}>
-                  <TouchableOpacity onPress={() => { setSelectedDeal(null); setSelectedFlash(null); }}>
-                    <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
-                  </TouchableOpacity>
-                  <View style={{ alignItems: 'center' }}>
-                    <Text style={styles.detailHeaderTitle}>{selectedFlash ? 'Brick Flash' : 'Brick Deal'}</Text>
-                    {selectedFlash && <Text style={styles.detailHeaderSubtitle}>📍 Cocody, Abidjan</Text>}
-                  </View>
-                  <TouchableOpacity style={styles.bellIconContainer}>
-                    <Ionicons name="notifications-outline" size={24} color={Colors.textPrimary} />
-                    <View style={styles.bellBadge}><Text style={styles.bellBadgeText}>3</Text></View>
-                  </TouchableOpacity>
-                </View>
-
-                <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
-                  {/* Image container */}
-                  <View style={styles.detailImageContainer}>
-                    <Image source={{ uri: selectedFlash ? selectedFlash.image : selectedDeal?.image }} style={styles.detailImage} />
-                    <View style={selectedFlash ? [styles.bestDealBadge, { backgroundColor: '#E30613' }] : styles.bestDealBadge}>
-                      <Text style={styles.bestDealBadgeText}>{selectedFlash ? selectedFlash.discount : 'MEILLEUR DEAL'}</Text>
-                    </View>
-                    <TouchableOpacity style={styles.favoriteBtn}>
-                      <Ionicons name="heart-outline" size={20} color="black" />
-                    </TouchableOpacity>
-                  </View>
-
-                  {/* Content Area */}
-                  <View style={styles.detailContent}>
-                    <View style={styles.titleRow}>
-                      <Text style={styles.detailTitle}>{selectedFlash ? selectedFlash.title : selectedDeal?.title}</Text>
-                      {!selectedFlash && (
-                        <View style={styles.discountLabel}>
-                          <Text style={styles.discountLabelText}>{selectedDeal?.discount}</Text>
-                        </View>
-                      )}
-                    </View>
-
-                    <Text style={styles.detailSubtitle}>
-                      <Text style={{ fontWeight: '700', color: Colors.textPrimary }}>{selectedFlash ? selectedFlash.restaurant : selectedDeal?.restaurant}</Text>
-                      <Text style={styles.ratingTextSecondary}>  ⭐ {selectedFlash ? '4,6 (128 avis)' : '4,8 (256 avis)'}</Text>
-                    </Text>
-
-                    {selectedFlash && (
-                      <Text style={styles.descriptionText}>{selectedFlash.description}</Text>
-                    )}
-
-                    <View style={styles.priceRow}>
-                      <Text style={styles.priceOld}>{(selectedFlash ? selectedFlash.priceOld : selectedDeal?.priceOld)?.toLocaleString()} FCFA</Text>
-                      <Text style={styles.priceBold}>{(selectedFlash ? selectedFlash.priceNew : selectedDeal?.priceNew)?.toLocaleString()} FCFA</Text>
-                      {selectedFlash && (
-                        <View style={styles.savingsBadge}>
-                          <Text style={styles.savingsBadgeText}>Économisez {(selectedFlash.priceOld - selectedFlash.priceNew).toLocaleString()} FCFA</Text>
-                        </View>
-                      )}
-                    </View>
-
-                    <View style={styles.peopleBadge}>
-                      <Ionicons name="people-outline" size={16} color={Colors.primary} />
-                      <Text style={styles.peopleBadgeText}>{selectedFlash ? 'Pour 1 personne' : 'Pour 2 personnes'}</Text>
-                    </View>
-
-                    {/* What's included block for Deal */}
-                    {!selectedFlash ? (
-                      <View style={styles.inclusionsContainer}>
-                        <View style={{ flex: 1 }}>
-                          <Text style={styles.inclusionsTitle}>Ce pack comprend :</Text>
-                          <View style={styles.inclusionRow}>
-                            <Text style={styles.checkIcon}>✓</Text>
-                            <Text style={styles.inclusionText}>Entrée assortie</Text>
-                          </View>
-                          <View style={styles.inclusionRow}>
-                            <Text style={styles.checkIcon}>✓</Text>
-                            <Text style={styles.inclusionText}>2 Plats au choix</Text>
-                          </View>
-                          <View style={styles.inclusionRow}>
-                            <Text style={styles.checkIcon}>✓</Text>
-                            <Text style={styles.inclusionText}>2 Boissons</Text>
-                          </View>
-                          <View style={styles.inclusionRow}>
-                            <Text style={styles.checkIcon}>✓</Text>
-                            <Text style={styles.inclusionText}>1 Dessert</Text>
-                          </View>
-                          <View style={styles.inclusionRow}>
-                            <Text style={styles.checkIcon}>✓</Text>
-                            <Text style={styles.inclusionText}>Décoration de table</Text>
-                          </View>
-                        </View>
-                        
-                        {/* Restaurant logo card */}
-                        <View style={styles.restoLogoCard}>
-                          <View style={styles.restoLogoCardIcon}>
-                            <Ionicons name="restaurant-outline" size={20} color={Colors.textPrimary} />
-                          </View>
-                          <Text style={styles.restoLogoText}>{selectedDeal?.restaurant?.toUpperCase()}</Text>
-                          <Text style={styles.restoLogoSub}>Restaurant</Text>
-                        </View>
-                      </View>
-                    ) : null}
-
-                    {/* Availability Box */}
-                    <View style={selectedFlash ? styles.flashAvailabilityBox : styles.availabilityBox}>
-                      <View style={styles.availabilityHalf}>
-                        <Text style={styles.availabilityLabel}>{selectedFlash ? 'Début' : 'Disponible du'}</Text>
-                        <Text style={styles.availabilityVal}>
-                          {selectedFlash ? `📅 15 Août 2024\n${selectedFlash.startHour}` : '📅 15 Août 2024\n12h00'}
-                        </Text>
-                      </View>
-                      <View style={styles.separatorLine} />
-                      <View style={styles.availabilityHalf}>
-                        <Text style={styles.availabilityLabel}>{selectedFlash ? 'Fin' : 'Au'}</Text>
-                        <Text style={styles.availabilityVal}>
-                          {selectedFlash ? `📅 15 Août 2024\n${selectedFlash.endHour}` : '📅 30 Août 2024\n23h00'}
-                        </Text>
-                      </View>
-                    </View>
-
-                    {/* Additional boxes for Flash */}
-                    {selectedFlash ? (
-                      <View style={{ flexDirection: 'row', gap: 12, marginBottom: 16 }}>
-                        {/* Box 1: Fin dans */}
-                        <View style={styles.countdownBox}>
-                          <Text style={{ fontSize: 10, color: Colors.textSecondary }}>Fin dans</Text>
-                          <View style={styles.countdownValRow}>
-                            <Ionicons name="time-outline" size={14} color={Colors.primary} style={{ marginRight: 4 }} />
-                            <Text style={styles.countdownValText}>01 : 42 : 18</Text>
-                          </View>
-                          <View style={styles.countdownLabelsRow}>
-                            <Text style={styles.countdownLabelText}>H</Text>
-                            <Text style={styles.countdownLabelText}>MIN</Text>
-                            <Text style={styles.countdownLabelText}>SEC</Text>
-                          </View>
-                        </View>
-
-                        {/* Box 2: Offres dispo */}
-                        <View style={[styles.countdownBox, { backgroundColor: '#FFFDF9', borderColor: '#FDF2E2' }]}>
-                          <Text style={{ fontSize: 10, color: Colors.textSecondary }}>Plus que</Text>
-                          <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8 }}>
-                            <Ionicons name="cube-outline" size={14} color="#D97706" style={{ marginRight: 4 }} />
-                            <Text style={{ fontSize: 13, fontWeight: '700', color: '#1A1A1A' }}>
-                              <Text style={{ color: Colors.primary, fontWeight: '800' }}>{selectedFlash.quantityRemaining}</Text> offres
-                            </Text>
-                          </View>
-                          <Text style={{ fontSize: 8, color: Colors.textSecondary, marginTop: 4, fontWeight: '600' }}>disponibles</Text>
-                        </View>
-                      </View>
-                    ) : (
-                      /* Left availability count for Deal */
-                      <View style={styles.warningRow}>
-                        <Ionicons name="people" size={16} color={Colors.primary} />
-                        <Text style={styles.warningText}>
-                          Plus que <Text style={{ color: Colors.primary, fontWeight: '700' }}>23</Text> réservations disponibles
-                        </Text>
-                      </View>
-                    )}
-
-                    <TouchableOpacity style={styles.actionBtn} onPress={() => setBookingStep(1)}>
-                      <Text style={styles.actionBtnText}>
-                        {selectedFlash ? '⚡ J\'en profite' : '❤️ Je réserve'}
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-                </ScrollView>
-              </View>
-            )}
-
-            {/* STEP 1: OPTIONS / DATE & TIME */}
-            {bookingStep === 1 && (
-              <View style={{ flex: 1 }}>
-                {/* Header for Step 1 */}
-                <View style={styles.detailHeader}>
-                  <TouchableOpacity onPress={() => setBookingStep(0)}>
-                    <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
-                  </TouchableOpacity>
-                  <Text style={styles.detailHeaderTitle}>{selectedFlash ? "J'en profite" : "Je réserve"}</Text>
-                  <View style={{ width: 24 }} />
-                </View>
-
-                <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
-                  <Text style={styles.formTitle}>1. Choisissez votre date</Text>
-                  {selectedFlash ? (
-                    /* Stacked vertical radio group for Flash */
-                    <View style={styles.verticalRadioGroup}>
-                      <TouchableOpacity style={[styles.verticalRadioItem, bookingDate === 'Aujourd\'hui 15 Août' && styles.verticalRadioActive]} onPress={() => setBookingDate('Aujourd\'hui 15 Août')}>
-                        <Text style={[styles.verticalRadioItemText, bookingDate === 'Aujourd\'hui 15 Août' && { color: 'white', fontWeight: '700' }]}>Aujourd'hui 15 Août</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity style={[styles.verticalRadioItem, bookingDate === 'Demain 16 Août' && styles.verticalRadioActive]} onPress={() => setBookingDate('Demain 16 Août')}>
-                        <Text style={[styles.verticalRadioItemText, bookingDate === 'Demain 16 Août' && { color: 'white', fontWeight: '700' }]}>Demain 16 Août</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity style={[styles.verticalRadioItem, bookingDate === 'Autre date' && styles.verticalRadioActive]} onPress={() => setBookingDate('Autre date')}>
-                        <Text style={[styles.verticalRadioItemText, bookingDate === 'Autre date' && { color: 'white', fontWeight: '700' }]}>Autre date</Text>
-                        <Ionicons name="calendar-outline" size={16} color={bookingDate === 'Autre date' ? 'white' : Colors.textSecondary} />
-                      </TouchableOpacity>
-                    </View>
-                  ) : (
-                    /* Side-by-side radio group for Deal */
-                    <View style={styles.radioGroup}>
-                      <TouchableOpacity style={[styles.radioItem, bookingDate === 'Aujourd\'hui 15 Août' && styles.radioActive]} onPress={() => setBookingDate('Aujourd\'hui 15 Août')}>
-                        <Text style={[styles.radioItemText, bookingDate === 'Aujourd\'hui 15 Août' && { color: Colors.primary, fontWeight: '700' }]}>Aujourd'hui 15 Août</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity style={[styles.radioItem, bookingDate === 'Demain 16 Août' && styles.radioActive]} onPress={() => setBookingDate('Demain 16 Août')}>
-                        <Text style={[styles.radioItemText, bookingDate === 'Demain 16 Août' && { color: Colors.primary, fontWeight: '700' }]}>Demain 16 Août</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity style={[styles.radioItem, bookingDate === 'Autre date' && styles.radioActive]} onPress={() => setBookingDate('Autre date')}>
-                        <Text style={[styles.radioItemText, bookingDate === 'Autre date' && { color: Colors.primary, fontWeight: '700' }]}>Autre date 📅</Text>
-                      </TouchableOpacity>
-                    </View>
-                  )}
-
-                  <Text style={styles.formTitle}>2. Choisissez l'heure</Text>
-                  <View style={styles.timeGrid}>
-                    {(selectedFlash ? ['14h00', '15h00', '16h00', '17h00', '18h00'] : ['12h00', '13h00', '14h00', '19h00', '20h00', '21h00']).map(t => (
-                      <TouchableOpacity key={t} style={[styles.timeItem, bookingTime === t && styles.timeActive]} onPress={() => setBookingTime(t)}>
-                        <Text style={[styles.timeItemText, bookingTime === t && { color: 'white', fontWeight: '700' }]}>{t}</Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-
-                  {/* Quantity and comment récupérer for Flash */}
-                  {selectedFlash && (
-                    <>
-                      <Text style={styles.formTitle}>3. Quantité</Text>
-                      <View style={styles.qtyRow}>
-                        <TouchableOpacity style={styles.qtyBtn} onPress={() => setBookingQty(q => Math.max(1, q - 1))}><Text>-</Text></TouchableOpacity>
-                        <Text style={styles.qtyVal}>{bookingQty}</Text>
-                        <TouchableOpacity style={styles.qtyBtn} onPress={() => setBookingQty(q => q + 1)}><Text>+</Text></TouchableOpacity>
-                      </View>
-                      
-                      <Text style={styles.formTitle}>4. Comment récupérer ?</Text>
-                      <View style={{ marginVertical: 8 }}>
-                        <TouchableOpacity style={[styles.deliveryOptionRow, deliveryMode === 'retrait' && styles.deliveryOptionActive]} onPress={() => setDeliveryMode('retrait')}>
-                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                            <View style={styles.radioOutlineSmall}>
-                              {deliveryMode === 'retrait' && <View style={styles.radioDotSmall} />}
-                            </View>
-                            <Text style={styles.deliveryOptionLabel}>Je récupère au restaurant</Text>
-                          </View>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={[styles.deliveryOptionRow, deliveryMode === 'livraison' && styles.deliveryOptionActive]} onPress={() => setDeliveryMode('livraison')}>
-                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                            <View style={styles.radioOutlineSmall}>
-                              {deliveryMode === 'livraison' && <View style={styles.radioDotSmall} />}
-                            </View>
-                            <Text style={styles.deliveryOptionLabel}>Livraison à domicile</Text>
-                          </View>
-                        </TouchableOpacity>
-                      </View>
-                    </>
-                  )}
-
-                  {/* Selected Pack Card Summary */}
-                  <Text style={styles.formTitle}>Pack sélectionné</Text>
-                  <View style={styles.selectedPackCard}>
-                    <Image source={{ uri: selectedFlash ? selectedFlash.image : selectedDeal?.image }} style={styles.selectedPackImg} />
-                    <View style={styles.selectedPackInfo}>
-                      <Text style={styles.selectedPackTitle}>{selectedFlash ? selectedFlash.title : selectedDeal?.title}</Text>
-                      <Text style={styles.selectedPackResto}>{selectedFlash ? selectedFlash.restaurant : selectedDeal?.restaurant}</Text>
-                      <Text style={styles.selectedPackPeople}>{selectedFlash ? 'Pour 1 personne' : 'Pour 2 personnes'}</Text>
-                    </View>
-                  </View>
-
-                  <Text style={{ fontSize: 13, color: Colors.textSecondary, marginTop: 16 }}>
-                    Disponibilités restantes : <Text style={{ fontWeight: '700', color: Colors.primary }}>{selectedFlash ? selectedFlash.quantityRemaining : 23}</Text>
-                  </Text>
-
-                  <TouchableOpacity style={styles.actionBtn} onPress={() => setBookingStep(2)}>
-                    <Text style={styles.actionBtnText}>Continuer</Text>
-                  </TouchableOpacity>
-                </ScrollView>
-              </View>
-            )}
-
-            {/* STEP 2: RESUME */}
-            {bookingStep === 2 && (
-              <View style={{ flex: 1 }}>
-                {/* Header for Step 2 */}
-                <View style={styles.detailHeader}>
-                  <TouchableOpacity onPress={() => setBookingStep(1)}>
-                    <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
-                  </TouchableOpacity>
-                  <Text style={styles.detailHeaderTitle}>Résumé</Text>
-                  <View style={{ width: 24 }} />
-                </View>
-
-                <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
-                  {/* Summary Card */}
-                  <View style={styles.selectedPackCard}>
-                    <Image source={{ uri: selectedFlash ? selectedFlash.image : selectedDeal?.image }} style={styles.selectedPackImg} />
-                    <View style={styles.selectedPackInfo}>
-                      <Text style={styles.selectedPackTitle}>{selectedFlash ? selectedFlash.title : selectedDeal?.title}</Text>
-                      <Text style={styles.selectedPackResto}>{selectedFlash ? selectedFlash.restaurant : selectedDeal?.restaurant}</Text>
-                      <Text style={styles.selectedPackPeople}>{selectedFlash ? 'Pour 1 personne' : 'Pour 2 personnes'}</Text>
-                    </View>
-                  </View>
-
-                  {/* Summary Details */}
-                  <View style={styles.resumeDetailsContainer}>
-                    <View style={styles.resumeRow}>
-                      <Text style={styles.resumeLabel}>Date</Text>
-                      <Text style={styles.resumeVal}>{bookingDate}</Text>
-                    </View>
-                    <View style={styles.resumeRow}>
-                      <Text style={styles.resumeLabel}>Heure</Text>
-                      <Text style={styles.resumeVal}>{bookingTime}</Text>
-                    </View>
-                    {selectedFlash ? (
-                      <>
-                        <View style={styles.resumeRow}>
-                          <Text style={styles.resumeLabel}>Quantité</Text>
-                          <Text style={styles.resumeVal}>{bookingQty}</Text>
-                        </View>
-                        <View style={styles.resumeRow}>
-                          <Text style={styles.resumeLabel}>Mode</Text>
-                          <Text style={styles.resumeVal}>
-                            {deliveryMode === 'retrait' ? 'Je récupère au restaurant' : 'Livraison à domicile'}
-                          </Text>
-                        </View>
-                      </>
-                    ) : (
-                      <View style={styles.resumeRow}>
-                        <Text style={styles.resumeLabel}>Nombre de personnes</Text>
-                        <Text style={styles.resumeVal}>2 personnes</Text>
-                      </View>
-                    )}
-
-                    {!selectedFlash && (
-                      <View style={{ marginTop: 12, borderTopWidth: 1, borderTopColor: '#EEE', paddingTop: 12 }}>
-                        <Text style={[styles.inclusionsTitle, { fontSize: 13, marginBottom: 8 }]}>Inclus dans le pack</Text>
-                        <View style={styles.inclusionRow}>
-                          <Text style={styles.checkIcon}>✓</Text>
-                          <Text style={styles.inclusionText}>Entrée assortie</Text>
-                        </View>
-                        <View style={styles.inclusionRow}>
-                          <Text style={styles.checkIcon}>✓</Text>
-                          <Text style={styles.inclusionText}>2 Plats au choix</Text>
-                        </View>
-                        <View style={styles.inclusionRow}>
-                          <Text style={styles.checkIcon}>✓</Text>
-                          <Text style={styles.inclusionText}>2 Boissons</Text>
-                        </View>
-                        <View style={styles.inclusionRow}>
-                          <Text style={styles.checkIcon}>✓</Text>
-                          <Text style={styles.inclusionText}>1 Dessert</Text>
-                        </View>
-                        <View style={styles.inclusionRow}>
-                          <Text style={styles.checkIcon}>✓</Text>
-                          <Text style={styles.inclusionText}>Décoration de table</Text>
-                        </View>
-                      </View>
-                    )}
-
-                    <View style={styles.totalRow}>
-                      <Text style={styles.totalLabel}>Total</Text>
-                      <Text style={styles.totalVal}>
-                        {selectedFlash ? (selectedFlash.priceNew * bookingQty).toLocaleString() : selectedDeal?.priceNew?.toLocaleString()} FCFA
-                      </Text>
-                    </View>
-                  </View>
-
-                  <TouchableOpacity style={styles.actionBtn} onPress={() => {
-                    if (!isLoggedIn) {
-                      setIsSignup(false);
-                      setShowClientAuthModal(true);
-                    } else {
-                      setBookingStep(3);
-                    }
-                  }}>
-                    <Text style={styles.actionBtnText}>
-                      {selectedFlash ? 'Je bloque mon avantage' : 'Je confirme ma réservation'}
-                    </Text>
-                  </TouchableOpacity>
-                </ScrollView>
-              </View>
-            )}
-
-            {/* STEP 3: PAYMENT */}
-            {bookingStep === 3 && (
-              <View style={{ flex: 1 }}>
-                {/* Header for Step 3 */}
-                <View style={styles.detailHeader}>
-                  <TouchableOpacity onPress={() => setBookingStep(2)}>
-                    <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
-                  </TouchableOpacity>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                    <Ionicons name="lock-closed" size={18} color={Colors.textPrimary} />
-                    <Text style={styles.detailHeaderTitle}>Paiement sécurisé</Text>
-                  </View>
-                  <View style={{ width: 24 }} />
-                </View>
-
-                <View style={styles.modalBody}>
-                  <View style={{ alignItems: 'center', marginVertical: 20 }}>
-                    <Text style={{ fontSize: 13, color: Colors.textSecondary }}>Montant à payer</Text>
-                    <Text style={{ fontSize: 28, fontWeight: '900', color: Colors.primary, marginTop: 4 }}>
-                      {selectedFlash ? (selectedFlash.priceNew * bookingQty).toLocaleString() : selectedDeal?.priceNew?.toLocaleString()} FCFA
-                    </Text>
-                  </View>
-
-                  <Text style={styles.formTitle}>Choisissez votre moyen de paiement</Text>
-                  
-                  <TouchableOpacity style={[styles.paymentRadioRow, paymentMethod === 'wave' && styles.paymentRadioActive]} onPress={() => setPaymentMethod('wave')}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                      <View style={[styles.paymentIconBox, { backgroundColor: '#3B82F6' }]}><Text style={{ color: 'white', fontWeight: '900', fontSize: 12 }}>W</Text></View>
-                      <Text style={styles.paymentRadioLabel}>Wave</Text>
-                    </View>
-                    <View style={styles.radioOutline}>
-                      {paymentMethod === 'wave' && <View style={styles.radioDot} />}
-                    </View>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity style={[styles.paymentRadioRow, paymentMethod === 'orange' && styles.paymentRadioActive]} onPress={() => setPaymentMethod('orange')}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                      <View style={[styles.paymentIconBox, { backgroundColor: '#F97316' }]}><Text style={{ color: 'white', fontWeight: '900', fontSize: 12 }}>OM</Text></View>
-                      <Text style={styles.paymentRadioLabel}>Orange Money</Text>
-                    </View>
-                    <View style={styles.radioOutline}>
-                      {paymentMethod === 'orange' && <View style={styles.radioDot} />}
-                    </View>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity style={[styles.paymentRadioRow, paymentMethod === 'mtn' && styles.paymentRadioActive]} onPress={() => setPaymentMethod('mtn')}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                      <View style={[styles.paymentIconBox, { backgroundColor: '#EAB308' }]}><Text style={{ color: 'black', fontWeight: '900', fontSize: 12 }}>MoMo</Text></View>
-                      <Text style={styles.paymentRadioLabel}>MTN Mobile Money</Text>
-                    </View>
-                    <View style={styles.radioOutline}>
-                      {paymentMethod === 'mtn' && <View style={styles.radioDot} />}
-                    </View>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity style={[styles.paymentRadioRow, paymentMethod === 'cb' && styles.paymentRadioActive]} onPress={() => setPaymentMethod('cb')}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                      <View style={[styles.paymentIconBox, { backgroundColor: '#6B7280' }]}><Ionicons name="card-outline" size={16} color="white" /></View>
-                      <Text style={styles.paymentRadioLabel}>Carte bancaire  <Text style={{ fontSize: 10, color: Colors.textSecondary }}>VISA / MC</Text></Text>
-                    </View>
-                    <View style={styles.radioOutline}>
-                      {paymentMethod === 'cb' && <View style={styles.radioDot} />}
-                    </View>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity style={[styles.actionBtn, { marginTop: 32 }]} onPress={() => setBookingStep(4)}>
-                    <Text style={styles.actionBtnText}>Payer maintenant</Text>
-                  </TouchableOpacity>
-
-                  <View style={styles.securePaymentFooter}>
-                    <Ionicons name="shield-checkmark" size={16} color={Colors.success} />
-                    <Text style={{ fontSize: 12, color: Colors.textSecondary, fontWeight: '500' }}>Paiement 100% sécurisé</Text>
-                  </View>
-                </View>
-              </View>
-            )}
-
-            {/* STEP 4: SUCCESS */}
-            {bookingStep === 4 && (
-              <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingVertical: 40 }} showsVerticalScrollIndicator={false}>
-                <View style={{ alignItems: 'center', paddingHorizontal: 24 }}>
-                  <View style={styles.successCheckContainer}>
-                    <Ionicons name="checkmark" size={40} color="white" />
-                  </View>
-                  <Text style={styles.successTitle}>Réservation confirmée !</Text>
-                  <Text style={styles.successSubtitle}>
-                    {selectedFlash ? 'Votre Brick Flash est réservé.' : 'Votre Brick Deal est réservé.'}
-                  </Text>
-                  
-                  {/* Detailed Receipt Card */}
-                  <View style={styles.receiptCard}>
-                    <View style={styles.receiptRow}>
-                      <Text style={styles.receiptLabel}>Offre</Text>
-                      <Text style={styles.receiptVal}>{selectedFlash ? selectedFlash.title : selectedDeal?.title}</Text>
-                    </View>
-                    <View style={styles.receiptRow}>
-                      <Text style={styles.receiptLabel}>Restaurant</Text>
-                      <Text style={styles.receiptVal}>{selectedFlash ? selectedFlash.restaurant : selectedDeal?.restaurant}</Text>
-                    </View>
-                    <View style={styles.receiptRow}>
-                      <Text style={styles.receiptLabel}>Date</Text>
-                      <Text style={styles.receiptVal}>{bookingDate}</Text>
-                    </View>
-                    <View style={styles.receiptRow}>
-                      <Text style={styles.receiptLabel}>Heure</Text>
-                      <Text style={styles.receiptVal}>{bookingTime}</Text>
-                    </View>
-                    <View style={styles.receiptRow}>
-                      <Text style={styles.receiptLabel}>Nombre de personnes</Text>
-                      <Text style={styles.receiptVal}>{selectedFlash ? `${bookingQty} personne(s)` : '2 personnes'}</Text>
-                    </View>
-                    <View style={styles.receiptRow}>
-                      <Text style={styles.receiptLabel}>Montant payé</Text>
-                      <Text style={[styles.receiptVal, { color: Colors.primary, fontWeight: '700' }]}>
-                        {selectedFlash ? (selectedFlash.priceNew * bookingQty).toLocaleString() : selectedDeal?.priceNew?.toLocaleString()} FCFA
-                      </Text>
-                    </View>
-                    <View style={[styles.receiptRow, { borderTopWidth: 1, borderTopColor: '#EEE', paddingTop: 10, marginTop: 10 }]}>
-                      <Text style={styles.receiptLabel}>N° Réservation</Text>
-                      <Text style={[styles.receiptVal, { fontWeight: '700' }]}>BD125487</Text>
-                    </View>
-                  </View>
-
-                  {/* QR Code premium mock box */}
-                  <View style={styles.qrCodeBox}>
-                    <View style={{ width: 140, height: 140, padding: 8, backgroundColor: 'white', borderWidth: 1, borderColor: '#DDD', alignItems: 'center', justifyContent: 'center' }}>
-                      <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap', width: 120, height: 120 }}>
-                        <View style={{ width: 30, height: 30, borderWidth: 4, borderColor: 'black', backgroundColor: 'transparent' }} />
-                        <View style={{ width: 30, height: 30, backgroundColor: 'black' }} />
-                        <View style={{ width: 30, height: 30, borderWidth: 4, borderColor: 'black', backgroundColor: 'transparent' }} />
-                        <View style={{ width: 30, height: 30, backgroundColor: 'black' }} />
-                        <View style={{ width: 30, height: 30, borderWidth: 4, borderColor: 'black', backgroundColor: 'transparent' }} />
-                        <View style={{ width: 30, height: 30, backgroundColor: 'black' }} />
-                        <View style={{ width: 30, height: 30, backgroundColor: 'black' }} />
-                        <View style={{ width: 30, height: 30, backgroundColor: 'black' }} />
-                        <View style={{ width: 30, height: 30, borderWidth: 4, borderColor: 'black', backgroundColor: 'transparent' }} />
-                      </View>
-                    </View>
-                    <Text style={[styles.qrCodeVal, { fontSize: 13, letterSpacing: 1, marginTop: 12, color: Colors.textSecondary }]}>BD-125487</Text>
-                  </View>
-
-                  <TouchableOpacity style={[styles.actionBtn, { backgroundColor: '#10B981', width: '100%', marginTop: 0 }]} onPress={() => { setSelectedFlash(null); setSelectedDeal(null); setClientTab('reservations'); }}>
-                    <Text style={styles.actionBtnText}>Voir mes réservations</Text>
-                  </TouchableOpacity>
-                </View>
-              </ScrollView>
-            )}
           </SafeAreaView>
         </Modal>
 
