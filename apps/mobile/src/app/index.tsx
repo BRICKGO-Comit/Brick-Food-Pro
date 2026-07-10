@@ -328,7 +328,7 @@ export default function MobileApp() {
                 </TouchableOpacity>
               </View>
 
-              <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
+              <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
                 {/* Image container */}
                 <View style={styles.detailImageContainer}>
                   <Image source={{ uri: selectedFlash ? selectedFlash.image : selectedDeal?.image }} style={styles.detailImage} />
@@ -479,7 +479,7 @@ export default function MobileApp() {
                 <View style={{ width: 24 }} />
               </View>
 
-              <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
+              <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 24, paddingBottom: 60 }} showsVerticalScrollIndicator={false}>
                 <Text style={styles.formTitle}>1. Choisissez votre date</Text>
                 
                 {/* Horizontal scrollable date cards */}
@@ -518,11 +518,31 @@ export default function MobileApp() {
 
                 <Text style={styles.formTitle}>2. Choisissez l'heure</Text>
                 <View style={styles.timeGrid}>
-                  {(selectedFlash ? ['14h00', '15h00', '16h00', '17h00', '18h00'] : ['12h00', '13h00', '14h00', '19h00', '20h00', '21h00']).map(t => (
-                    <TouchableOpacity key={t} style={[styles.timeItem, bookingTime === t && styles.timeActive]} onPress={() => setBookingTime(t)}>
-                      <Text style={[styles.timeItemText, bookingTime === t && { color: 'white', fontWeight: '700' }]}>{t}</Text>
+                  {(selectedFlash ? ['14h00', '15h00', '16h00', '17h00', '18h00'] : ['12h00', '13h00', '14h00', '19h00', '20h00', '21h00']).map(t => {
+                    const isSelected = bookingTime === t;
+                    return (
+                      <TouchableOpacity key={t} style={[styles.timeItem, isSelected && styles.timeActive]} onPress={() => setBookingTime(t)}>
+                        <Text style={[styles.timeItemText, isSelected && { color: 'white', fontWeight: '700' }]}>{t}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+
+                {/* Manual input for custom time selection */}
+                <View style={styles.customDateInputContainer}>
+                  <Ionicons name="time-outline" size={18} color={Colors.textSecondary} style={{ marginRight: 8 }} />
+                  <TextInput
+                    style={styles.customDateInput}
+                    placeholder="Saisir manuellement (ex: 19h30, 20h45)..."
+                    placeholderTextColor="#9CA3AF"
+                    value={bookingTime}
+                    onChangeText={(text) => setBookingTime(text)}
+                  />
+                  {bookingTime.length > 0 && (
+                    <TouchableOpacity onPress={() => setBookingTime('')}>
+                      <Ionicons name="close-circle" size={18} color="#9CA3AF" />
                     </TouchableOpacity>
-                  ))}
+                  )}
                 </View>
 
                 {/* Quantity and comment récupérer for Flash */}
@@ -591,7 +611,7 @@ export default function MobileApp() {
                 <View style={{ width: 24 }} />
               </View>
 
-              <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
+              <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 24, paddingBottom: 60 }} showsVerticalScrollIndicator={false}>
                 {/* Summary Card */}
                 <View style={styles.selectedPackCard}>
                   <Image source={{ uri: selectedFlash ? selectedFlash.image : selectedDeal?.image }} style={styles.selectedPackImg} />
@@ -683,7 +703,7 @@ export default function MobileApp() {
                 <View style={{ width: 24 }} />
               </View>
 
-              <View style={styles.modalBody}>
+              <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 24, paddingBottom: 60 }} showsVerticalScrollIndicator={false}>
                 <View style={{ alignItems: 'center', marginVertical: 20 }}>
                   <Text style={{ fontSize: 13, color: Colors.textSecondary }}>Montant à payer</Text>
                   <Text style={{ fontSize: 28, fontWeight: '900', color: Colors.primary, marginTop: 4 }}>
@@ -741,13 +761,13 @@ export default function MobileApp() {
                   <Ionicons name="shield-checkmark" size={16} color={Colors.success} />
                   <Text style={{ fontSize: 12, color: Colors.textSecondary, fontWeight: '500' }}>Paiement 100% sécurisé</Text>
                 </View>
-              </View>
+              </ScrollView>
             </View>
           )}
 
           {/* STEP 4: SUCCESS */}
           {bookingStep === 4 && (
-            <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingVertical: 40 }} showsVerticalScrollIndicator={false}>
+            <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingVertical: 40, paddingBottom: 60 }} showsVerticalScrollIndicator={false}>
               <View style={{ alignItems: 'center', paddingHorizontal: 24 }}>
                 <View style={styles.successCheckContainer}>
                   <Ionicons name="checkmark" size={40} color="white" />
