@@ -15,6 +15,73 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from './_layout';
 import { Colors } from '../theme/colors';
 
+// Mock datasets for rich UI rendering
+const flashOffers = [
+  {
+    id: 'flash_1',
+    title: 'Menu Burger Duo',
+    restaurant: 'Le QG Lounge',
+    rating: '4.6',
+    priceOld: 12000,
+    priceNew: 7500,
+    timeRemaining: '01h:42m',
+    quantityRemaining: 18,
+    image: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=500&auto=format&fit=crop&q=60',
+    discount: '-37%'
+  },
+  {
+    id: 'flash_2',
+    title: 'Seau de Poulet Kora',
+    restaurant: 'Chez Georges',
+    rating: '4.5',
+    priceOld: 15000,
+    priceNew: 9500,
+    timeRemaining: '02h:15m',
+    quantityRemaining: 8,
+    image: 'https://images.unsplash.com/photo-1569058242253-92a9c755a0ec?w=500&auto=format&fit=crop&q=60',
+    discount: '-36%'
+  },
+  {
+    id: 'flash_3',
+    title: 'Pizza Royale XL',
+    restaurant: 'Pizzeria Bella',
+    rating: '4.7',
+    priceOld: 10000,
+    priceNew: 6500,
+    timeRemaining: '00h:55m',
+    quantityRemaining: 12,
+    image: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?w=500&auto=format&fit=crop&q=60',
+    discount: '-35%'
+  }
+];
+
+const dealOffers = [
+  {
+    id: 'deal_1',
+    title: 'Pack Couple Romantique',
+    restaurant: 'Le Bateau Ivoire',
+    rating: '4.8',
+    priceOld: 35000,
+    priceNew: 25000,
+    validity: 'Jusqu\'au 30 Août',
+    persons: 2,
+    image: 'https://images.unsplash.com/photo-1544025162-d76694265947?w=500&auto=format&fit=crop&q=60',
+    discount: '-30%'
+  },
+  {
+    id: 'deal_2',
+    title: 'Buffet Dimanche en Famille',
+    restaurant: 'Le QG Lounge',
+    rating: '4.6',
+    priceOld: 45000,
+    priceNew: 30000,
+    validity: 'Tous les dimanches',
+    persons: 4,
+    image: 'https://images.unsplash.com/photo-1555244162-803834f70033?w=500&auto=format&fit=crop&q=60',
+    discount: '-33%'
+  }
+];
+
 export default function MobileApp() {
   const { role, setRole, isLoggedIn, setIsLoggedIn } = useAuth();
   
@@ -117,87 +184,169 @@ export default function MobileApp() {
             <Text style={styles.greetingText}>{isLoggedIn ? `Bonjour ${clientName.split(' ')[0]} 👋` : 'Bonjour Invité 👋'}</Text>
             <Text style={styles.locationText}>📍 Cocody, Abidjan ▾</Text>
           </View>
-          {isLoggedIn ? (
-            <TouchableOpacity style={styles.logoutBadge} onPress={() => { setIsLoggedIn(false); setRole('client'); }}>
-              <Text style={styles.logoutText}>Déconnexion</Text>
-            </TouchableOpacity>
-          ) : (
-            <TouchableOpacity style={[styles.logoutBadge, { backgroundColor: Colors.primary }]} onPress={() => { setIsSignup(false); setShowClientAuthModal(true); }}>
-              <Text style={[styles.logoutText, { color: 'white' }]}>Se connecter</Text>
-            </TouchableOpacity>
-          )}
         </View>
 
         {clientTab === 'home' && (
-          <ScrollView style={styles.scrollArea}>
+          <ScrollView style={styles.scrollArea} showsVerticalScrollIndicator={false}>
+            {/* Search Bar */}
+            <View style={styles.searchBarContainer}>
+              <Ionicons name="search-outline" size={18} color={Colors.textSecondary} style={styles.searchIcon} />
+              <TextInput 
+                placeholder="Rechercher un plat, un resto..." 
+                placeholderTextColor={Colors.textSecondary}
+                style={styles.searchInput}
+              />
+              <TouchableOpacity style={styles.filterBtn}>
+                <Ionicons name="options-outline" size={18} color={Colors.primary} />
+              </TouchableOpacity>
+            </View>
+
             {/* Quick Metrics */}
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.metricsScroll}>
-              <View style={[styles.miniCard, { borderLeftColor: '#A855F7' }]}>
-                <Text style={styles.miniCardVal}>12</Text>
-                <Text style={styles.miniCardTitle}>Réservations</Text>
+              <View style={[styles.metricCard, { backgroundColor: '#F3E8FF' }]}>
+                <View style={styles.metricCardHeader}>
+                  <Text style={[styles.metricCardVal, { color: '#6B21A8' }]}>12</Text>
+                  <Ionicons name="calendar-outline" size={18} color="#6B21A8" />
+                </View>
+                <Text style={[styles.metricCardTitle, { color: '#6B21A8' }]}>Réservations</Text>
               </View>
-              <View style={[styles.miniCard, { borderLeftColor: Colors.success }]}>
-                <Text style={styles.miniCardVal}>8</Text>
-                <Text style={styles.miniCardTitle}>Terminées</Text>
+              <View style={[styles.metricCard, { backgroundColor: '#E6F8F3' }]}>
+                <View style={styles.metricCardHeader}>
+                  <Text style={[styles.metricCardVal, { color: '#047857' }]}>8</Text>
+                  <Ionicons name="checkmark-circle-outline" size={18} color="#047857" />
+                </View>
+                <Text style={[styles.metricCardTitle, { color: '#047857' }]}>Terminées</Text>
               </View>
-              <View style={[styles.miniCard, { borderLeftColor: Colors.warning }]}>
-                <Text style={styles.miniCardVal}>3</Text>
-                <Text style={styles.miniCardTitle}>En cours</Text>
+              <View style={[styles.metricCard, { backgroundColor: '#FFF7ED' }]}>
+                <View style={styles.metricCardHeader}>
+                  <Text style={[styles.metricCardVal, { color: '#C2410C' }]}>3</Text>
+                  <Ionicons name="time-outline" size={18} color="#C2410C" />
+                </View>
+                <Text style={[styles.metricCardTitle, { color: '#C2410C' }]}>En cours</Text>
               </View>
-              <View style={[styles.miniCard, { borderLeftColor: Colors.primary }]}>
-                <Text style={styles.miniCardVal}>24 500 F</Text>
-                <Text style={styles.miniCardTitle}>Économies</Text>
+              <View style={[styles.metricCard, { backgroundColor: '#FFEBEB' }]}>
+                <View style={styles.metricCardHeader}>
+                  <Text style={[styles.metricCardVal, { color: Colors.primary }]}>24 500 F</Text>
+                  <Ionicons name="wallet-outline" size={18} color={Colors.primary} />
+                </View>
+                <Text style={[styles.metricCardTitle, { color: Colors.primary }]}>Économies</Text>
               </View>
             </ScrollView>
 
             {/* Brick Flash Section */}
-            <Text style={styles.sectionTitle}>⚡ BRICK FLASH <Text style={styles.sectionSubtitle}>Dernière minute</Text></Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.horizontalScroll}>
-              <View style={styles.dealCard}>
-                <View style={styles.cardBadge}><Text style={styles.badgeText}>-37%</Text></View>
-                <Text style={styles.cardCategory}>BRICK FLASH</Text>
-                <Text style={styles.cardTitle}>Menu Burger Duo</Text>
-                <Text style={styles.cardResto}>Le QG Lounge ⭐ 4,6</Text>
-                <View style={styles.priceRow}>
-                  <Text style={styles.priceOld}>12 000 F</Text>
-                  <Text style={styles.priceNew}>7 500 FCFA</Text>
-                </View>
-                <Text style={styles.cardMeta}>⏳ Fin dans 01h:42m  •  📦 18 restants</Text>
-                <TouchableOpacity style={styles.cardBtn} onPress={() => { setSelectedFlash(true); setBookingStep(1); }}>
-                  <Text style={styles.cardBtnText}>⚡ J'en profite</Text>
-                </TouchableOpacity>
+            <View style={styles.sectionHeaderRow}>
+              <View>
+                <Text style={styles.sectionTitleText}>⚡ BRICK FLASH</Text>
+                <Text style={styles.sectionSubtitleText}>Offres exclusives de dernière minute</Text>
               </View>
+              <TouchableOpacity>
+                <Text style={styles.seeAllText}>Voir tout</Text>
+              </TouchableOpacity>
+            </View>
+            
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.horizontalScroll}>
+              {flashOffers.map((item) => (
+                <View key={item.id} style={styles.dealCard}>
+                  <Image source={{ uri: item.image }} style={styles.cardImage} />
+                  <View style={styles.cardBadge}>
+                    <Text style={styles.badgeText}>{item.discount}</Text>
+                  </View>
+                  <View style={styles.cardContent}>
+                    <Text style={styles.cardCategory}>BRICK FLASH</Text>
+                    <Text style={styles.cardTitle} numberOfLines={1}>{item.title}</Text>
+                    <View style={styles.restoRow}>
+                      <Text style={styles.cardResto}>{item.restaurant}</Text>
+                      <View style={styles.starBadge}>
+                        <Ionicons name="star" size={10} color="#F5A623" />
+                        <Text style={styles.starText}>{item.rating}</Text>
+                      </View>
+                    </View>
+                    <View style={styles.priceRow}>
+                      <Text style={styles.priceOld}>{item.priceOld.toLocaleString()} F</Text>
+                      <Text style={styles.priceNew}>{item.priceNew.toLocaleString()} FCFA</Text>
+                    </View>
+                    <Text style={styles.cardMeta}>⏳ Fin dans {item.timeRemaining}  •  📦 {item.quantityRemaining} restants</Text>
+                    <TouchableOpacity style={styles.cardBtn} onPress={() => { setSelectedFlash(item); setBookingStep(1); }}>
+                      <Text style={styles.cardBtnText}>⚡ J'en profite</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ))}
             </ScrollView>
 
             {/* Brick Deal Section */}
-            <Text style={styles.sectionTitle}>❤️ BRICK DEAL <Text style={styles.sectionSubtitle}>Expériences exclusives</Text></Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.horizontalScroll}>
-              <View style={styles.dealCard}>
-                <View style={[styles.cardBadge, { backgroundColor: '#F59E0B' }]}><Text style={styles.badgeText}>-30%</Text></View>
-                <Text style={[styles.cardCategory, { color: '#F59E0B' }]}>BRICK DEAL</Text>
-                <Text style={styles.cardTitle}>Pack Couple Romantique</Text>
-                <Text style={styles.cardResto}>Le Bateau Ivoire ⭐ 4,8</Text>
-                <View style={styles.priceRow}>
-                  <Text style={styles.priceOld}>35 000 F</Text>
-                  <Text style={styles.priceNew}>25 000 FCFA</Text>
-                </View>
-                <Text style={styles.cardMeta}>👥 Pour 2 pers  •  📅 Jusqu'au 30 Août</Text>
-                <TouchableOpacity style={[styles.cardBtn, { backgroundColor: Colors.primary }]} onPress={() => { setSelectedDeal(true); setBookingStep(1); }}>
-                  <Text style={styles.cardBtnText}>❤️ Je réserve</Text>
-                </TouchableOpacity>
+            <View style={styles.sectionHeaderRow}>
+              <View>
+                <Text style={styles.sectionTitleText}>❤️ BRICK DEAL</Text>
+                <Text style={styles.sectionSubtitleText}>Expériences et formules de groupe</Text>
               </View>
+              <TouchableOpacity>
+                <Text style={styles.seeAllText}>Voir tout</Text>
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.horizontalScroll}>
+              {dealOffers.map((item) => (
+                <View key={item.id} style={styles.dealCard}>
+                  <Image source={{ uri: item.image }} style={styles.cardImage} />
+                  <View style={[styles.cardBadge, { backgroundColor: '#F59E0B' }]}>
+                    <Text style={styles.badgeText}>{item.discount}</Text>
+                  </View>
+                  <View style={styles.cardContent}>
+                    <Text style={[styles.cardCategory, { color: '#F59E0B' }]}>BRICK DEAL</Text>
+                    <Text style={styles.cardTitle} numberOfLines={1}>{item.title}</Text>
+                    <View style={styles.restoRow}>
+                      <Text style={styles.cardResto}>{item.restaurant}</Text>
+                      <View style={styles.starBadge}>
+                        <Ionicons name="star" size={10} color="#F5A623" />
+                        <Text style={styles.starText}>{item.rating}</Text>
+                      </View>
+                    </View>
+                    <View style={styles.priceRow}>
+                      <Text style={styles.priceOld}>{item.priceOld.toLocaleString()} F</Text>
+                      <Text style={styles.priceNew}>{item.priceNew.toLocaleString()} FCFA</Text>
+                    </View>
+                    <Text style={styles.cardMeta}>👥 Pour {item.persons} pers  •  📅 {item.validity}</Text>
+                    <TouchableOpacity style={[styles.cardBtn, { backgroundColor: Colors.primary }]} onPress={() => { setSelectedDeal(item); setBookingStep(1); }}>
+                      <Text style={styles.cardBtnText}>❤️ Je réserve</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ))}
             </ScrollView>
 
             {/* Partners */}
-            <Text style={styles.sectionTitle}>🏪 Restaurants Partenaires</Text>
-            <View style={styles.partnerItem}>
-              <Text style={styles.partnerName}>Le Bateau Ivoire</Text>
-              <Text style={styles.partnerSub}>Cuisine Africaine & Européenne • Cocody 2 Plateaux</Text>
+            <View style={styles.sectionHeaderRow}>
+              <View>
+                <Text style={styles.sectionTitleText}>🏪 Restaurants Partenaires</Text>
+                <Text style={styles.sectionSubtitleText}>Commandez directement auprès de nos partenaires</Text>
+              </View>
             </View>
-            <View style={styles.partnerItem}>
-              <Text style={styles.partnerName}>Le QG Lounge</Text>
-              <Text style={styles.partnerSub}>Fast-Food & Grillades • Cocody Riviera</Text>
+
+            <View style={styles.partnersContainer}>
+              {restaurantsList.map((resto) => (
+                <TouchableOpacity key={resto.id} style={styles.partnerCard}>
+                  <View style={styles.partnerLeft}>
+                    <View style={styles.partnerLogoContainer}>
+                      <Ionicons name="restaurant" size={18} color="white" />
+                    </View>
+                    <View style={styles.partnerInfo}>
+                      <Text style={styles.partnerCardName}>{resto.name}</Text>
+                      <Text style={styles.partnerCardDesc} numberOfLines={1}>{resto.description || 'Spécialités culinaires.'}</Text>
+                      <Text style={styles.partnerCardSub}>📍 {resto.address}</Text>
+                    </View>
+                  </View>
+                  <View style={styles.partnerRight}>
+                    <View style={styles.ratingBadge}>
+                      <Ionicons name="star" size={10} color="#F5A623" />
+                      <Text style={styles.ratingText}>4.7</Text>
+                    </View>
+                    <Text style={styles.partnerCardPhone}>{resto.phone}</Text>
+                  </View>
+                </TouchableOpacity>
+              ))}
             </View>
+            <View style={{ height: 32 }} />
           </ScrollView>
         )}
 
@@ -280,9 +429,6 @@ export default function MobileApp() {
             <Ionicons name={clientTab === 'home' ? 'home' : 'home-outline'} size={22} color={clientTab === 'home' ? Colors.primary : Colors.textSecondary} />
             <Text style={[styles.navBtnText, clientTab === 'home' && styles.activeNavText]}>Accueil</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.scanBtn} onPress={() => Alert.alert('Scanner QR Code', 'Ouverture de la caméra pour scanner le QR Code au restaurant.')}>
-            <Ionicons name="qr-code" size={24} color="white" />
-          </TouchableOpacity>
           <TouchableOpacity style={styles.navBtn} onPress={() => setClientTab('reservations')}>
             <Ionicons name={clientTab === 'reservations' ? 'calendar' : 'calendar-outline'} size={22} color={clientTab === 'reservations' ? Colors.primary : Colors.textSecondary} />
             <Text style={[styles.navBtnText, clientTab === 'reservations' && styles.activeNavText]}>Réservations</Text>
@@ -357,13 +503,13 @@ export default function MobileApp() {
               <View style={styles.modalBody}>
                 <Text style={styles.formTitle}>Résumé de la réservation</Text>
                 <View style={styles.resumeCard}>
-                  <Text style={styles.resumeText}>Offre : {selectedFlash ? 'Menu Burger Duo' : 'Pack Couple Romantique'}</Text>
-                  <Text style={styles.resumeText}>Établissement : {selectedFlash ? 'Le QG Lounge' : 'Le Bateau Ivoire'}</Text>
+                  <Text style={styles.resumeText}>Offre : {selectedFlash ? selectedFlash.title : selectedDeal?.title}</Text>
+                  <Text style={styles.resumeText}>Établissement : {selectedFlash ? selectedFlash.restaurant : selectedDeal?.restaurant}</Text>
                   <Text style={styles.resumeText}>Date : {bookingDate}</Text>
                   <Text style={styles.resumeText}>Heure : {bookingTime}</Text>
                   {selectedFlash && <Text style={styles.resumeText}>Quantité : {bookingQty} x | Mode : {deliveryMode}</Text>}
                   <Text style={[styles.resumeText, { fontWeight: '700', color: Colors.primary }]}>
-                    Total à payer : {selectedFlash ? (7500 * bookingQty).toLocaleString() : '25 000'} FCFA
+                    Total à payer : {selectedFlash ? (selectedFlash.priceNew * bookingQty).toLocaleString() : selectedDeal?.priceNew?.toLocaleString()} FCFA
                   </Text>
                 </View>
 
@@ -1008,78 +1154,107 @@ const styles = StyleSheet.create({
   dealCard: {
     backgroundColor: 'white',
     borderRadius: 16,
-    padding: 16,
     width: 280,
     marginRight: 16,
     borderWidth: 1,
     borderColor: '#EBEBEB',
     shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 5,
-    elevation: 2,
+    shadowOpacity: 0.04,
+    shadowRadius: 10,
+    elevation: 3,
+    overflow: 'hidden',
+  },
+  cardImage: {
+    width: '100%',
+    height: 125,
+    backgroundColor: '#F3F4F6',
+  },
+  cardContent: {
+    padding: 14,
   },
   cardBadge: {
     position: 'absolute',
-    top: 12,
-    right: 12,
+    top: 10,
+    right: 10,
     backgroundColor: Colors.primary,
     paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: 8,
+    borderRadius: 6,
   },
   badgeText: {
     color: 'white',
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '800',
   },
   cardCategory: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '800',
     color: Colors.primary,
     marginBottom: 4,
+    letterSpacing: 0.5,
   },
   cardTitle: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '800',
     color: Colors.textPrimary,
   },
-  cardResto: {
-    fontSize: 13,
-    color: Colors.textSecondary,
+  restoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     marginTop: 2,
+  },
+  cardResto: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    fontWeight: '500',
+  },
+  starBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFBEB',
+    paddingHorizontal: 5,
+    paddingVertical: 2,
+    borderRadius: 4,
+    gap: 3,
+  },
+  starText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#D97706',
   },
   priceRow: {
     flexDirection: 'row',
     alignItems: 'baseline',
-    gap: 8,
-    marginVertical: 12,
+    gap: 6,
+    marginVertical: 10,
   },
   priceOld: {
-    fontSize: 13,
+    fontSize: 12,
     color: Colors.textSecondary,
     textDecorationLine: 'line-through',
   },
   priceNew: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '800',
     color: Colors.primary,
   },
   cardMeta: {
     fontSize: 11,
     color: Colors.textSecondary,
-    marginBottom: 12,
+    marginBottom: 10,
   },
   cardBtn: {
     backgroundColor: '#0F0F10',
-    padding: 12,
-    borderRadius: 10,
+    paddingVertical: 10,
+    borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
   },
   cardBtnText: {
     color: 'white',
     fontWeight: '700',
-    fontSize: 13,
+    fontSize: 12,
   },
 
   // Partners list
@@ -1454,5 +1629,153 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 12,
     fontWeight: '700',
+  },
+
+  // Search Bar styles
+  searchBarContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F3F4F6',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    marginBottom: 16,
+    height: 44,
+  },
+  searchIcon: {
+    marginRight: 6,
+  },
+  searchInput: {
+    flex: 1,
+    height: '100%',
+    color: '#1A1A1A',
+    fontSize: 13,
+    padding: 0,
+  },
+  filterBtn: {
+    padding: 4,
+  },
+
+  // Premium Metric Cards
+  metricCard: {
+    padding: 12,
+    borderRadius: 12,
+    marginRight: 10,
+    width: 110,
+    shadowColor: '#000',
+    shadowOpacity: 0.02,
+    shadowRadius: 5,
+    elevation: 1,
+  },
+  metricCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  metricCardVal: {
+    fontSize: 16,
+    fontWeight: '800',
+  },
+  metricCardTitle: {
+    fontSize: 10,
+    fontWeight: '600',
+  },
+
+  // Section Headers
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 16,
+    marginBottom: 12,
+  },
+  sectionTitleText: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: Colors.textPrimary,
+  },
+  sectionSubtitleText: {
+    fontSize: 11,
+    color: Colors.textSecondary,
+    marginTop: 1,
+  },
+  seeAllText: {
+    fontSize: 12,
+    color: Colors.primary,
+    fontWeight: '700',
+  },
+
+  // Partners Premium Card
+  partnersContainer: {
+    gap: 10,
+  },
+  partnerCard: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    backgroundColor: 'white',
+    borderRadius: 14,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#F0F0F0',
+    shadowColor: '#000',
+    shadowOpacity: 0.03,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  partnerLeft: {
+    flexDirection: 'row',
+    gap: 10,
+    flex: 1,
+  },
+  partnerLogoContainer: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: Colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  partnerInfo: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  partnerCardName: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: Colors.textPrimary,
+  },
+  partnerCardDesc: {
+    fontSize: 11,
+    color: Colors.textSecondary,
+    marginTop: 1,
+  },
+  partnerCardSub: {
+    fontSize: 10,
+    color: Colors.textSecondary,
+    marginTop: 2,
+  },
+  partnerRight: {
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+    paddingVertical: 2,
+  },
+  ratingBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFBEB',
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderRadius: 6,
+    gap: 3,
+  },
+  ratingText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#D97706',
+  },
+  partnerCardPhone: {
+    fontSize: 9,
+    color: Colors.textSecondary,
+    fontWeight: '500',
   },
 });
