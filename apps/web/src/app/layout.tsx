@@ -6,7 +6,10 @@ export const metadata = {
   title: 'Brick Food Pro - Administration',
   description: 'Portail d\'administration centrale pour Brick Food Pro',
   icons: {
-    icon: '/favicon.png',
+    icon: [
+      { url: '/favicon.png', sizes: '32x32', type: 'image/png' },
+      { url: '/favicon.png', sizes: '192x192', type: 'image/png' },
+    ],
   },
 };
 
@@ -22,7 +25,7 @@ export default function RootLayout({
           {/* Sidebar */}
           <aside className="sidebar">
             <div className="logo-container">
-              <img src="/logo.png" alt="Logo" style={{ width: '40px', height: '40px', objectFit: 'contain' }} />
+              <img src="/logo.png" alt="Logo" style={{ width: '60px', height: '60px', objectFit: 'contain' }} />
               <div className="logo-text">
                 BRICK<span>FOOD</span>
               </div>
