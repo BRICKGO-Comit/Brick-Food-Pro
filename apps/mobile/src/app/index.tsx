@@ -1102,7 +1102,9 @@ export default function MobileApp() {
           </TouchableOpacity>
         </View>
 
-          </SafeAreaView>
+      </SafeAreaView>
+    );
+  }
 
         {/* PRO LOGIN MODAL (Agents & Restaurants) */}
         <Modal visible={showProLoginModal} animationType="slide">
