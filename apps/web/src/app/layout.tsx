@@ -5,6 +5,9 @@ import SidebarNav from './components/SidebarNav';
 export const metadata = {
   title: 'Brick Food Pro - Administration',
   description: 'Portail d\'administration centrale pour Brick Food Pro',
+  icons: {
+    icon: '/favicon.png',
+  },
 };
 
 export default function RootLayout({
@@ -19,7 +22,7 @@ export default function RootLayout({
           {/* Sidebar */}
           <aside className="sidebar">
             <div className="logo-container">
-              <div className="logo-mark">B</div>
+              <img src="/logo.png" alt="Logo" style={{ width: '40px', height: '40px', objectFit: 'contain' }} />
               <div className="logo-text">
                 BRICK<span>FOOD</span>
               </div>
