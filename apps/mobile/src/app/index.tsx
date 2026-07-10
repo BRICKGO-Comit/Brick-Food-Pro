@@ -38,6 +38,21 @@ const getFutureFormatted = (daysToAdd: number) => {
   return `${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear()}`;
 };
 
+const getNextDays = (count: number) => {
+  const list = [];
+  const daysOfWeek = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
+  const months = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
+  for (let i = 0; i < count; i++) {
+    const d = new Date();
+    d.setDate(d.getDate() + i);
+    const label = i === 0 ? "Auj." : i === 1 ? "Dem." : `${daysOfWeek[d.getDay()]}.`;
+    const dateStr = `${d.getDate()} ${months[d.getMonth()].substring(0, 4)}.`;
+    const fullStr = i === 0 ? `Aujourd'hui ${d.getDate()} ${months[d.getMonth()]}` : i === 1 ? `Demain ${d.getDate()} ${months[d.getMonth()]}` : `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
+    list.push({ label, dateStr, fullStr });
+  }
+  return list;
+};
+
 // Mock datasets for rich UI rendering
 const flashOffers = [
   {
@@ -466,34 +481,40 @@ export default function MobileApp() {
 
               <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
                 <Text style={styles.formTitle}>1. Choisissez votre date</Text>
-                {selectedFlash ? (
-                  /* Stacked vertical radio group for Flash */
-                  <View style={styles.verticalRadioGroup}>
-                    <TouchableOpacity style={[styles.verticalRadioItem, bookingDate === ('Aujourd\'hui ' + getFrenchDate(0)) && styles.verticalRadioActive]} onPress={() => setBookingDate('Aujourd\'hui ' + getFrenchDate(0))}>
-                      <Text style={[styles.verticalRadioItemText, bookingDate === ('Aujourd\'hui ' + getFrenchDate(0)) && { color: 'white', fontWeight: '700' }]}>Aujourd'hui {getFrenchDate(0)}</Text>
+                
+                {/* Horizontal scrollable date cards */}
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.dateCardScroll} contentContainerStyle={{ gap: 8, paddingBottom: 8 }}>
+                  {getNextDays(8).map((day, idx) => {
+                    const isSelected = bookingDate === day.fullStr;
+                    return (
+                      <TouchableOpacity 
+                        key={idx} 
+                        style={[styles.dateCardOption, isSelected && styles.dateCardOptionActive]} 
+                        onPress={() => setBookingDate(day.fullStr)}
+                      >
+                        <Text style={[styles.dateCardLabel, isSelected && { color: 'white', fontWeight: '700' }]}>{day.label}</Text>
+                        <Text style={[styles.dateCardNumber, isSelected && { color: 'white', fontWeight: '900' }]}>{day.dateStr}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </ScrollView>
+
+                {/* Manual input for custom date selection */}
+                <View style={styles.customDateInputContainer}>
+                  <Ionicons name="calendar-outline" size={18} color={Colors.textSecondary} style={{ marginRight: 8 }} />
+                  <TextInput
+                    style={styles.customDateInput}
+                    placeholder="Saisir manuellement (ex: 20 Décembre)..."
+                    placeholderTextColor="#9CA3AF"
+                    value={bookingDate}
+                    onChangeText={(text) => setBookingDate(text)}
+                  />
+                  {bookingDate.length > 0 && (
+                    <TouchableOpacity onPress={() => setBookingDate('')}>
+                      <Ionicons name="close-circle" size={18} color="#9CA3AF" />
                     </TouchableOpacity>
-                    <TouchableOpacity style={[styles.verticalRadioItem, bookingDate === ('Demain ' + getFrenchDate(1)) && styles.verticalRadioActive]} onPress={() => setBookingDate('Demain ' + getFrenchDate(1))}>
-                      <Text style={[styles.verticalRadioItemText, bookingDate === ('Demain ' + getFrenchDate(1)) && { color: 'white', fontWeight: '700' }]}>Demain {getFrenchDate(1)}</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={[styles.verticalRadioItem, bookingDate === getFrenchDate(2) && styles.verticalRadioActive]} onPress={() => setBookingDate(getFrenchDate(2))}>
-                      <Text style={[styles.verticalRadioItemText, bookingDate === getFrenchDate(2) && { color: 'white', fontWeight: '700' }]}>Autre date ({getFrenchDate(2)})</Text>
-                      <Ionicons name="calendar-outline" size={16} color={bookingDate === getFrenchDate(2) ? 'white' : Colors.textSecondary} />
-                    </TouchableOpacity>
-                  </View>
-                ) : (
-                  /* Side-by-side radio group for Deal */
-                  <View style={styles.radioGroup}>
-                    <TouchableOpacity style={[styles.radioItem, bookingDate === ('Aujourd\'hui ' + getFrenchDate(0)) && styles.radioActive]} onPress={() => setBookingDate('Aujourd\'hui ' + getFrenchDate(0))}>
-                      <Text style={[styles.radioItemText, bookingDate === ('Aujourd\'hui ' + getFrenchDate(0)) && { color: Colors.primary, fontWeight: '700' }]}>Aujourd'hui {getFrenchDate(0)}</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={[styles.radioItem, bookingDate === ('Demain ' + getFrenchDate(1)) && styles.radioActive]} onPress={() => setBookingDate('Demain ' + getFrenchDate(1))}>
-                      <Text style={[styles.radioItemText, bookingDate === ('Demain ' + getFrenchDate(1)) && { color: Colors.primary, fontWeight: '700' }]}>Demain {getFrenchDate(1)}</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={[styles.radioItem, bookingDate === getFrenchDate(2) && styles.radioActive]} onPress={() => setBookingDate(getFrenchDate(2))}>
-                      <Text style={[styles.radioItemText, bookingDate === getFrenchDate(2) && { color: Colors.primary, fontWeight: '700' }]}>Autre date ({getFrenchDate(2)})</Text>
-                    </TouchableOpacity>
-                  </View>
-                )}
+                  )}
+                </View>
 
                 <Text style={styles.formTitle}>2. Choisissez l'heure</Text>
                 <View style={styles.timeGrid}>
@@ -2402,6 +2423,52 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '900',
     color: Colors.primary,
+  },
+  dateCardScroll: {
+    marginVertical: 8,
+  },
+  dateCardOption: {
+    width: 82,
+    height: 68,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    backgroundColor: '#F9FAFB',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+  },
+  dateCardOptionActive: {
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
+  },
+  dateCardLabel: {
+    fontSize: 11,
+    color: Colors.textSecondary,
+    fontWeight: '600',
+  },
+  dateCardNumber: {
+    fontSize: 13,
+    color: '#1A1A1A',
+    fontWeight: '800',
+  },
+  customDateInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    height: 48,
+    backgroundColor: '#FFFFFF',
+    marginTop: 8,
+    marginBottom: 16,
+  },
+  customDateInput: {
+    flex: 1,
+    fontSize: 14,
+    color: '#1A1A1A',
+    paddingVertical: 8,
   },
 
   // Payment Radio Step 3
