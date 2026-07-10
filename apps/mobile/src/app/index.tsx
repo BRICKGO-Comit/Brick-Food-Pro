@@ -1103,7 +1103,6 @@ export default function MobileApp() {
         </View>
 
           </SafeAreaView>
-        </Modal>
 
         {/* PRO LOGIN MODAL (Agents & Restaurants) */}
         <Modal visible={showProLoginModal} animationType="slide">
