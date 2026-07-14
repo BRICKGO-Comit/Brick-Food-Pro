@@ -13,7 +13,7 @@ interface AuthContextType {
   role: UserRole;
   isLoggedIn: boolean;
   loading: boolean;
-  refreshProfile: () => Promise<void>;
+  refreshProfile: (userId?: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -30,12 +30,13 @@ export default function RootLayout() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const refreshProfile = async () => {
-    if (!user) {
+  const refreshProfile = async (userId?: string) => {
+    const targetId = userId ?? user?.id;
+    if (!targetId) {
       setProfile(null);
       return;
     }
-    const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single();
+    const { data } = await supabase.from('profiles').select('*').eq('id', targetId).single();
     setProfile(data as Profile | null);
   };
 

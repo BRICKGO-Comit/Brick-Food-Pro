@@ -478,7 +478,7 @@ export default function MobileApp() {
       } else {
         setRestaurantTab('home');
       }
-      await refreshProfile();
+      await refreshProfile(data.user.id);
       Alert.alert('Connexion Réussie', `Bienvenue dans votre espace ${prof.role === 'agent' ? 'Agent Commercial' : 'Restaurant Partenaire'}.`);
     } catch (err: any) {
       Alert.alert('Erreur de connexion', err.message || 'Identifiants incorrects');
