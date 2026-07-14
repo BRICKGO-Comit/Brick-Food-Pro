@@ -19,7 +19,7 @@ export default function AgentsManagement() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingAgent, setEditingAgent] = useState<any | null>(null);
   const [notification, setNotification] = useState<string | null>(null);
-  const [newAgent, setNewAgent] = useState({ name: '', email: '', phone: '' });
+  const [newAgent, setNewAgent] = useState({ name: '', email: '', password: '', phone: '' });
 
   useEffect(() => {
     if (!authLoading && !user) router.replace('/login');
@@ -64,7 +64,7 @@ export default function AgentsManagement() {
     e.preventDefault();
     const { data, error } = await supabase.auth.signUp({
       email: newAgent.email.trim(),
-      password: 'TempAgent123!',
+      password: newAgent.password,
       options: { data: { full_name: newAgent.name, role: 'agent', phone: newAgent.phone } },
     });
     if (error) {
@@ -72,7 +72,7 @@ export default function AgentsManagement() {
       return;
     }
     showNotification(`Agent "${newAgent.name}" recruté ! Un email de confirmation a été envoyé.`);
-    setNewAgent({ name: '', email: '', phone: '' });
+    setNewAgent({ name: '', email: '', password: '', phone: '' });
     setShowAddModal(false);
     fetchAgents();
   };
@@ -218,6 +218,10 @@ export default function AgentsManagement() {
               <div className="form-group">
                 <label className="form-label">Adresse Email</label>
                 <input type="email" className="form-input" placeholder="ex: agent@brickfood.com" value={newAgent.email} onChange={(e) => setNewAgent({ ...newAgent, email: e.target.value })} required />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Mot de passe</label>
+                <input type="password" className="form-input" placeholder="••••••••" value={newAgent.password} onChange={(e) => setNewAgent({ ...newAgent, password: e.target.value })} required />
               </div>
               <div className="form-group">
                 <label className="form-label">Téléphone</label>
