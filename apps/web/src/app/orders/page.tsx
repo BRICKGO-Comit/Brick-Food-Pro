@@ -1,145 +1,91 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
+import { supabase } from '@/lib/supabase';
+import { useAuth } from '../components/AuthProvider';
+import type { OrderWithRelations, OrderHistoryWithActor } from '@/types/database';
 
-// Mock list of orders
-const initialOrders = [
-  {
-    id: '#BF19339',
-    client: 'Aminata O.',
-    clientPhone: '+225 07 12 34 56 78',
-    restaurant: 'Maquis La Joie',
-    type: 'Brick Flash',
-    offerTitle: 'Menu Poulet Braisé',
-    quantity: 1,
-    amount: 7500,
-    commission: 750,
-    status: 'nouvelle',
-    date: '09 Juillet 2026',
-    time: '15:40',
-    mode: 'retrait',
-    history: [
-      { action: 'creee', time: '15:40', actor: 'Client (Aminata O.)' }
-    ]
-  },
-  {
-    id: '#BF1258',
-    client: 'Jean K.',
-    clientPhone: '+225 05 58 45 12 36',
-    restaurant: 'Toni Fast Food',
-    type: 'Brick Flash',
-    offerTitle: 'Menu Burger Duo',
-    quantity: 1,
-    amount: 7500,
-    commission: 900,
-    status: 'en_preparation',
-    date: '09 Juillet 2026',
-    time: '14:30',
-    mode: 'livraison',
-    history: [
-      { action: 'creee', time: '14:30', actor: 'Client (Jean K.)' },
-      { action: 'acceptee', time: '14:35', actor: 'Restaurant (Toni Fast Food)' }
-    ]
-  },
-  {
-    id: '#BD1257',
-    client: 'Awa D.',
-    clientPhone: '+225 07 06 78 90 12',
-    restaurant: 'Le Bateau Ivoire',
-    type: 'Brick Deal',
-    offerTitle: 'Pack Couple Romantique',
-    quantity: 1,
-    amount: 25000,
-    commission: 2500,
-    status: 'validee', // Confirmée/Prête
-    date: '09 Juillet 2026',
-    time: '14:20',
-    mode: 'retrait',
-    history: [
-      { action: 'creee', time: '14:20', actor: 'Client (Awa D.)' },
-      { action: 'acceptee', time: '14:25', actor: 'Restaurant (Le Bateau Ivoire)' },
-      { action: 'prete', time: '14:50', actor: 'Restaurant (Le Bateau Ivoire)' }
-    ]
-  },
-  {
-    id: '#BF1256',
-    client: 'Marc T.',
-    clientPhone: '+225 01 02 34 56 78',
-    restaurant: 'Chez Georges',
-    type: 'Brick Flash',
-    offerTitle: 'Poulet Braisé + Attiéké',
-    quantity: 2,
-    amount: 12000,
-    commission: 1200,
-    status: 'nouvelle',
-    date: '09 Juillet 2026',
-    time: '14:10',
-    mode: 'retrait',
-    history: [
-      { action: 'creee', time: '14:10', actor: 'Client (Marc T.)' }
-    ]
-  },
-  {
-    id: '#BF1255',
-    client: 'Sophie K.',
-    clientPhone: '+225 07 89 01 23 45',
-    restaurant: 'Le QG Lounge',
-    type: 'Brick Flash',
-    offerTitle: 'Menu Burger Duo',
-    quantity: 2,
-    amount: 15000,
-    commission: 1500,
-    status: 'terminee',
-    date: '09 Juillet 2026',
-    time: '13:40',
-    mode: 'livraison',
-    history: [
-      { action: 'creee', time: '13:40', actor: 'Client (Sophie K.)' },
-      { action: 'acceptee', time: '13:45', actor: 'Restaurant (Le QG Lounge)' },
-      { action: 'prete', time: '14:10', actor: 'Restaurant (Le QG Lounge)' },
-      { action: 'terminee', time: '14:35', actor: 'Livreur (Moussa K.)' }
-    ]
-  }
-];
+const Colors = {
+  primary: '#E30613',
+  success: '#10B981',
+};
 
 export default function OrdersManagement() {
-  const [orders, setOrders] = useState(initialOrders);
+  const { user, loading: authLoading } = useAuth();
+  const router = useRouter();
+  const [orders, setOrders] = useState<OrderWithRelations[]>([]);
   const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
+  const [historyMap, setHistoryMap] = useState<Record<string, OrderHistoryWithActor[]>>({});
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [typeFilter, setTypeFilter] = useState<string>('all');
 
-  const handleUpdateStatus = (id: string, newStatus: string) => {
-    setOrders(prev => prev.map(o => {
-      if (o.id === id) {
-        const now = new Date();
-        const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-        return {
-          ...o,
-          status: newStatus,
-          history: [...o.history, { action: newStatus, time: timeStr, actor: 'Administration Centrale' }]
-        };
-      }
-      return o;
-    }));
-    
-    if (selectedOrder && selectedOrder.id === id) {
-      setSelectedOrder((prev: any) => {
-        const now = new Date();
-        const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-        return {
-          ...prev,
-          status: newStatus,
-          history: [...prev.history, { action: newStatus, time: timeStr, actor: 'Administration Centrale' }]
-        };
+  useEffect(() => {
+    if (!authLoading && !user) router.replace('/login');
+  }, [authLoading, user, router]);
+
+  const fetchOrders = useCallback(async () => {
+    const { data } = await supabase
+      .from('orders')
+      .select('*, profiles!client_id(*), restaurants(*), offers(*)')
+      .order('created_at', { ascending: false });
+    setOrders((data ?? []) as unknown as OrderWithRelations[]);
+  }, []);
+
+  // Charge l'historique d'une commande
+  const fetchHistory = useCallback(async (orderId: string) => {
+    const { data } = await supabase
+      .from('order_history')
+      .select('*, profiles!actor_id(full_name)')
+      .eq('order_id', orderId)
+      .order('created_at', { ascending: true });
+    setHistoryMap((prev) => ({ ...prev, [orderId]: (data ?? []) as unknown as OrderHistoryWithActor[] }));
+  }, []);
+
+  useEffect(() => {
+    if (user) fetchOrders();
+  }, [user, fetchOrders]);
+
+  useEffect(() => {
+    if (selectedOrder) fetchHistory(selectedOrder.id);
+  }, [selectedOrder, fetchHistory]);
+
+  const handleUpdateStatus = async (id: string, newStatus: string) => {
+    const { error: updateError } = await supabase.from('orders').update({ status: newStatus }).eq('id', id);
+    if (updateError) {
+      alert(`Erreur: ${updateError.message}`);
+      return;
+    }
+
+    // Insère dans l'historique
+    if (user) {
+      await supabase.from('order_history').insert({
+        order_id: id,
+        action: newStatus,
+        actor_id: user.id,
       });
+    }
+
+    fetchOrders();
+    if (selectedOrder?.id === id) {
+      fetchHistory(id);
+      // Refresh selected order locally
+      setSelectedOrder((prev: any) => (prev ? { ...prev, status: newStatus } : prev));
     }
   };
 
-  const filteredOrders = orders.filter(order => {
+  const filteredOrders = orders.filter((order) => {
     const matchStatus = statusFilter === 'all' || order.status === statusFilter;
-    const matchType = typeFilter === 'all' || (typeFilter === 'flash' && order.type === 'Brick Flash') || (typeFilter === 'deal' && order.type === 'Brick Deal');
+    const offerType = order.offers?.type;
+    const matchType = typeFilter === 'all' || (typeFilter === 'flash' && offerType === 'flash') || (typeFilter === 'deal' && offerType === 'deal');
     return matchStatus && matchType;
   });
+
+  const formatDate = (iso: string) => {
+    const d = new Date(iso);
+    return d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' }) + ' ' +
+      d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+  };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
@@ -152,18 +98,18 @@ export default function OrdersManagement() {
       <div className="panel" style={{ flexDirection: 'row', gap: '16px', flexWrap: 'wrap', padding: '16px 28px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <span style={{ fontSize: '13px', fontWeight: '600' }}>Statut :</span>
-          <select className="form-input" style={{ padding: '6px 12px' }} value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
+          <select className="form-input" style={{ padding: '6px 12px' }} value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
             <option value="all">Toutes</option>
             <option value="nouvelle">Nouvelles</option>
             <option value="en_preparation">En préparation</option>
-            <option value="validee">Prêtes / Confirmées</option>
+            <option value="prete">Prêtes</option>
             <option value="terminee">Terminées</option>
+            <option value="livree">Livrées</option>
           </select>
         </div>
-
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <span style={{ fontSize: '13px', fontWeight: '600' }}>Type d'offre :</span>
-          <select className="form-input" style={{ padding: '6px 12px' }} value={typeFilter} onChange={e => setTypeFilter(e.target.value)}>
+          <select className="form-input" style={{ padding: '6px 12px' }} value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>
             <option value="all">Tous</option>
             <option value="flash">⚡ Brick Flash</option>
             <option value="deal">❤️ Brick Deal</option>
@@ -171,102 +117,112 @@ export default function OrdersManagement() {
         </div>
       </div>
 
-      {/* Grid container to support sidebar details */}
       <div style={{ display: 'grid', gridTemplateColumns: selectedOrder ? '2fr 1fr' : '1fr', gap: '24px', transition: 'var(--transition)' }}>
-        
-        {/* Table Panel */}
         <div className="panel">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>ID Commande</th>
-                <th>Client</th>
-                <th>Restaurant</th>
-                <th>Offre / Qté</th>
-                <th>Montant</th>
-                <th>Commission</th>
-                <th>Statut</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredOrders.map(order => (
-                <tr key={order.id} style={{ cursor: 'pointer' }} onClick={() => setSelectedOrder(order)}>
-                  <td>
-                    <div style={{ fontWeight: '700', color: 'var(--primary)' }}>{order.id}</div>
-                    <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>{order.date} {order.time}</div>
-                  </td>
-                  <td>{order.client}</td>
-                  <td>{order.restaurant}</td>
-                  <td>
-                    <div style={{ fontWeight: '600' }}>{order.offerTitle}</div>
-                    <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Qté: {order.quantity} | {order.mode}</div>
-                  </td>
-                  <td style={{ fontWeight: '700' }}>{order.amount.toLocaleString()} F</td>
-                  <td style={{ fontWeight: '700', color: 'var(--success)' }}>+{order.commission.toLocaleString()} F</td>
-                  <td>
-                    <span className={`badge ${order.status}`}>
-                      {order.status === 'nouvelle' && 'Nouvelle'}
-                      {order.status === 'en_preparation' && 'En préparation'}
-                      {order.status === 'validee' && 'Confirmée'}
-                      {order.status === 'terminee' && 'Terminée'}
-                    </span>
-                  </td>
+          {filteredOrders.length === 0 ? (
+            <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text-secondary)' }}>
+              Aucune commande trouvée
+            </div>
+          ) : (
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>ID Commande</th>
+                  <th>Client</th>
+                  <th>Restaurant</th>
+                  <th>Offre / Qté</th>
+                  <th>Montant</th>
+                  <th>Commission</th>
+                  <th>Statut</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {filteredOrders.map((order) => (
+                  <tr key={order.id} style={{ cursor: 'pointer' }} onClick={() => setSelectedOrder(order)}>
+                    <td>
+                      <div style={{ fontWeight: '700', color: 'var(--primary)' }}>{order.reservation_code}</div>
+                      <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>{formatDate(order.created_at)}</div>
+                    </td>
+                    <td>{order.profiles?.full_name ?? '—'}</td>
+                    <td>{order.restaurants?.name ?? '—'}</td>
+                    <td>
+                      <div style={{ fontWeight: '600' }}>{order.offers?.title ?? '—'}</div>
+                      <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Qté: {order.quantity} | {order.delivery_mode}</div>
+                    </td>
+                    <td style={{ fontWeight: '700' }}>{Number(order.total_amount).toLocaleString('fr-FR')} F</td>
+                    <td style={{ fontWeight: '700', color: 'var(--success)' }}>+{Number(order.commission_amount).toLocaleString('fr-FR')} F</td>
+                    <td>
+                      <span className={`badge ${order.status}`}>
+                        {order.status === 'nouvelle' && 'Nouvelle'}
+                        {order.status === 'en_preparation' && 'En préparation'}
+                        {order.status === 'prete' && 'Prête'}
+                        {order.status === 'terminee' && 'Terminée'}
+                        {order.status === 'livree' && 'Livrée'}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
 
-        {/* Details Sidebar panel */}
         {selectedOrder && (
           <div className="panel" style={{ animation: 'slideIn 0.3s' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div className="panel-title" style={{ fontSize: '16px' }}>Détail Commande {selectedOrder.id}</div>
+              <div className="panel-title" style={{ fontSize: '16px' }}>Détail {selectedOrder.reservation_code}</div>
               <button style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '18px' }} onClick={() => setSelectedOrder(null)}>✕</button>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', fontSize: '13px' }}>
               <div style={{ borderBottom: '1px solid var(--border)', paddingBottom: '12px' }}>
-                <Text style={{ fontWeight: '700', fontSize: '14px', marginBottom: '4px', display: 'block' }}>Client</Text>
-                <Text style={{ display: 'block' }}>Nom : {selectedOrder.client}</Text>
-                <Text style={{ display: 'block', color: 'var(--text-secondary)' }}>Tél : {selectedOrder.clientPhone}</Text>
+                <span style={{ fontWeight: '700', fontSize: '14px', marginBottom: '4px', display: 'block' }}>Client</span>
+                <span style={{ display: 'block' }}>Nom : {selectedOrder.profiles?.full_name ?? '—'}</span>
+                <span style={{ display: 'block', color: 'var(--text-secondary)' }}>Tél : {selectedOrder.profiles?.phone ?? '—'}</span>
+                <span style={{ display: 'block', color: 'var(--text-secondary)' }}>Email : {selectedOrder.profiles?.email ?? '—'}</span>
               </div>
 
               <div style={{ borderBottom: '1px solid var(--border)', paddingBottom: '12px' }}>
-                <Text style={{ fontWeight: '700', fontSize: '14px', marginBottom: '4px', display: 'block' }}>Détails Offre</Text>
-                <Text style={{ display: 'block', fontWeight: '600' }}>{selectedOrder.offerTitle}</Text>
-                <Text style={{ display: 'block' }}>Restaurant : {selectedOrder.restaurant}</Text>
-                <Text style={{ display: 'block' }}>Type : {selectedOrder.type}</Text>
-                <Text style={{ display: 'block' }}>Qté : {selectedOrder.quantity} | Mode : {selectedOrder.mode}</Text>
+                <span style={{ fontWeight: '700', fontSize: '14px', marginBottom: '4px', display: 'block' }}>Détails Offre</span>
+                <span style={{ display: 'block', fontWeight: '600' }}>{selectedOrder.offers?.title ?? '—'}</span>
+                <span style={{ display: 'block' }}>Restaurant : {selectedOrder.restaurants?.name ?? '—'}</span>
+                <span style={{ display: 'block' }}>Type : {selectedOrder.offers?.type === 'flash' ? 'Brick Flash' : 'Brick Deal'}</span>
+                <span style={{ display: 'block' }}>Qté : {selectedOrder.quantity} | Mode : {selectedOrder.delivery_mode}</span>
               </div>
 
               <div style={{ borderBottom: '1px solid var(--border)', paddingBottom: '12px' }}>
-                <Text style={{ fontWeight: '700', fontSize: '14px', marginBottom: '4px', display: 'block' }}>Finances</Text>
-                <Text style={{ display: 'block', fontWeight: '700', color: 'var(--primary)', fontSize: '14px' }}>Montant : {selectedOrder.amount.toLocaleString()} FCFA</Text>
-                <Text style={{ display: 'block', fontWeight: '700', color: 'var(--success)' }}>Commission : +{selectedOrder.commission.toLocaleString()} FCFA</Text>
+                <span style={{ fontWeight: '700', fontSize: '14px', marginBottom: '4px', display: 'block' }}>Finances</span>
+                <span style={{ display: 'block', fontWeight: '700', color: 'var(--primary)', fontSize: '14px' }}>Montant : {Number(selectedOrder.total_amount).toLocaleString('fr-FR')} FCFA</span>
+                <span style={{ display: 'block', fontWeight: '700', color: 'var(--success)' }}>Commission : +{Number(selectedOrder.commission_amount).toLocaleString('fr-FR')} FCFA</span>
+                <span style={{ display: 'block', color: 'var(--text-secondary)' }}>Paiement : {selectedOrder.payment_status}</span>
               </div>
 
               <div>
-                <Text style={{ fontWeight: '700', fontSize: '14px', marginBottom: '8px', display: 'block' }}>Historique de Suivi</Text>
+                <span style={{ fontWeight: '700', fontSize: '14px', marginBottom: '8px', display: 'block' }}>Historique de Suivi</span>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', borderLeft: '2px solid var(--border)', paddingLeft: '12px', marginLeft: '6px' }}>
-                  {selectedOrder.history.map((h: any, index: number) => (
-                    <div key={index} style={{ position: 'relative' }}>
+                  {(historyMap[selectedOrder.id] ?? []).map((h) => (
+                    <div key={h.id} style={{ position: 'relative' }}>
                       <span style={{ position: 'absolute', left: '-17px', top: '4px', width: '8px', height: '8px', borderRadius: '50%', backgroundColor: Colors.primary }}></span>
-                      <Text style={{ fontWeight: '700', display: 'block' }}>
+                      <span style={{ fontWeight: '700', display: 'block' }}>
                         {h.action === 'creee' && 'Commande créée'}
-                        {h.action === 'acceptee' && 'Acceptée par le resto'}
                         {h.action === 'en_preparation' && 'En préparation'}
                         {h.action === 'prete' && 'Marquée prête'}
                         {h.action === 'terminee' && 'Marquée terminée'}
-                      </Text>
-                      <Text style={{ fontSize: '11px', color: 'var(--text-secondary)', display: 'block' }}>Par {h.actor} à {h.time}</Text>
+                        {h.action === 'livree' && 'Livrée'}
+                        {!['creee', 'en_preparation', 'prete', 'terminee', 'livree'].includes(h.action) && h.action}
+                      </span>
+                      <span style={{ fontSize: '11px', color: 'var(--text-secondary)', display: 'block' }}>
+                        Par {h.profiles?.full_name ?? 'Système'} · {formatDate(h.created_at)}
+                      </span>
                     </div>
                   ))}
+                  {(historyMap[selectedOrder.id] ?? []).length === 0 && (
+                    <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Chargement de l'historique...</span>
+                  )}
                 </div>
               </div>
 
-              {/* Action overriding buttons */}
-              {selectedOrder.status !== 'terminee' && (
+              {selectedOrder.status !== 'terminee' && selectedOrder.status !== 'livree' && (
                 <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
                   {selectedOrder.status === 'nouvelle' && (
                     <button className="btn btn-primary" style={{ flex: '1', fontSize: '12px' }} onClick={() => handleUpdateStatus(selectedOrder.id, 'en_preparation')}>
@@ -278,7 +234,7 @@ export default function OrdersManagement() {
                       Marquer Prête
                     </button>
                   )}
-                  {selectedOrder.status === 'validee' && (
+                  {selectedOrder.status === 'prete' && (
                     <button className="btn btn-primary" style={{ flex: '1', fontSize: '12px', backgroundColor: 'black' }} onClick={() => handleUpdateStatus(selectedOrder.id, 'terminee')}>
                       Terminer
                     </button>
@@ -289,17 +245,13 @@ export default function OrdersManagement() {
           </div>
         )}
       </div>
+
+      <style jsx global>{`
+        @keyframes slideIn {
+          from { transform: translateX(20px); opacity: 0; }
+          to { transform: translateX(0); opacity: 1; }
+        }
+      `}</style>
     </div>
   );
-}
-
-// Minimal placeholder colors mapping inside next component
-const Colors = {
-  primary: '#E30613',
-  success: '#10B981',
-};
-
-// Fake Text mapping for Next wrapper
-function Text({ children, style }: any) {
-  return <span style={style}>{children}</span>;
 }

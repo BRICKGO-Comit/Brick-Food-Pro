@@ -1,14 +1,19 @@
-import React, { createContext, useState, useContext } from 'react';
+import React, { createContext, useState, useContext, useEffect } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Slot } from 'expo-router';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { Session, User } from '@supabase/supabase-js';
+import { supabase } from '../lib/supabase';
+import type { Profile, UserRole } from '../types/database';
 
-// Create a mock authentication context for roles testing
 interface AuthContextType {
-  role: 'client' | 'agent' | 'restaurant';
-  setRole: (role: 'client' | 'agent' | 'restaurant') => void;
+  user: User | null;
+  session: Session | null;
+  profile: Profile | null;
+  role: UserRole;
   isLoggedIn: boolean;
-  setIsLoggedIn: (login: boolean) => void;
+  loading: boolean;
+  refreshProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -20,11 +25,65 @@ export function useAuth() {
 }
 
 export default function RootLayout() {
-  const [role, setRole] = useState<'client' | 'agent' | 'restaurant'>('client');
-  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
+  const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const refreshProfile = async () => {
+    if (!user) {
+      setProfile(null);
+      return;
+    }
+    const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single();
+    setProfile(data as Profile | null);
+  };
+
+  useEffect(() => {
+    // Session initiale
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      if (session?.user) {
+        supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .single()
+          .then(({ data }) => {
+            setProfile(data as Profile | null);
+            setLoading(false);
+          });
+      } else {
+        setLoading(false);
+      }
+    });
+
+    // Écoute des changements d'auth
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      if (session?.user) {
+        supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .single()
+          .then(({ data }) => setProfile(data as Profile | null));
+      } else {
+        setProfile(null);
+      }
+      setLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const role: UserRole = profile?.role ?? 'client';
+  const isLoggedIn = !!user;
 
   return (
-    <AuthContext.Provider value={{ role, setRole, isLoggedIn, setIsLoggedIn }}>
+    <AuthContext.Provider value={{ user, session, profile, role, isLoggedIn, loading, refreshProfile }}>
       <SafeAreaProvider>
         <View style={styles.container}>
           <Slot />

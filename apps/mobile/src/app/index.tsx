@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  StyleSheet, 
-  Text, 
-  View, 
-  Image, 
-  TouchableOpacity, 
-  ScrollView, 
-  TextInput, 
+import {
+  StyleSheet,
+  Text,
+  View,
+  Image,
+  TouchableOpacity,
+  ScrollView,
+  TextInput,
   Modal,
   Alert
 } from 'react-native';
@@ -14,6 +14,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from './_layout';
 import { Colors } from '../theme/colors';
+import { supabase } from '../lib/supabase';
+import type { OfferWithRelations, OrderWithRelations } from '../types/database';
 
 // Helper functions for dynamic French dates
 const getFrenchDate = (daysToAdd: number) => {
@@ -53,137 +55,47 @@ const getNextDays = (count: number) => {
   return list;
 };
 
-// Mock datasets for rich UI rendering
-const flashOffers = [
-  {
-    id: 'flash_1',
-    title: 'Menu Burger Duo',
-    restaurant: 'Le QG Lounge',
-    rating: '4.6',
-    priceOld: 12000,
-    priceNew: 7500,
-    timeRemaining: '01h:42m',
-    quantityRemaining: 18,
-    image: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=500&auto=format&fit=crop&q=60',
-    discount: '-37%',
-    description: '1 Burger au choix + Frites + 1 Boisson 33cl',
-    startHour: '14h00',
-    endHour: '17h00',
-    countdownHours: 1,
-    countdownMinutes: 42,
-    countdownSeconds: 18
-  },
-  {
-    id: 'flash_2',
-    title: 'Seau de Poulet Kora',
-    restaurant: 'Chez Georges',
-    rating: '4.5',
-    priceOld: 15000,
-    priceNew: 9500,
-    timeRemaining: '02h:15m',
-    quantityRemaining: 8,
-    image: 'https://images.unsplash.com/photo-1569058242253-92a9c755a0ec?w=500&auto=format&fit=crop&q=60',
-    discount: '-36%',
-    description: '10 morceaux de poulet + frites familiales + boisson 1L',
-    startHour: '12h00',
-    endHour: '15h00',
-    countdownHours: 2,
-    countdownMinutes: 15,
-    countdownSeconds: 0
-  },
-  {
-    id: 'flash_3',
-    title: 'Pizza Royale XL',
-    restaurant: 'Pizzeria Bella',
-    rating: '4.7',
-    priceOld: 10000,
-    priceNew: 6500,
-    timeRemaining: '00h:55m',
-    quantityRemaining: 12,
-    image: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?w=500&auto=format&fit=crop&q=60',
-    discount: '-35%',
-    description: 'Pizza Royale diamètre 40cm (jambon, champignons, fromage)',
-    startHour: '18h00',
-    endHour: '21h00',
-    countdownHours: 0,
-    countdownMinutes: 55,
-    countdownSeconds: 0
-  }
-];
-
-const dealOffers = [
-  {
-    id: 'deal_1',
-    title: 'Pack Couple Romantique',
-    restaurant: 'Le Bateau Ivoire',
-    rating: '4.8',
-    priceOld: 35000,
-    priceNew: 25000,
-    validity: 'Jusqu\'au 30 Août',
-    persons: 2,
-    image: 'https://images.unsplash.com/photo-1544025162-d76694265947?w=500&auto=format&fit=crop&q=60',
-    discount: '-30%',
-    inclusions: [
-      'Entrée assortie',
-      '2 Plats au choix',
-      '2 Boissons',
-      '1 Dessert',
-      'Décoration de table'
-    ]
-  },
-  {
-    id: 'deal_2',
-    title: 'Buffet Dimanche en Famille',
-    restaurant: 'Le QG Lounge',
-    rating: '4.6',
-    priceOld: 45000,
-    priceNew: 30000,
-    validity: 'Tous les dimanches',
-    persons: 4,
-    image: 'https://images.unsplash.com/photo-1555244162-803834f70033?w=500&auto=format&fit=crop&q=60',
-    discount: '-33%',
-    inclusions: [
-      'Buffet chaud & froid à volonté',
-      'Boissons locales gratuites',
-      'Espace de jeux pour enfants',
-      'Animation musicale live'
-    ]
-  }
-];
+// Placeholder image par défaut
+const DEFAULT_IMG = 'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=500&auto=format&fit=crop&q=60';
 
 export default function MobileApp() {
-  const { role, setRole, isLoggedIn, setIsLoggedIn } = useAuth();
-  
+  const { user, profile, role, isLoggedIn, refreshProfile } = useAuth();
+
   // Navigation tabs states for each role
   const [clientTab, setClientTab] = useState<'home' | 'reservations' | 'profile'>('home');
   const [agentTab, setAgentTab] = useState<'home' | 'restaurants' | 'proposals' | 'profile'>('home');
   const [restaurantTab, setRestaurantTab] = useState<'home' | 'orders' | 'profile'>('home');
 
+  // Data states (chargés depuis Supabase)
+  const [flashOffers, setFlashOffers] = useState<any[]>([]);
+  const [dealOffers, setDealOffers] = useState<any[]>([]);
+  const [restaurantsList, setRestaurantsList] = useState<any[]>([]);
+  const [clientOrders, setClientOrders] = useState<any[]>([]);
+  const [agentRestaurants, setAgentRestaurants] = useState<any[]>([]);
+  const [agentStats, setAgentStats] = useState({ commission: 0, ordersCount: 0 });
+  const [restaurantOrders, setRestaurantOrders] = useState<any[]>([]);
+
   // Checkout modal states
   const [selectedFlash, setSelectedFlash] = useState<any | null>(null);
   const [selectedDeal, setSelectedDeal] = useState<any | null>(null);
-  const [bookingStep, setBookingStep] = useState<number>(1); // 1: Date/Time, 2: Resume, 3: Payment, 4: Success
+  const [bookingStep, setBookingStep] = useState<number>(1);
 
   // Auth flow states
   const [showClientAuthModal, setShowClientAuthModal] = useState(false);
   const [showProLoginModal, setShowProLoginModal] = useState(false);
   const [isSignup, setIsSignup] = useState(false);
+  const [authLoading, setAuthLoading] = useState(false);
 
   // Client info state
-  const [clientName, setClientName] = useState('Eric Kouassi');
+  const [clientName, setClientName] = useState('');
   const [clientEmail, setClientEmail] = useState('');
   const [clientPassword, setClientPassword] = useState('');
-  const [clientPhone, setClientPhone] = useState('+225 07 45 89 12 36');
+  const [clientPhone, setClientPhone] = useState('');
 
   // Pro info state
   const [proEmail, setProEmail] = useState('');
   const [proPassword, setProPassword] = useState('');
 
-  // Local state for registered restaurants
-  const [restaurantsList, setRestaurantsList] = useState([
-    { id: 'resto_001', name: 'Le Bateau Ivoire', address: 'Cocody 2 Plateaux', phone: '+225 07 58 45 12 36', description: 'Spécialités ivoiriennes.', ownerEmail: 'owner.bateau@email.com' },
-    { id: 'resto_002', name: 'Le QG Lounge', address: 'Riviera Palmeraie', phone: '+225 07 01 02 03 04', description: 'Grillades et bar lounge.', ownerEmail: 'owner.qg@email.com' }
-  ]);
   const [showAddRestoModal, setShowAddRestoModal] = useState(false);
   const [newRestoName, setNewRestoName] = useState('');
   const [newRestoAddress, setNewRestoAddress] = useState('');
@@ -191,7 +103,7 @@ export default function MobileApp() {
   const [newRestoDesc, setNewRestoDesc] = useState('');
   const [newRestoOwnerEmail, setNewRestoOwnerEmail] = useState('');
   const [newRestoOwnerPassword, setNewRestoOwnerPassword] = useState('');
-  
+
   // Form booking selections
   const [bookingDate, setBookingDate] = useState<string>('');
   const [bookingTime, setBookingTime] = useState<string>('');
@@ -200,17 +112,184 @@ export default function MobileApp() {
   const [paymentMethod, setPaymentMethod] = useState<'wave' | 'orange' | 'mtn' | 'cb'>('wave');
 
   // Real-time details state variables
-  const [reservationId, setReservationId] = useState<string>('BD125487');
-  const [countdown, setCountdown] = useState({ hours: 1, minutes: 42, seconds: 18 });
+  const [reservationId, setReservationId] = useState<string>('');
+  const [countdown, setCountdown] = useState({ hours: 0, minutes: 0, seconds: 0 });
+
+  // Agent proposal state
+  const [proposalType, setProposalType] = useState<'flash' | 'deal'>('flash');
+  const [newProp, setNewProp] = useState({
+    restaurant: '',
+    restaurantId: '',
+    title: '',
+    description: '',
+    price_normal: '',
+    price_promo: '',
+    quantity: '10',
+    pack_type: 'couple',
+    persons: '2',
+    prestations: '',
+  });
+
+  // --- CHARGEMENT DES DONNÉES DEPUIS SUPABASE ---
+
+  // Charge les offres publiées (page d'accueil client)
+  useEffect(() => {
+    const loadOffers = async () => {
+      const { data } = await supabase
+        .from('offers')
+        .select('*, restaurants(*)')
+        .eq('is_published', true)
+        .order('created_at', { ascending: false });
+
+      const now = new Date();
+      const flash: any[] = [];
+      const deals: any[] = [];
+
+      (data ?? []).forEach((o: any) => {
+        const restoName = o.restaurants?.name ?? 'Restaurant';
+        if (o.type === 'flash') {
+          // Calcule le countdown depuis end_timestamp
+          const end = o.end_timestamp ? new Date(o.end_timestamp) : null;
+          const diffMs = end ? Math.max(0, end.getTime() - now.getTime()) : 0;
+          const hours = Math.floor(diffMs / 3600000);
+          const minutes = Math.floor((diffMs % 3600000) / 60000);
+          const seconds = Math.floor((diffMs % 60000) / 1000);
+          const oldP = Number(o.price_normal ?? 0);
+          const newP = Number(o.price_promo ?? 0);
+          const discount = oldP > 0 ? `-${Math.round((1 - newP / oldP) * 100)}%` : '';
+          flash.push({
+            id: o.id,
+            title: o.title,
+            restaurant: restoName,
+            restaurantId: o.restaurant_id,
+            agentId: o.agent_id,
+            rating: '4.5',
+            priceOld: oldP,
+            priceNew: newP,
+            quantityRemaining: o.quantity_remaining ?? 0,
+            image: o.photos?.[0] || DEFAULT_IMG,
+            discount,
+            description: o.description,
+            startHour: o.start_timestamp ? new Date(o.start_timestamp).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : '',
+            endHour: end ? end.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : '',
+            countdownHours: hours,
+            countdownMinutes: minutes,
+            countdownSeconds: seconds,
+            commissionRate: Number(o.commission_rate ?? 10),
+          });
+        } else if (o.type === 'deal') {
+          const oldP = Number(o.price ?? 0) * 1.3; // estimation
+          const newP = Number(o.price ?? 0);
+          const discount = `-${Math.round((1 - newP / oldP) * 100)}%`;
+          deals.push({
+            id: o.id,
+            title: o.title,
+            restaurant: restoName,
+            restaurantId: o.restaurant_id,
+            agentId: o.agent_id,
+            rating: '4.8',
+            priceOld: Math.round(oldP),
+            priceNew: newP,
+            validity: o.available_date ? `Disponible le ${new Date(o.available_date).toLocaleDateString('fr-FR')}` : '',
+            persons: o.capacity_persons ?? 2,
+            image: o.photos?.[0] || DEFAULT_IMG,
+            discount,
+            inclusions: o.description ? o.description.split(',').map((s: string) => s.trim()).filter(Boolean) : [],
+            commissionRate: Number(o.commission_rate ?? 10),
+          });
+        }
+      });
+
+      setFlashOffers(flash);
+      setDealOffers(deals);
+    };
+    loadOffers();
+  }, []);
+
+  // Charge les restaurants (page d'accueil client + agent)
+  useEffect(() => {
+    const loadRestaurants = async () => {
+      const { data } = await supabase.from('restaurants').select('*').order('name');
+      setRestaurantsList((data ?? []).map((r: any) => ({
+        id: r.id,
+        name: r.name,
+        address: r.address,
+        phone: r.phone,
+        description: r.description ?? '',
+        ownerEmail: '',
+      })));
+    };
+    loadRestaurants();
+  }, []);
+
+  // Charge les réservations du client connecté
+  useEffect(() => {
+    if (!isLoggedIn || role !== 'client' || !user) {
+      setClientOrders([]);
+      return;
+    }
+    const loadClientOrders = async () => {
+      const { data } = await supabase
+        .from('orders')
+        .select('*, offers(*), restaurants(*)')
+        .eq('client_id', user.id)
+        .order('created_at', { ascending: false });
+      setClientOrders(data ?? []);
+    };
+    loadClientOrders();
+  }, [isLoggedIn, role, user]);
+
+  // Charge les données de l'agent
+  useEffect(() => {
+    if (!isLoggedIn || role !== 'agent' || !user) return;
+    const loadAgentData = async () => {
+      const { data: restos } = await supabase
+        .from('restaurants')
+        .select('*')
+        .eq('agent_id', user.id)
+        .order('name');
+      setAgentRestaurants(restos ?? []);
+
+      const { data: orders } = await supabase
+        .from('orders')
+        .select('commission_amount')
+        .eq('agent_id', user.id);
+      const commission = (orders ?? []).reduce((s: number, o: any) => s + Number(o.commission_amount || 0), 0);
+      setAgentStats({ commission, ordersCount: orders?.length ?? 0 });
+
+      // Pré-remplit le restaurant par défaut pour les propositions
+      if (restos && restos.length > 0) {
+        setNewProp((prev) => ({ ...prev, restaurant: restos[0].name, restaurantId: restos[0].id }));
+      }
+    };
+    loadAgentData();
+  }, [isLoggedIn, role, user]);
+
+  // Charge les commandes du restaurant
+  useEffect(() => {
+    if (!isLoggedIn || role !== 'restaurant' || !profile?.restaurant_id) {
+      setRestaurantOrders([]);
+      return;
+    }
+    const loadRestaurantOrders = async () => {
+      const { data } = await supabase
+        .from('orders')
+        .select('*, profiles!client_id(full_name, phone), offers(title)')
+        .eq('restaurant_id', profile.restaurant_id)
+        .order('created_at', { ascending: false });
+      setRestaurantOrders(data ?? []);
+    };
+    loadRestaurantOrders();
+  }, [isLoggedIn, role, profile]);
 
   // Ticking countdown timer for Flash offers
   useEffect(() => {
     let timer: any;
     if (selectedFlash) {
       setCountdown({
-        hours: selectedFlash.countdownHours || 1,
-        minutes: selectedFlash.countdownMinutes || 42,
-        seconds: selectedFlash.countdownSeconds || 18
+        hours: selectedFlash.countdownHours || 0,
+        minutes: selectedFlash.countdownMinutes || 0,
+        seconds: selectedFlash.countdownSeconds || 0,
       });
 
       timer = setInterval(() => {
@@ -240,7 +319,8 @@ export default function MobileApp() {
     };
   }, [selectedFlash]);
 
-  // Action helpers to initialize date/time/resID dynamically
+  // --- HANDLERS ---
+
   const handleSelectFlash = (item: any) => {
     setSelectedFlash(item);
     setBookingStep(0);
@@ -248,7 +328,7 @@ export default function MobileApp() {
     setBookingTime(item.startHour);
     setBookingQty(1);
     setDeliveryMode('retrait');
-    setReservationId('BD' + Math.floor(100000 + Math.random() * 900000));
+    setReservationId('BF' + Math.floor(100000 + Math.random() * 900000));
   };
 
   const handleSelectDeal = (item: any) => {
@@ -261,36 +341,195 @@ export default function MobileApp() {
     setReservationId('BD' + Math.floor(100000 + Math.random() * 900000));
   };
 
-  // Agent proposal state
-  const [proposalType, setProposalType] = useState<'flash' | 'deal'>('flash');
-  const [newProp, setNewProp] = useState({
-    restaurant: 'Le Bateau Ivoire',
-    title: '',
-    description: '',
-    price_normal: '',
-    price_promo: '',
-    quantity: '10',
-    pack_type: 'couple',
-    persons: '2',
-    prestations: '',
-  });
+  // Crée une commande en base (checkout final)
+  const handleCreateOrder = async () => {
+    if (!user) return;
+    const offer = selectedFlash || selectedDeal;
+    if (!offer) return;
 
-  // Restaurant orders simulation
-  const [orders, setOrders] = useState([
-    { id: '#BF12458', client: 'Jean K.', phone: '07 58 45 12 36', items: '2 articles (Menu Poulet Braisé + Jus)', amount: '12 000 FCFA', mode: 'retrait', status: 'nouvelle', time: '14:30' },
-    { id: '#BF12457', client: 'Awa D.', phone: '05 06 78 90 12', items: '3 articles', amount: '18 500 FCFA', mode: 'livraison', status: 'en_preparation', time: '14:20' },
-    { id: '#BF12456', client: 'Marc T.', phone: '01 02 34 56 78', items: '1 article', amount: '9 000 FCFA', mode: 'retrait', status: 'prete', time: '14:10' },
-  ]);
+    const unitPrice = selectedFlash ? selectedFlash.priceNew : selectedDeal.priceNew;
+    const totalAmount = unitPrice * bookingQty;
+    const commissionAmount = Math.round((totalAmount * (offer.commissionRate || 10)) / 100);
 
-  const handleUpdateStatus = (id: string, nextStatus: string) => {
-    setOrders(prev => prev.map(o => o.id === id ? { ...o, status: nextStatus } : o));
-    Alert.alert('Succès', `Commande ${id} mise à jour avec le statut : ${nextStatus}`);
+    const { data, error } = await supabase
+      .from('orders')
+      .insert({
+        client_id: user.id,
+        restaurant_id: offer.restaurantId,
+        offer_id: offer.id,
+        agent_id: offer.agentId,
+        status: 'nouvelle',
+        delivery_mode: deliveryMode,
+        quantity: bookingQty,
+        total_amount: totalAmount,
+        commission_amount: commissionAmount,
+        payment_status: 'paid',
+        reservation_code: reservationId,
+      })
+      .select('id')
+      .single();
+
+    if (error) {
+      Alert.alert('Erreur', `Impossible de créer la commande: ${error.message}`);
+      return;
+    }
+
+    // Historique initial
+    if (data) {
+      await supabase.from('order_history').insert({
+        order_id: data.id,
+        action: 'creee',
+        actor_id: user.id,
+      });
+    }
+
+    // Passe à l'écran de succès
+    setBookingStep(4);
   };
 
-  const handleCreateProposal = () => {
-    Alert.alert('Proposition soumise', `Votre proposition "${newProp.title}" a été envoyée avec succès à l'administration centrale en statut EN ATTENTE.`);
+  const handleUpdateOrderStatus = async (orderId: string, nextStatus: string) => {
+    const { error } = await supabase.from('orders').update({ status: nextStatus }).eq('id', orderId);
+    if (error) {
+      Alert.alert('Erreur', error.message);
+      return;
+    }
+    if (user) {
+      await supabase.from('order_history').insert({
+        order_id: orderId,
+        action: nextStatus,
+        actor_id: user.id,
+      });
+    }
+    // Recharge
+    if (profile?.restaurant_id) {
+      const { data } = await supabase
+        .from('orders')
+        .select('*, profiles!client_id(full_name, phone), offers(title)')
+        .eq('restaurant_id', profile.restaurant_id)
+        .order('created_at', { ascending: false });
+      setRestaurantOrders(data ?? []);
+    }
+    Alert.alert('Succès', `Commande mise à jour : ${nextStatus}`);
+  };
+
+  // Auth client (signup / login)
+  const handleClientAuth = async () => {
+    if (!clientEmail || !clientPassword || (isSignup && !clientName)) {
+      Alert.alert('Champs requis', 'Veuillez remplir tous les champs nécessaires.');
+      return;
+    }
+    setAuthLoading(true);
+    try {
+      if (isSignup) {
+        const { error } = await supabase.auth.signUp({
+          email: clientEmail.trim(),
+          password: clientPassword,
+          options: { data: { full_name: clientName, phone: clientPhone, role: 'client' } },
+        });
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.auth.signInWithPassword({
+          email: clientEmail.trim(),
+          password: clientPassword,
+        });
+        if (error) throw error;
+      }
+      setShowClientAuthModal(false);
+      if (selectedFlash || selectedDeal) {
+        setBookingStep(3);
+      }
+    } catch (err: any) {
+      Alert.alert('Erreur', err.message || 'Échec de l\'authentification');
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  // Auth pro (agent / restaurant)
+  const handleProLogin = async () => {
+    if (!proEmail || !proPassword) {
+      Alert.alert('Erreur', 'Veuillez saisir votre email et votre mot de passe.');
+      return;
+    }
+    setAuthLoading(true);
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: proEmail.trim(),
+        password: proPassword,
+      });
+      if (error) throw error;
+
+      // Vérifie le rôle
+      const { data: prof } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', data.user.id)
+        .single();
+
+      if (!prof || (prof.role !== 'agent' && prof.role !== 'restaurant')) {
+        Alert.alert('Accès refusé', 'Ce compte n\'est pas un compte professionnel.');
+        await supabase.auth.signOut();
+        return;
+      }
+
+      setShowProLoginModal(false);
+      if (prof.role === 'agent') {
+        setAgentTab('home');
+      } else {
+        setRestaurantTab('home');
+      }
+      await refreshProfile();
+      Alert.alert('Connexion Réussie', `Bienvenue dans votre espace ${prof.role === 'agent' ? 'Agent Commercial' : 'Restaurant Partenaire'}.`);
+    } catch (err: any) {
+      Alert.alert('Erreur de connexion', err.message || 'Identifiants incorrects');
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  // Logout
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    setClientTab('home');
+  };
+
+  // Crée une proposition d'offre (agent)
+  const handleCreateProposal = async () => {
+    if (!user || !newProp.restaurantId) {
+      Alert.alert('Erreur', 'Veuillez sélectionner un restaurant.');
+      return;
+    }
+    const insertData: any = {
+      agent_id: user.id,
+      restaurant_id: newProp.restaurantId,
+      type: proposalType,
+      title: newProp.title,
+      description: proposalType === 'flash' ? newProp.description : newProp.prestations,
+      status: 'en_attente',
+    };
+
+    if (proposalType === 'flash') {
+      insertData.price_normal = Number(newProp.price_normal) || null;
+      insertData.price_promo = Number(newProp.price_promo) || null;
+      insertData.quantity_initial = Number(newProp.quantity) || null;
+      insertData.quantity_remaining = Number(newProp.quantity) || null;
+      insertData.start_timestamp = new Date().toISOString();
+      insertData.end_timestamp = new Date(Date.now() + 4 * 3600000).toISOString();
+    } else {
+      insertData.pack_type = newProp.pack_type;
+      insertData.price = Number(newProp.price_promo) || null;
+      insertData.capacity_persons = Number(newProp.persons) || null;
+    }
+
+    const { error } = await supabase.from('offers').insert(insertData);
+    if (error) {
+      Alert.alert('Erreur', error.message);
+      return;
+    }
+    Alert.alert('Proposition soumise', `Votre proposition "${newProp.title}" a été envoyée en statut EN ATTENTE.`);
     setNewProp({
-      restaurant: 'Le Bateau Ivoire',
+      restaurant: newProp.restaurant,
+      restaurantId: newProp.restaurantId,
       title: '',
       description: '',
       price_normal: '',
@@ -300,6 +539,40 @@ export default function MobileApp() {
       persons: '2',
       prestations: '',
     });
+  };
+
+  // Ajoute un restaurant (agent)
+  const handleAddRestaurant = async () => {
+    if (!user || !newRestoName || !newRestoOwnerEmail) {
+      Alert.alert('Champs requis', 'Nom et email du propriétaire requis.');
+      return;
+    }
+    const { error } = await supabase.from('restaurants').insert({
+      name: newRestoName,
+      address: newRestoAddress,
+      phone: newRestoPhone,
+      description: newRestoDesc,
+      agent_id: user.id,
+    });
+    if (error) {
+      Alert.alert('Erreur', error.message);
+      return;
+    }
+    // Crée le compte propriétaire
+    if (newRestoOwnerEmail && newRestoOwnerPassword) {
+      await supabase.auth.signUp({
+        email: newRestoOwnerEmail.trim(),
+        password: newRestoOwnerPassword,
+        options: { data: { full_name: newRestoName, role: 'restaurant' } },
+      });
+    }
+    Alert.alert('Succès', `Restaurant "${newRestoName}" inscrit avec succès.`);
+    setShowAddRestoModal(false);
+    setNewRestoName(''); setNewRestoAddress(''); setNewRestoPhone(''); setNewRestoDesc('');
+    setNewRestoOwnerEmail(''); setNewRestoOwnerPassword('');
+    // Recharge
+    const { data: restos } = await supabase.from('restaurants').select('*').eq('agent_id', user.id).order('name');
+    setAgentRestaurants(restos ?? []);
   };
 
   // --- VIEW 1: AUTH LOGIN GATEWAY REMOVED ---
@@ -331,7 +604,7 @@ export default function MobileApp() {
               <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
                 {/* Image container */}
                 <View style={styles.detailImageContainer}>
-                  <Image source={{ uri: selectedFlash ? selectedFlash.image : selectedDeal?.image }} style={styles.detailImage} />
+                  <Image source={{ uri: selectedFlash ? selectedFlash.image : selectedDeal?.image }} style={styles.detailImage as any} />
                   <View style={selectedFlash ? [styles.bestDealBadge, { backgroundColor: '#E30613' }] : styles.bestDealBadge}>
                     <Text style={styles.bestDealBadgeText}>{selectedFlash ? selectedFlash.discount : 'MEILLEUR DEAL'}</Text>
                   </View>
@@ -580,7 +853,7 @@ export default function MobileApp() {
                 {/* Selected Pack Card Summary */}
                 <Text style={styles.formTitle}>Pack sélectionné</Text>
                 <View style={styles.selectedPackCard}>
-                  <Image source={{ uri: selectedFlash ? selectedFlash.image : selectedDeal?.image }} style={styles.selectedPackImg} />
+                  <Image source={{ uri: selectedFlash ? selectedFlash.image : selectedDeal?.image }} style={styles.selectedPackImg as any} />
                   <View style={styles.selectedPackInfo}>
                     <Text style={styles.selectedPackTitle}>{selectedFlash ? selectedFlash.title : selectedDeal?.title}</Text>
                     <Text style={styles.selectedPackResto}>{selectedFlash ? selectedFlash.restaurant : selectedDeal?.restaurant}</Text>
@@ -614,7 +887,7 @@ export default function MobileApp() {
               <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 24, paddingBottom: 60 }} showsVerticalScrollIndicator={false}>
                 {/* Summary Card */}
                 <View style={styles.selectedPackCard}>
-                  <Image source={{ uri: selectedFlash ? selectedFlash.image : selectedDeal?.image }} style={styles.selectedPackImg} />
+                  <Image source={{ uri: selectedFlash ? selectedFlash.image : selectedDeal?.image }} style={styles.selectedPackImg as any} />
                   <View style={styles.selectedPackInfo}>
                     <Text style={styles.selectedPackTitle}>{selectedFlash ? selectedFlash.title : selectedDeal?.title}</Text>
                     <Text style={styles.selectedPackResto}>{selectedFlash ? selectedFlash.restaurant : selectedDeal?.restaurant}</Text>
@@ -910,7 +1183,7 @@ export default function MobileApp() {
              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.horizontalScroll}>
               {flashOffers.map((item) => (
                 <TouchableOpacity key={item.id} style={styles.dealCard} onPress={() => handleSelectFlash(item)}>
-                  <Image source={{ uri: item.image }} style={styles.cardImage} />
+                  <Image source={{ uri: item.image }} style={styles.cardImage as any} />
                   <View style={styles.cardBadge}>
                     <Text style={styles.badgeText}>{item.discount}</Text>
                   </View>
@@ -951,7 +1224,7 @@ export default function MobileApp() {
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.horizontalScroll}>
               {dealOffers.map((item) => (
                 <TouchableOpacity key={item.id} style={styles.dealCard} onPress={() => handleSelectDeal(item)}>
-                  <Image source={{ uri: item.image }} style={styles.cardImage} />
+                  <Image source={{ uri: item.image }} style={styles.cardImage as any} />
                   <View style={[styles.cardBadge, { backgroundColor: '#F59E0B' }]}>
                     <Text style={styles.badgeText}>{item.discount}</Text>
                   </View>
@@ -1017,24 +1290,25 @@ export default function MobileApp() {
           isLoggedIn ? (
             <ScrollView style={styles.scrollArea}>
               <Text style={styles.sectionTitle}>Mes Réservations</Text>
-              
-              <View style={styles.orderListItem}>
-                <View style={styles.orderListHeader}>
-                  <Text style={styles.orderListResto}>Le QG Lounge</Text>
-                  <View style={[styles.statusBadge, { backgroundColor: Colors.warningLight }]}><Text style={[styles.statusText, { color: Colors.warning }]}>En préparation</Text></View>
-                </View>
-                <Text style={styles.orderListDetail}>Menu Burger Duo • 16 Août 2024, 15h00</Text>
-                <Text style={styles.orderListTotal}>Montant payé : 7 500 FCFA (Réf: BF12458)</Text>
-              </View>
 
-              <View style={styles.orderListItem}>
-                <View style={styles.orderListHeader}>
-                  <Text style={styles.orderListResto}>Le Bateau Ivoire</Text>
-                  <View style={[styles.statusBadge, { backgroundColor: Colors.successLight }]}><Text style={[styles.statusText, { color: Colors.success }]}>Confirmée</Text></View>
+              {clientOrders.length === 0 && (
+                <Text style={{ color: Colors.textSecondary, fontSize: 14, textAlign: 'center', marginTop: 40 }}>Aucune réservation pour le moment.</Text>
+              )}
+
+              {clientOrders.map((order) => (
+                <View key={order.id} style={styles.orderListItem}>
+                  <View style={styles.orderListHeader}>
+                    <Text style={styles.orderListResto}>{order.restaurants?.name ?? 'Restaurant'}</Text>
+                    <View style={[styles.statusBadge, { backgroundColor: order.status === 'terminee' ? Colors.successLight : Colors.warningLight }]}>
+                      <Text style={[styles.statusText, { color: order.status === 'terminee' ? Colors.success : Colors.warning }]}>
+                        {order.status === 'nouvelle' ? 'Nouvelle' : order.status === 'en_preparation' ? 'En préparation' : order.status === 'prete' ? 'Prête' : order.status === 'terminee' ? 'Terminée' : order.status}
+                      </Text>
+                    </View>
+                  </View>
+                  <Text style={styles.orderListDetail}>{order.offers?.title ?? 'Offre'} • {new Date(order.created_at).toLocaleDateString('fr-FR')}</Text>
+                  <Text style={styles.orderListTotal}>Montant payé : {Number(order.total_amount).toLocaleString('fr-FR')} FCFA (Réf: {order.reservation_code})</Text>
                 </View>
-                <Text style={styles.orderListDetail}>Pack Couple Romantique • 17 Août 2024, 19h00</Text>
-                <Text style={styles.orderListTotal}>Montant payé : 25 000 FCFA (Réf: BD12548)</Text>
-              </View>
+              ))}
             </ScrollView>
           ) : (
             <View style={[styles.scrollArea, { alignItems: 'center', justifyContent: 'center', gap: 16, flex: 1, paddingVertical: 80 }]}>
@@ -1055,11 +1329,11 @@ export default function MobileApp() {
             <View style={styles.scrollArea}>
               <Text style={styles.sectionTitle}>Mon Profil</Text>
               <View style={styles.profileCard}>
-                <Text style={styles.profileName}>{clientName}</Text>
-                <Text style={styles.profileEmail}>{clientEmail || 'client.test@brickfood.com'}</Text>
-                <Text style={styles.profilePhone}>{clientPhone}</Text>
+                <Text style={styles.profileName}>{profile?.full_name ?? clientName}</Text>
+                <Text style={styles.profileEmail}>{profile?.email ?? clientEmail}</Text>
+                <Text style={styles.profilePhone}>{profile?.phone ?? clientPhone}</Text>
               </View>
-              <TouchableOpacity style={styles.logoutBtn} onPress={() => { setIsLoggedIn(false); setRole('client'); }}>
+              <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
                 <Text style={styles.logoutBtnText}>Se déconnecter</Text>
               </TouchableOpacity>
             </View>
@@ -1142,29 +1416,8 @@ export default function MobileApp() {
                 secureTextEntry 
               />
 
-              <TouchableOpacity style={[styles.actionBtn, { marginTop: 24 }]} onPress={() => {
-                if (!proEmail || !proPassword) {
-                  Alert.alert('Erreur', 'Veuillez saisir votre email et votre mot de passe.');
-                  return;
-                }
-                const email = proEmail.toLowerCase().trim();
-                if (email.includes('agent') || email === 'eric@brickfood.com') {
-                  setRole('agent');
-                  setAgentTab('home');
-                  setIsLoggedIn(true);
-                  setShowProLoginModal(false);
-                  Alert.alert('Connexion Réussie', 'Bienvenue dans votre espace Agent Commercial.');
-                } else if (email.includes('owner') || email.includes('resto') || email.includes('bateau')) {
-                  setRole('restaurant');
-                  setRestaurantTab('home');
-                  setIsLoggedIn(true);
-                  setShowProLoginModal(false);
-                  Alert.alert('Connexion Réussie', 'Bienvenue dans l\'espace Restaurant Partenaire.');
-                } else {
-                  Alert.alert('Erreur de connexion', 'Identifiants professionnels non reconnus. Veuillez utiliser les identifiants transmis.');
-                }
-              }}>
-                <Text style={styles.actionBtnText}>Se connecter au Staff</Text>
+              <TouchableOpacity style={[styles.actionBtn, { marginTop: 24 }]} onPress={handleProLogin} disabled={authLoading}>
+                <Text style={styles.actionBtnText}>{authLoading ? 'Connexion...' : 'Se connecter au Staff'}</Text>
               </TouchableOpacity>
             </View>
           </SafeAreaView>
@@ -1203,23 +1456,8 @@ export default function MobileApp() {
               <Text style={styles.inputLabel}>Mot de passe</Text>
               <TextInput style={styles.input} placeholder="Mot de passe" value={clientPassword} onChangeText={setClientPassword} secureTextEntry />
 
-              <TouchableOpacity style={[styles.actionBtn, { marginTop: 12 }]} onPress={() => {
-                if (!clientEmail || !clientPassword || (isSignup && !clientName)) {
-                  Alert.alert('Champs requis', 'Veuillez remplir tous les champs nécessaires.');
-                  return;
-                }
-                setRole('client');
-                setIsLoggedIn(true);
-                setShowClientAuthModal(false);
-                Alert.alert(
-                  isSignup ? 'Compte créé !' : 'Connexion réussie !',
-                  `Bienvenue ${isSignup ? clientName : 'de retour'} ! Vous pouvez maintenant finaliser votre paiement.`
-                );
-                if (selectedFlash || selectedDeal) {
-                  setBookingStep(3);
-                }
-              }}>
-                <Text style={styles.actionBtnText}>{isSignup ? 'Créer mon compte' : 'Se connecter'}</Text>
+              <TouchableOpacity style={[styles.actionBtn, { marginTop: 12 }]} onPress={handleClientAuth} disabled={authLoading}>
+                <Text style={styles.actionBtnText}>{authLoading ? 'Veuillez patienter...' : isSignup ? 'Créer mon compte' : 'Se connecter'}</Text>
               </TouchableOpacity>
 
               <TouchableOpacity style={{ alignSelf: 'center', marginTop: 12 }} onPress={() => setIsSignup(!isSignup)}>
@@ -1243,7 +1481,7 @@ export default function MobileApp() {
             <Text style={styles.greetingText}>Espace Agent Commercial</Text>
             <Text style={styles.locationText}>Eric Mba's (Responsable 18 Restos)</Text>
           </View>
-          <TouchableOpacity style={styles.logoutBadge} onPress={() => setIsLoggedIn(false)}>
+          <TouchableOpacity style={styles.logoutBadge} onPress={handleLogout}>
             <Text style={styles.logoutText}>Déconnexion</Text>
           </TouchableOpacity>
         </View>
@@ -1450,7 +1688,7 @@ export default function MobileApp() {
             <Text style={styles.greetingText}>Restaurant : Le Bateau Ivoire</Text>
             <Text style={styles.locationText}>Cocody 2 Plateaux</Text>
           </View>
-          <TouchableOpacity style={styles.logoutBadge} onPress={() => setIsLoggedIn(false)}>
+          <TouchableOpacity style={styles.logoutBadge} onPress={handleLogout}>
             <Text style={styles.logoutText}>Déconnexion</Text>
           </TouchableOpacity>
         </View>
@@ -1464,7 +1702,7 @@ export default function MobileApp() {
             </View>
 
             <Text style={styles.sectionTitle}>📦 Commandes à traiter</Text>
-            {orders.map(order => (
+            {restaurantOrders.map(order => (
               <View key={order.id} style={styles.orderListItem}>
                 <View style={styles.orderListHeader}>
                   <Text style={styles.orderListResto}>{order.client} ({order.id})</Text>
@@ -1479,12 +1717,12 @@ export default function MobileApp() {
                 
                 <View style={styles.actionRow}>
                   {order.status === 'nouvelle' && (
-                    <TouchableOpacity style={styles.actionBadgeBtn} onPress={() => handleUpdateStatus(order.id, 'en_preparation')}>
+                    <TouchableOpacity style={styles.actionBadgeBtn} onPress={() => handleUpdateOrderStatus(order.id, 'en_preparation')}>
                       <Text style={styles.actionBadgeText}>Accepter</Text>
                     </TouchableOpacity>
                   )}
                   {order.status === 'en_preparation' && (
-                    <TouchableOpacity style={[styles.actionBadgeBtn, { backgroundColor: Colors.success }]} onPress={() => handleUpdateStatus(order.id, 'prete')}>
+                    <TouchableOpacity style={[styles.actionBadgeBtn, { backgroundColor: Colors.success }]} onPress={() => handleUpdateOrderStatus(order.id, 'prete')}>
                       <Text style={styles.actionBadgeText}>Marquer Prête</Text>
                     </TouchableOpacity>
                   )}
@@ -2177,7 +2415,7 @@ const styles = StyleSheet.create({
   },
   detailTitle: {
     fontSize: 20,
-    fontWeight: '850',
+    fontWeight: '800',
     color: '#1A1A1A',
     flex: 1,
   },
@@ -2911,7 +3149,7 @@ const styles = StyleSheet.create({
   },
   countdownValText: {
     fontSize: 14,
-    fontWeight: '850',
+    fontWeight: '800',
     color: Colors.primary,
   },
   countdownLabelsRow: {

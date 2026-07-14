@@ -1,57 +1,113 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { supabase } from '@/lib/supabase';
+import { useAuth } from './components/AuthProvider';
+import type { OrderWithRelations } from '@/types/database';
 
-// Mock dashboard stats matching the dashboard mockup
-const initialStats = {
-  totalRestaurants: 256,
-  totalAgents: 45,
-  totalOrders: 1248,
-  totalCA: '24 580 000 FCFA',
-  salesDistribution: {
-    flash: 52,
-    deals: 33,
-    classic: 15,
-  },
-};
-
-const initialOrders = [
-  { id: '#BF1258', client: 'Jean K.', restaurant: 'Toni Fast Food', type: 'Brick Flash', amount: '7 500 FCFA', status: 'en_preparation' },
-  { id: '#BD1257', client: 'Awa D.', restaurant: 'Le Bateau Ivoire', type: 'Brick Deal', amount: '25 000 FCFA', status: 'validee' },
-  { id: '#BF1256', client: 'Marc T.', restaurant: 'Chez Georges', type: 'Brick Flash', amount: '12 000 FCFA', status: 'nouvelle' },
-  { id: '#BF1255', client: 'Sophie K.', restaurant: 'Le QG Lounge', type: 'Brick Flash', amount: '15 000 FCFA', status: 'terminee' },
-];
+interface DashboardStats {
+  totalRestaurants: number;
+  totalAgents: number;
+  totalOrders: number;
+  totalCA: number;
+  salesDistribution: { flash: number; deals: number; classic: number };
+}
 
 export default function AdminDashboard() {
-  const [stats, setStats] = useState(initialStats);
-  const [orders, setOrders] = useState(initialOrders);
+  const { user, loading: authLoading } = useAuth();
+  const router = useRouter();
+  const [stats, setStats] = useState<DashboardStats>({
+    totalRestaurants: 0,
+    totalAgents: 0,
+    totalOrders: 0,
+    totalCA: 0,
+    salesDistribution: { flash: 0, deals: 0, classic: 0 },
+  });
+  const [orders, setOrders] = useState<OrderWithRelations[]>([]);
 
-  // Simulate real-time order arrival
+  // Redirige vers /login si non authentifié
   useEffect(() => {
-    const timer = setInterval(() => {
-      const names = ['Karim B.', 'Aminata O.', 'David L.', 'Florence M.'];
-      const restaurants = ['Le Bateau Ivoire', 'Toni Fast Food', 'Maquis La Joie', 'Chez Georges'];
-      const types = ['Brick Flash', 'Brick Deal'];
-      const amounts = ['6 000 FCFA', '18 500 FCFA', '25 000 FCFA', '7 500 FCFA'];
-      
-      const newOrder = {
-        id: `#BF${Math.floor(10000 + Math.random() * 90000)}`,
-        client: names[Math.floor(Math.random() * names.length)],
-        restaurant: restaurants[Math.floor(Math.random() * restaurants.length)],
-        type: types[Math.floor(Math.random() * types.length)],
-        amount: amounts[Math.floor(Math.random() * amounts.length)],
-        status: 'nouvelle',
-      };
+    if (!authLoading && !user) {
+      router.replace('/login');
+    }
+  }, [authLoading, user, router]);
 
-      setOrders(prev => [newOrder, ...prev.slice(0, 5)]);
-      setStats(prev => ({
-        ...prev,
-        totalOrders: prev.totalOrders + 1,
-      }));
-    }, 15000); // New order every 15 seconds
+  // Charge les statistiques depuis la base
+  const fetchStats = async () => {
+    const [{ count: totalRestaurants }, { count: totalAgents }, { count: totalOrders }] = await Promise.all([
+      supabase.from('restaurants').select('*', { count: 'exact', head: true }),
+      supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'agent'),
+      supabase.from('orders').select('*', { count: 'exact', head: true }),
+    ]);
 
-    return () => clearInterval(timer);
-  }, []);
+    // CA total
+    const { data: caData } = await supabase.from('orders').select('total_amount');
+
+    // Répartition flash / deal via jointure offers
+    const { data: distData } = await supabase
+      .from('orders')
+      .select('offers(type)');
+
+    let flash = 0;
+    let deals = 0;
+    let classic = 0;
+    (distData ?? []).forEach((row: any) => {
+      const t = row.offers?.type;
+      if (t === 'flash') flash++;
+      else if (t === 'deal') deals++;
+      else classic++;
+    });
+    const total = flash + deals + classic || 1;
+
+    const totalCA = (caData ?? []).reduce((sum: number, r: any) => sum + Number(r.total_amount || 0), 0);
+
+    setStats({
+      totalRestaurants: totalRestaurants ?? 0,
+      totalAgents: totalAgents ?? 0,
+      totalOrders: totalOrders ?? 0,
+      totalCA,
+      salesDistribution: {
+        flash: Math.round((flash / total) * 100),
+        deals: Math.round((deals / total) * 100),
+        classic: Math.round((classic / total) * 100),
+      },
+    });
+  };
+
+  // Charge les commandes récentes
+  const fetchOrders = async () => {
+    const { data } = await supabase
+      .from('orders')
+      .select('*, profiles!client_id(*), restaurants(*), offers(*)')
+      .order('created_at', { ascending: false })
+      .limit(6);
+    setOrders((data ?? []) as unknown as OrderWithRelations[]);
+  };
+
+  useEffect(() => {
+    if (!user) return;
+    fetchStats();
+    fetchOrders();
+
+    // Realtime : nouvelles commandes
+    const channel = supabase
+      .channel('orders-realtime')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders' }, () => {
+        fetchOrders();
+        fetchStats();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
+
+  const formatFCFA = (n: number) =>
+    new Intl.NumberFormat('fr-FR').format(Math.round(n)) + ' FCFA';
+
+  const dist = stats.salesDistribution;
 
   return (
     <>
@@ -63,7 +119,7 @@ export default function AdminDashboard() {
             <span style={{ fontSize: '18px' }}>🏪</span>
           </div>
           <div className="metric-value">{stats.totalRestaurants}</div>
-          <div className="metric-sub">+15 ce mois</div>
+          <div className="metric-sub">Données en direct</div>
         </div>
 
         <div className="metric-card">
@@ -72,7 +128,7 @@ export default function AdminDashboard() {
             <span style={{ fontSize: '18px' }}>👤</span>
           </div>
           <div className="metric-value">{stats.totalAgents}</div>
-          <div className="metric-sub">+3 ce mois</div>
+          <div className="metric-sub">Données en direct</div>
         </div>
 
         <div className="metric-card">
@@ -81,7 +137,7 @@ export default function AdminDashboard() {
             <span style={{ fontSize: '18px' }}>🛍️</span>
           </div>
           <div className="metric-value">{stats.totalOrders}</div>
-          <div className="metric-sub">+28% ce mois</div>
+          <div className="metric-sub">Données en direct</div>
         </div>
 
         <div className="metric-card" style={{ borderLeft: '4px solid var(--primary)' }}>
@@ -89,8 +145,8 @@ export default function AdminDashboard() {
             <span>Chiffre d'affaires global</span>
             <span style={{ fontSize: '18px' }}>💰</span>
           </div>
-          <div className="metric-value" style={{ color: 'var(--primary)' }}>{stats.totalCA}</div>
-          <div className="metric-sub">+32% vs mois dernier</div>
+          <div className="metric-value" style={{ color: 'var(--primary)' }}>{formatFCFA(stats.totalCA)}</div>
+          <div className="metric-sub">Données en direct</div>
         </div>
       </div>
 
@@ -98,68 +154,70 @@ export default function AdminDashboard() {
       <div className="panels-grid">
         {/* Real-time Orders */}
         <div className="panel">
-          <div className="panel-title" style={{ display: 'flex', alignItems: 'center', justifyItems: 'center', gap: '8px' }}>
+          <div className="panel-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', backgroundColor: 'var(--primary)', animation: 'pulse 1.5s infinite' }}></span>
             Commandes en temps réel
           </div>
-          
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Client</th>
-                <th>Restaurant</th>
-                <th>Type</th>
-                <th>Montant</th>
-                <th>Statut</th>
-              </tr>
-            </thead>
-            <tbody>
-              {orders.map(order => (
-                <tr key={order.id} style={{ transition: 'var(--transition)' }}>
-                  <td style={{ fontWeight: '600' }}>{order.id}</td>
-                  <td>{order.client}</td>
-                  <td>{order.restaurant}</td>
-                  <td style={{ fontWeight: '500' }}>{order.type}</td>
-                  <td style={{ color: 'var(--primary)', fontWeight: '700' }}>{order.amount}</td>
-                  <td>
-                    <span className={`badge ${order.status}`}>
-                      {order.status === 'nouvelle' && 'Nouvelle'}
-                      {order.status === 'en_preparation' && 'En préparation'}
-                      {order.status === 'validee' && 'Confirmée'}
-                      {order.status === 'terminee' && 'Terminée'}
-                    </span>
-                  </td>
+
+          {orders.length === 0 ? (
+            <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text-secondary)' }}>
+              Aucune commande pour le moment
+            </div>
+          ) : (
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Réf.</th>
+                  <th>Client</th>
+                  <th>Restaurant</th>
+                  <th>Type</th>
+                  <th>Montant</th>
+                  <th>Statut</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {orders.map((order) => (
+                  <tr key={order.id} style={{ transition: 'var(--transition)' }}>
+                    <td style={{ fontWeight: '600' }}>{order.reservation_code}</td>
+                    <td>{order.profiles?.full_name ?? '—'}</td>
+                    <td>{order.restaurants?.name ?? '—'}</td>
+                    <td style={{ fontWeight: '500' }}>
+                      {order.offers?.type === 'flash' ? 'Brick Flash' : 'Brick Deal'}
+                    </td>
+                    <td style={{ color: 'var(--primary)', fontWeight: '700' }}>{formatFCFA(Number(order.total_amount))}</td>
+                    <td>
+                      <span className={`badge ${order.status}`}>
+                        {order.status === 'nouvelle' && 'Nouvelle'}
+                        {order.status === 'en_preparation' && 'En préparation'}
+                        {order.status === 'prete' && 'Prête'}
+                        {order.status === 'terminee' && 'Terminée'}
+                        {order.status === 'livree' && 'Livrée'}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
 
         {/* Sales distribution */}
         <div className="panel" style={{ alignItems: 'center', justifyContent: 'space-between' }}>
           <div className="panel-title" style={{ width: '100%', textAlign: 'left' }}>Répartition des ventes</div>
-          
+
           {/* Custom SVG Donut Chart */}
           <div style={{ position: 'relative', width: '180px', height: '180px' }}>
             <svg viewBox="0 0 36 36" style={{ transform: 'rotate(-90deg)', width: '100%', height: '100%' }}>
-              {/* Classic Circle */}
               <circle cx="18" cy="18" r="15.915" fill="none" stroke="#EBEBEB" strokeWidth="3" />
-              
-              {/* Flash Circle (52%) */}
-              <circle cx="18" cy="18" r="15.915" fill="none" stroke="var(--primary)" strokeWidth="3" 
-                      strokeDasharray="52 48" strokeDashoffset="0" />
-              
-              {/* Deals Circle (33%) - Offset by 52 */}
-              <circle cx="18" cy="18" r="15.915" fill="none" stroke="#F59E0B" strokeWidth="3" 
-                      strokeDasharray="33 67" strokeDashoffset="-52" />
-                      
-              {/* Classic custom color (15%) - Offset by 52 + 33 = 85 */}
-              <circle cx="18" cy="18" r="15.915" fill="none" stroke="#3B82F6" strokeWidth="3" 
-                      strokeDasharray="15 85" strokeDashoffset="-85" />
+              <circle cx="18" cy="18" r="15.915" fill="none" stroke="var(--primary)" strokeWidth="3"
+                      strokeDasharray={`${dist.flash} ${100 - dist.flash}`} strokeDashoffset="0" />
+              <circle cx="18" cy="18" r="15.915" fill="none" stroke="#F59E0B" strokeWidth="3"
+                      strokeDasharray={`${dist.deals} ${100 - dist.deals}`} strokeDashoffset={`-${dist.flash}`} />
+              <circle cx="18" cy="18" r="15.915" fill="none" stroke="#3B82F6" strokeWidth="3"
+                      strokeDasharray={`${dist.classic} ${100 - dist.classic}`} strokeDashoffset={`-${dist.flash + dist.deals}`} />
             </svg>
             <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', lineHeight: '1' }}>
-              <span style={{ fontSize: '24px', fontWeight: '800' }}>{stats.salesDistribution.flash}%</span>
+              <span style={{ fontSize: '24px', fontWeight: '800' }}>{dist.flash}%</span>
               <span style={{ fontSize: '10px', color: 'var(--text-secondary)', fontWeight: '600' }}>Brick Flash</span>
             </div>
           </div>
@@ -170,23 +228,21 @@ export default function AdminDashboard() {
                 <span style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: 'var(--primary)' }}></span>
                 <span>Brick Flash</span>
               </div>
-              <span style={{ fontWeight: '700' }}>{stats.salesDistribution.flash}%</span>
+              <span style={{ fontWeight: '700' }}>{dist.flash}%</span>
             </div>
-            
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#F59E0B' }}></span>
                 <span>Brick Deals</span>
               </div>
-              <span style={{ fontWeight: '700' }}>{stats.salesDistribution.deals}%</span>
+              <span style={{ fontWeight: '700' }}>{dist.deals}%</span>
             </div>
-
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#3B82F6' }}></span>
-                <span>Commandes classiques</span>
+                <span>Autres</span>
               </div>
-              <span style={{ fontWeight: '700' }}>{stats.salesDistribution.classic}%</span>
+              <span style={{ fontWeight: '700' }}>{dist.classic}%</span>
             </div>
           </div>
         </div>
