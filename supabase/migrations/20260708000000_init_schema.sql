@@ -171,11 +171,11 @@ CREATE POLICY "Allow users to read their own profile"
 
 CREATE POLICY "Allow admins to manage all profiles"
     ON public.profiles FOR ALL
-    USING (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin'));
+    USING ((auth.jwt() -> 'user_metadata' ->> 'role') = 'admin');
 
 CREATE POLICY "Allow agents to view profiles"
     ON public.profiles FOR SELECT
-    USING (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'agent'));
+    USING ((auth.jwt() -> 'user_metadata' ->> 'role') = 'agent');
 
 -- Restaurants Policies
 CREATE POLICY "Allow anyone to read restaurants"
@@ -184,7 +184,7 @@ CREATE POLICY "Allow anyone to read restaurants"
 
 CREATE POLICY "Allow admins to manage all restaurants"
     ON public.restaurants FOR ALL
-    USING (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin'));
+    USING ((auth.jwt() -> 'user_metadata' ->> 'role') = 'admin');
 
 CREATE POLICY "Allow assigned agents to update restaurants"
     ON public.restaurants FOR UPDATE
@@ -201,7 +201,7 @@ CREATE POLICY "Allow anyone to view published offers"
 
 CREATE POLICY "Allow admins to manage all offers"
     ON public.offers FOR ALL
-    USING (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin'));
+    USING ((auth.jwt() -> 'user_metadata' ->> 'role') = 'admin');
 
 CREATE POLICY "Allow creator agents to view and edit their pending/rejected offers"
     ON public.offers FOR ALL
@@ -226,7 +226,7 @@ CREATE POLICY "Allow clients to insert orders"
 
 CREATE POLICY "Allow admins to view and manage all orders"
     ON public.orders FOR ALL
-    USING (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin'));
+    USING ((auth.jwt() -> 'user_metadata' ->> 'role') = 'admin');
 
 CREATE POLICY "Allow restaurants to view and update their orders"
     ON public.orders FOR ALL

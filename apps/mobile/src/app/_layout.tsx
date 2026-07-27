@@ -36,7 +36,12 @@ export default function RootLayout() {
       setProfile(null);
       return;
     }
-    const { data } = await supabase.from('profiles').select('*').eq('id', targetId).single();
+    const { data, error } = await supabase.from('profiles').select('*').eq('id', targetId).single();
+    if (error) {
+      console.error('[refreshProfile] Error:', error.message);
+    } else {
+      console.log('[refreshProfile] Success:', data);
+    }
     setProfile(data as Profile | null);
   };
 
@@ -51,7 +56,9 @@ export default function RootLayout() {
           .select('*')
           .eq('id', session.user.id)
           .single()
-          .then(({ data }) => {
+          .then(({ data, error }) => {
+            if (error) console.error('[getSession] Error fetching profile:', error.message);
+            else console.log('[getSession] Profile fetched:', data);
             setProfile(data as Profile | null);
             setLoading(false);
           });
@@ -70,7 +77,11 @@ export default function RootLayout() {
           .select('*')
           .eq('id', session.user.id)
           .single()
-          .then(({ data }) => setProfile(data as Profile | null));
+          .then(({ data, error }) => {
+            if (error) console.error('[onAuthStateChange] Error fetching profile:', error.message);
+            else console.log('[onAuthStateChange] Profile fetched:', data);
+            setProfile(data as Profile | null);
+          });
       } else {
         setProfile(null);
       }

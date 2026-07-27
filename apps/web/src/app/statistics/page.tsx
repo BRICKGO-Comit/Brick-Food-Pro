@@ -15,6 +15,7 @@ export default function StatisticsDashboard() {
   const [panierMoyen, setPanierMoyen] = useState(0);
   const [publishedOffers, setPublishedOffers] = useState(0);
   const [avgCommission, setAvgCommission] = useState(0);
+  const [ordersCount, setOrdersCount] = useState(0);
   const [dailyRevenue, setDailyRevenue] = useState<{ day: string; amount: number }[]>([]);
   const [topRestaurants, setTopRestaurants] = useState<{ name: string; orders: number; sales: number }[]>([]);
   const [topAgents, setTopAgents] = useState<{ name: string; proposals: number; commission: number }[]>([]);
@@ -42,6 +43,7 @@ export default function StatisticsDashboard() {
         .gte('created_at', startDate.toISOString());
 
       const orders = ordersData ?? [];
+      setOrdersCount(orders.length);
 
       // Panier moyen
       const totalAmount = orders.reduce((sum: number, o: any) => sum + Number(o.total_amount || 0), 0);
@@ -170,7 +172,7 @@ export default function StatisticsDashboard() {
             <span>Commandes (période)</span>
             <span>📦</span>
           </div>
-          <div className="metric-value">{dailyRevenue.reduce((s, d) => s + 0, 0)}</div>
+          <div className="metric-value">{ordersCount}</div>
           <div className="metric-sub">{timeframe === 'week' ? '7 derniers jours' : '30 derniers jours'}</div>
         </div>
 

@@ -1,20 +1,37 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   StyleSheet,
   Text,
   View,
   Image,
   TouchableOpacity,
+  FlatList,
+  Platform,
   ScrollView,
   TextInput,
   Modal,
-  Alert
+  Alert,
+  Linking
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from './_layout';
 import { Colors } from '../theme/colors';
 import { supabase } from '../lib/supabase';
+import { createClient } from '@supabase/supabase-js';
+
+const supabaseSignUpClient = createClient(
+  process.env.EXPO_PUBLIC_SUPABASE_URL!,
+  process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!,
+  {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+      detectSessionInUrl: false,
+    },
+  }
+);
+
 import type { OfferWithRelations, OrderWithRelations } from '../types/database';
 
 // Helper functions for dynamic French dates
@@ -58,13 +75,17 @@ const getNextDays = (count: number) => {
 // Placeholder image par défaut
 const DEFAULT_IMG = 'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=500&auto=format&fit=crop&q=60';
 
+// Service client BrickFood
+const BRICKFOOD_SERVICE_PHONE = '+2250100000000';
+const BRICKFOOD_WHATSAPP = '2250100000000';
+
 export default function MobileApp() {
   const { user, profile, role, isLoggedIn, refreshProfile } = useAuth();
 
   // Navigation tabs states for each role
   const [clientTab, setClientTab] = useState<'home' | 'reservations' | 'profile'>('home');
   const [agentTab, setAgentTab] = useState<'home' | 'restaurants' | 'proposals' | 'profile'>('home');
-  const [restaurantTab, setRestaurantTab] = useState<'home' | 'orders' | 'profile'>('home');
+  const [restaurantTab, setRestaurantTab] = useState<'home' | 'orders' | 'proposals' | 'profile'>('home');
 
   // Data states (chargés depuis Supabase)
   const [flashOffers, setFlashOffers] = useState<any[]>([]);
@@ -74,6 +95,27 @@ export default function MobileApp() {
   const [agentRestaurants, setAgentRestaurants] = useState<any[]>([]);
   const [agentStats, setAgentStats] = useState({ commission: 0, ordersCount: 0 });
   const [restaurantOrders, setRestaurantOrders] = useState<any[]>([]);
+  const [restaurantProposals, setRestaurantProposals] = useState<any[]>([]);
+  const [restoPropType, setRestoPropType] = useState<'flash' | 'deal'>('flash');
+  const [newRestoProp, setNewRestoProp] = useState({
+    title: '',
+    description: '',
+    price_normal: '',
+    price_promo: '',
+    quantity: '10',
+    pack_type: 'couple',
+    persons: '2',
+    prestations: '',
+  });
+  const [showAddRestoPropModal, setShowAddRestoPropModal] = useState(false);
+
+  // Notifications state
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  // Order tracking state (client)
+  const [trackedOrder, setTrackedOrder] = useState<any | null>(null);
+  const [orderHistory, setOrderHistory] = useState<any[]>([]);
 
   // Checkout modal states
   const [selectedFlash, setSelectedFlash] = useState<any | null>(null);
@@ -107,6 +149,9 @@ export default function MobileApp() {
   // Form booking selections
   const [bookingDate, setBookingDate] = useState<string>('');
   const [bookingTime, setBookingTime] = useState<string>('');
+  const [showTimePicker, setShowTimePicker] = useState(false);
+  const [pickerHour, setPickerHour] = useState(14);
+  const [pickerMinute, setPickerMinute] = useState(0);
   const [bookingQty, setBookingQty] = useState<number>(1);
   const [deliveryMode, setDeliveryMode] = useState<'retrait' | 'livraison'>('retrait');
   const [paymentMethod, setPaymentMethod] = useState<'wave' | 'orange' | 'mtn' | 'cb'>('wave');
@@ -129,6 +174,35 @@ export default function MobileApp() {
     persons: '2',
     prestations: '',
   });
+
+  // Profile edit states
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [editName, setEditName] = useState('');
+  const [editPhone, setEditPhone] = useState('');
+
+  // Restaurant details & edit states (for restaurant owners)
+  const [restaurantDetail, setRestaurantDetail] = useState<any | null>(null);
+  const [isEditingResto, setIsEditingResto] = useState(false);
+  const [editRestoName, setEditRestoName] = useState('');
+  const [editRestoAddress, setEditRestoAddress] = useState('');
+  const [editRestoPhone, setEditRestoPhone] = useState('');
+  const [editRestoDesc, setEditRestoDesc] = useState('');
+
+  useEffect(() => {
+    if (profile) {
+      setEditName(profile.full_name || '');
+      setEditPhone(profile.phone || '');
+    }
+  }, [profile]);
+
+  useEffect(() => {
+    if (restaurantDetail) {
+      setEditRestoName(restaurantDetail.name || '');
+      setEditRestoAddress(restaurantDetail.address || '');
+      setEditRestoPhone(restaurantDetail.phone || '');
+      setEditRestoDesc(restaurantDetail.description || '');
+    }
+  }, [restaurantDetail]);
 
   // --- CHARGEMENT DES DONNÉES DEPUIS SUPABASE ---
 
@@ -282,6 +356,155 @@ export default function MobileApp() {
     loadRestaurantOrders();
   }, [isLoggedIn, role, profile]);
 
+  // Charge les détails du restaurant (pour le propriétaire connecté)
+  useEffect(() => {
+    if (!isLoggedIn || role !== 'restaurant' || !profile?.restaurant_id) {
+      setRestaurantDetail(null);
+      return;
+    }
+    const loadRestaurantDetail = async () => {
+      const { data, error } = await supabase
+        .from('restaurants')
+        .select('*')
+        .eq('id', profile.restaurant_id)
+        .single();
+      if (error) {
+        console.error('[loadRestaurantDetail] Error:', error.message);
+      } else {
+        setRestaurantDetail(data);
+      }
+    };
+    loadRestaurantDetail();
+  }, [isLoggedIn, role, profile]);
+
+  // Charge les propositions du restaurant
+  useEffect(() => {
+    if (!isLoggedIn || role !== 'restaurant' || !profile?.restaurant_id) {
+      setRestaurantProposals([]);
+      return;
+    }
+    const loadRestaurantProposals = async () => {
+      const { data } = await supabase
+        .from('offers')
+        .select('*')
+        .eq('restaurant_id', profile.restaurant_id)
+        .order('created_at', { ascending: false });
+      setRestaurantProposals(data ?? []);
+    };
+    loadRestaurantProposals();
+  }, [isLoggedIn, role, profile]);
+
+  // --- REALTIME SUBSCRIPTIONS ---
+
+  // Listen for notifications (all roles)
+  useEffect(() => {
+    if (!isLoggedIn || !user) return;
+    // Load initial notifications
+    const loadNotifications = async () => {
+      const { data } = await supabase
+        .from('notifications')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(30);
+      setNotifications(data ?? []);
+      setUnreadCount((data ?? []).filter((n: any) => !n.is_read).length);
+    };
+    loadNotifications();
+
+    // Realtime subscription
+    const channel = supabase
+      .channel('notifications-' + user.id)
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'notifications',
+        filter: `user_id=eq.${user.id}`,
+      }, (payload: any) => {
+        setNotifications(prev => [payload.new, ...prev]);
+        setUnreadCount(prev => prev + 1);
+        // Show alert for restaurant/agent
+        if (role === 'restaurant' || role === 'agent') {
+          Alert.alert(payload.new.title, payload.new.body);
+        }
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [isLoggedIn, user, role]);
+
+  // Realtime tracking for a specific order (client side)
+  useEffect(() => {
+    if (!trackedOrder) return;
+    const channel = supabase
+      .channel('order-track-' + trackedOrder.id)
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'orders',
+        filter: `id=eq.${trackedOrder.id}`,
+      }, (payload: any) => {
+        setTrackedOrder((prev: any) => prev ? { ...prev, ...payload.new } : prev);
+        // Also update in clientOrders list
+        setClientOrders(prev => prev.map(o => o.id === payload.new.id ? { ...o, ...payload.new } : o));
+      })
+      .subscribe();
+
+    // Load order history
+    const loadHistory = async () => {
+      const { data } = await supabase
+        .from('order_history')
+        .select('*, profiles!actor_id(full_name)')
+        .eq('order_id', trackedOrder.id)
+        .order('created_at', { ascending: true });
+      setOrderHistory(data ?? []);
+    };
+    loadHistory();
+
+    // Also listen for history changes
+    const histChannel = supabase
+      .channel('order-history-' + trackedOrder.id)
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'order_history',
+        filter: `order_id=eq.${trackedOrder.id}`,
+      }, (payload: any) => {
+        setOrderHistory(prev => [...prev, payload.new]);
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+      supabase.removeChannel(histChannel);
+    };
+  }, [trackedOrder?.id]);
+
+  // Helper: open WhatsApp
+  const openWhatsApp = (orderId?: string) => {
+    const message = orderId
+      ? `Bonjour BrickFood, j'ai besoin d'aide pour ma commande ${orderId}. Merci !`
+      : `Bonjour BrickFood, j'ai besoin d'aide. Merci !`;
+    Linking.openURL(`https://wa.me/${BRICKFOOD_WHATSAPP}?text=${encodeURIComponent(message)}`);
+  };
+
+  // Helper: call service client
+  const callServiceClient = () => {
+    Linking.openURL(`tel:${BRICKFOOD_SERVICE_PHONE}`);
+  };
+
+  // Mark notifications as read
+  const markNotificationsRead = async () => {
+    if (!user || unreadCount === 0) return;
+    await supabase
+      .from('notifications')
+      .update({ is_read: true })
+      .eq('user_id', user.id)
+      .eq('is_read', false);
+    setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
+    setUnreadCount(0);
+  };
+
   // Ticking countdown timer for Flash offers
   useEffect(() => {
     let timer: any;
@@ -381,7 +604,67 @@ export default function MobileApp() {
         action: 'creee',
         actor_id: user.id,
       });
+
+      // --- NOTIFICATIONS ---
+      const offerType = selectedFlash ? 'Flash ⚡' : 'Deal ❤️';
+      const notifTitle = `Nouvelle commande ${offerType}`;
+      const notifBody = `${offer.title} — ${totalAmount.toLocaleString('fr-FR')} FCFA (${bookingQty} pers.) par ${profile?.full_name || 'Client'}`;
+      const notificationsToInsert: any[] = [];
+
+      // 1. Notify restaurant owner
+      const { data: restoOwner } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('restaurant_id', offer.restaurantId)
+        .single();
+      if (restoOwner) {
+        notificationsToInsert.push({
+          user_id: restoOwner.id,
+          order_id: data.id,
+          title: '🍽️ ' + notifTitle,
+          body: notifBody + ' — Préparez la commande !',
+          type: 'new_order',
+        });
+      }
+
+      // 2. Notify agent
+      if (offer.agentId) {
+        notificationsToInsert.push({
+          user_id: offer.agentId,
+          order_id: data.id,
+          title: '💰 ' + notifTitle,
+          body: notifBody + ` — Commission: ${commissionAmount.toLocaleString('fr-FR')} FCFA`,
+          type: 'new_order',
+        });
+      }
+
+      // 3. Notify all admins
+      const { data: admins } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('role', 'admin');
+      (admins ?? []).forEach((admin: any) => {
+        notificationsToInsert.push({
+          user_id: admin.id,
+          order_id: data.id,
+          title: '📊 ' + notifTitle,
+          body: notifBody,
+          type: 'new_order',
+        });
+      });
+
+      if (notificationsToInsert.length > 0) {
+        await supabase.from('notifications').insert(notificationsToInsert);
+      }
     }
+
+    // Recharge les commandes client
+    const { data: updatedOrders } = await supabase
+      .from('orders')
+      .select('*, offers(*), restaurants(*)')
+      .eq('client_id', user.id)
+      .order('created_at', { ascending: false });
+    setClientOrders(updatedOrders ?? []);
 
     // Passe à l'écran de succès
     setBookingStep(4);
@@ -459,28 +742,49 @@ export default function MobileApp() {
       });
       if (error) throw error;
 
-      // Vérifie le rôle
-      const { data: prof } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', data.user.id)
-        .single();
+      // 1) Vérifie le rôle via user_metadata (disponible immédiatement, pas de RLS)
+      const metaRole = data.user?.user_metadata?.role as string | undefined;
 
-      if (!prof || (prof.role !== 'agent' && prof.role !== 'restaurant')) {
-        Alert.alert('Accès refusé', 'Ce compte n\'est pas un compte professionnel.');
+      // 2) Fallback : requête profiles avec retry (le trigger handle_new_user peut avoir un léger délai)
+      let role = metaRole;
+      if (!role) {
+        for (let attempt = 0; attempt < 3; attempt++) {
+          const { data: prof, error: profError } = await supabase
+            .from('profiles')
+            .select('role')
+            .eq('id', data.user.id)
+            .single();
+          if (prof?.role) {
+            role = prof.role;
+            break;
+          }
+          console.log(`[ProLogin] Tentative ${attempt + 1}/3 — profil introuvable, retry dans 1s…`, profError?.message || '');
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+      }
+
+      console.log('[ProLogin] Résultat rôle — metadata:', metaRole, 'profil:', role);
+
+      if (!role || (role !== 'agent' && role !== 'restaurant')) {
+        console.warn('[ProLogin] ACCÈS REFUSÉ — metaRole:', metaRole, 'profileRole:', role, 'userId:', data.user.id);
+        Alert.alert(
+          'Accès refusé',
+          'Ce compte n\'est pas un compte professionnel. Vérifiez que votre profil a le rôle "agent" ou "restaurant".',
+        );
         await supabase.auth.signOut();
         return;
       }
 
       setShowProLoginModal(false);
-      if (prof.role === 'agent') {
+      if (role === 'agent') {
         setAgentTab('home');
       } else {
         setRestaurantTab('home');
       }
       await refreshProfile(data.user.id);
-      Alert.alert('Connexion Réussie', `Bienvenue dans votre espace ${prof.role === 'agent' ? 'Agent Commercial' : 'Restaurant Partenaire'}.`);
+      Alert.alert('Connexion Réussie', `Bienvenue dans votre espace ${role === 'agent' ? 'Agent Commercial' : 'Restaurant Partenaire'}.`);
     } catch (err: any) {
+      console.error('[ProLogin] Erreur:', err.message);
       Alert.alert('Erreur de connexion', err.message || 'Identifiants incorrects');
     } finally {
       setAuthLoading(false);
@@ -491,6 +795,66 @@ export default function MobileApp() {
   const handleLogout = async () => {
     await supabase.auth.signOut();
     setClientTab('home');
+  };
+
+  // Crée une proposition d'offre (restaurant)
+  const handleCreateRestoProposal = async () => {
+    if (!user || !profile?.restaurant_id) {
+      Alert.alert('Erreur', 'Non authentifié ou restaurant non associé.');
+      return;
+    }
+
+    const insertData: any = {
+      restaurant_id: profile.restaurant_id,
+      agent_id: restaurantDetail?.agent_id || null, // Associe l'agent attribué au restaurant s'il existe
+      type: restoPropType,
+      title: newRestoProp.title,
+      description: restoPropType === 'flash' ? newRestoProp.description : newRestoProp.prestations,
+      status: 'en_attente',
+      is_confirmed: true, // Confirmé d'office car soumis par le restaurant
+      commission_rate: 10.00, // Taux par défaut
+    };
+
+    if (restoPropType === 'flash') {
+      insertData.price_normal = Number(newRestoProp.price_normal) || null;
+      insertData.price_promo = Number(newRestoProp.price_promo) || null;
+      insertData.quantity_initial = Number(newRestoProp.quantity) || null;
+      insertData.quantity_remaining = Number(newRestoProp.quantity) || null;
+      insertData.start_timestamp = new Date().toISOString();
+      insertData.end_timestamp = new Date(Date.now() + 4 * 3600000).toISOString();
+    } else {
+      insertData.pack_type = newRestoProp.pack_type;
+      insertData.price = Number(newRestoProp.price_promo) || null;
+      insertData.capacity_persons = Number(newRestoProp.persons) || null;
+    }
+
+    const { error } = await supabase.from('offers').insert(insertData);
+    if (error) {
+      Alert.alert('Erreur', error.message);
+      return;
+    }
+    Alert.alert('Proposition soumise', `Votre proposition "${newRestoProp.title}" a été envoyée pour validation par l'administration.`);
+    
+    // Reset form
+    setNewRestoProp({
+      title: '',
+      description: '',
+      price_normal: '',
+      price_promo: '',
+      quantity: '10',
+      pack_type: 'couple',
+      persons: '2',
+      prestations: '',
+    });
+    setShowAddRestoPropModal(false);
+
+    // Refresh proposals list
+    const { data } = await supabase
+      .from('offers')
+      .select('*')
+      .eq('restaurant_id', profile.restaurant_id)
+      .order('created_at', { ascending: false });
+    setRestaurantProposals(data ?? []);
   };
 
   // Crée une proposition d'offre (agent)
@@ -547,23 +911,25 @@ export default function MobileApp() {
       Alert.alert('Champs requis', 'Nom et email du propriétaire requis.');
       return;
     }
-    const { error } = await supabase.from('restaurants').insert({
+    const { data: restoData, error } = await supabase.from('restaurants').insert({
       name: newRestoName,
       address: newRestoAddress,
       phone: newRestoPhone,
       description: newRestoDesc,
       agent_id: user.id,
-    });
+    }).select('id').single();
     if (error) {
       Alert.alert('Erreur', error.message);
       return;
     }
-    // Crée le compte propriétaire
-    if (newRestoOwnerEmail && newRestoOwnerPassword) {
-      await supabase.auth.signUp({
+    const restaurantId = restoData?.id;
+
+    // Crée le compte propriétaire avec restaurant_id dans les metadata
+    if (newRestoOwnerEmail && newRestoOwnerPassword && restaurantId) {
+      await supabaseSignUpClient.auth.signUp({
         email: newRestoOwnerEmail.trim(),
         password: newRestoOwnerPassword,
-        options: { data: { full_name: newRestoName, role: 'restaurant' } },
+        options: { data: { full_name: newRestoName, role: 'restaurant', restaurant_id: restaurantId } },
       });
     }
     Alert.alert('Succès', `Restaurant "${newRestoName}" inscrit avec succès.`);
@@ -573,6 +939,62 @@ export default function MobileApp() {
     // Recharge
     const { data: restos } = await supabase.from('restaurants').select('*').eq('agent_id', user.id).order('name');
     setAgentRestaurants(restos ?? []);
+  };
+
+  // Met à jour le profil de l'utilisateur (client, agent ou restaurateur)
+  const handleUpdateProfile = async () => {
+    if (!user) return;
+    if (!editName.trim()) {
+      Alert.alert('Erreur', 'Le nom ne peut pas être vide.');
+      return;
+    }
+    const { error } = await supabase
+      .from('profiles')
+      .update({
+        full_name: editName,
+        phone: editPhone,
+      })
+      .eq('id', user.id);
+
+    if (error) {
+      Alert.alert('Erreur', error.message);
+    } else {
+      Alert.alert('Succès', 'Votre profil a été mis à jour.');
+      setIsEditingProfile(false);
+      await refreshProfile(user.id);
+    }
+  };
+
+  // Met à jour la fiche du restaurant (pour les restaurateurs)
+  const handleUpdateRestaurant = async () => {
+    if (!profile?.restaurant_id) return;
+    if (!editRestoName.trim() || !editRestoAddress.trim() || !editRestoPhone.trim()) {
+      Alert.alert('Erreur', 'Veuillez remplir le nom, l\'adresse et le téléphone.');
+      return;
+    }
+    const { error } = await supabase
+      .from('restaurants')
+      .update({
+        name: editRestoName,
+        address: editRestoAddress,
+        phone: editRestoPhone,
+        description: editRestoDesc,
+      })
+      .eq('id', profile.restaurant_id);
+
+    if (error) {
+      Alert.alert('Erreur', error.message);
+    } else {
+      Alert.alert('Succès', 'Les informations du restaurant ont été mises à jour.');
+      setIsEditingResto(false);
+      // Recharger les données du restaurant
+      const { data } = await supabase
+        .from('restaurants')
+        .select('*')
+        .eq('id', profile.restaurant_id)
+        .single();
+      if (data) setRestaurantDetail(data);
+    }
   };
 
   // --- VIEW 1: AUTH LOGIN GATEWAY REMOVED ---
@@ -790,33 +1212,130 @@ export default function MobileApp() {
                 </View>
 
                 <Text style={styles.formTitle}>2. Choisissez l'heure</Text>
-                <View style={styles.timeGrid}>
-                  {(selectedFlash ? ['14h00', '15h00', '16h00', '17h00', '18h00'] : ['12h00', '13h00', '14h00', '19h00', '20h00', '21h00']).map(t => {
-                    const isSelected = bookingTime === t;
-                    return (
-                      <TouchableOpacity key={t} style={[styles.timeItem, isSelected && styles.timeActive]} onPress={() => setBookingTime(t)}>
-                        <Text style={[styles.timeItemText, isSelected && { color: 'white', fontWeight: '700' }]}>{t}</Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-
-                {/* Manual input for custom time selection */}
-                <View style={styles.customDateInputContainer}>
-                  <Ionicons name="time-outline" size={18} color={Colors.textSecondary} style={{ marginRight: 8 }} />
-                  <TextInput
-                    style={styles.customDateInput}
-                    placeholder="Saisir manuellement (ex: 19h30, 20h45)..."
-                    placeholderTextColor="#9CA3AF"
-                    value={bookingTime}
-                    onChangeText={(text) => setBookingTime(text)}
-                  />
-                  {bookingTime.length > 0 && (
-                    <TouchableOpacity onPress={() => setBookingTime('')}>
-                      <Ionicons name="close-circle" size={18} color="#9CA3AF" />
+                <TouchableOpacity
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    backgroundColor: '#F9FAFB',
+                    borderWidth: 1,
+                    borderColor: bookingTime ? Colors.primary : '#E5E7EB',
+                    borderRadius: 14,
+                    paddingHorizontal: 16,
+                    paddingVertical: 14,
+                    marginTop: 8,
+                    marginBottom: 4,
+                  }}
+                  onPress={() => {
+                    if (bookingTime) {
+                      const parts = bookingTime.replace('h', ':').split(':');
+                      setPickerHour(parseInt(parts[0]) || 14);
+                      setPickerMinute(parseInt(parts[1]) || 0);
+                    }
+                    setShowTimePicker(true);
+                  }}
+                >
+                  <Ionicons name="time-outline" size={20} color={bookingTime ? Colors.primary : Colors.textSecondary} style={{ marginRight: 10 }} />
+                  <Text style={{ flex: 1, fontSize: 15, color: bookingTime ? Colors.textPrimary : '#9CA3AF', fontWeight: bookingTime ? '600' : '400' }}>
+                    {bookingTime || 'Appuyez pour choisir l\'heure'}
+                  </Text>
+                  {bookingTime ? (
+                    <TouchableOpacity onPress={(e) => { e.stopPropagation(); setBookingTime(''); }}>
+                      <Ionicons name="close-circle" size={20} color="#9CA3AF" />
                     </TouchableOpacity>
+                  ) : (
+                    <Ionicons name="chevron-forward" size={18} color="#9CA3AF" />
                   )}
-                </View>
+                </TouchableOpacity>
+
+                {/* Time Picker Modal */}
+                <Modal visible={showTimePicker} transparent animationType="slide">
+                  <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.45)' }}>
+                    <View style={{ backgroundColor: 'white', borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingBottom: 40 }}>
+                      {/* Header */}
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 24, paddingTop: 20, paddingBottom: 12 }}>
+                        <TouchableOpacity onPress={() => setShowTimePicker(false)}>
+                          <Text style={{ fontSize: 15, color: Colors.textSecondary }}>Annuler</Text>
+                        </TouchableOpacity>
+                        <Text style={{ fontSize: 17, fontWeight: '700', color: Colors.textPrimary }}>Choisir l'heure</Text>
+                        <TouchableOpacity onPress={() => {
+                          const h = String(pickerHour).padStart(2, '0');
+                          const m = String(pickerMinute).padStart(2, '0');
+                          setBookingTime(`${h}h${m}`);
+                          setShowTimePicker(false);
+                        }}>
+                          <Text style={{ fontSize: 15, fontWeight: '700', color: Colors.primary }}>Confirmer</Text>
+                        </TouchableOpacity>
+                      </View>
+                      <View style={{ height: 1, backgroundColor: '#F3F4F6' }} />
+
+                      {/* Picker Wheels */}
+                      <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', paddingVertical: 12 }}>
+                        {/* Hours wheel */}
+                        <View style={{ width: 100, height: 180 }}>
+                          <Text style={{ textAlign: 'center', fontSize: 11, color: Colors.textSecondary, marginBottom: 6, fontWeight: '600' }}>HEURES</Text>
+                          <ScrollView
+                            showsVerticalScrollIndicator={false}
+                            snapToInterval={44}
+                            decelerationRate="fast"
+                            contentContainerStyle={{ paddingVertical: 44 }}
+                            onMomentumScrollEnd={(e) => {
+                              const idx = Math.round(e.nativeEvent.contentOffset.y / 44);
+                              setPickerHour(Math.min(23, Math.max(0, idx)));
+                            }}
+                            contentOffset={{ x: 0, y: pickerHour * 44 }}
+                          >
+                            {Array.from({ length: 24 }, (_, i) => (
+                              <TouchableOpacity key={i} onPress={() => setPickerHour(i)} style={{ height: 44, justifyContent: 'center', alignItems: 'center' }}>
+                                <Text style={{ fontSize: pickerHour === i ? 28 : 18, fontWeight: pickerHour === i ? '800' : '400', color: pickerHour === i ? Colors.primary : '#CCC' }}>
+                                  {String(i).padStart(2, '0')}
+                                </Text>
+                              </TouchableOpacity>
+                            ))}
+                          </ScrollView>
+                          {/* Selection indicator */}
+                          <View pointerEvents="none" style={{ position: 'absolute', top: 44 + 17, left: 10, right: 10, height: 44, borderTopWidth: 2, borderBottomWidth: 2, borderColor: Colors.primary + '30', borderRadius: 8 }} />
+                        </View>
+
+                        <Text style={{ fontSize: 32, fontWeight: '800', color: Colors.textPrimary, marginHorizontal: 8 }}>:</Text>
+
+                        {/* Minutes wheel */}
+                        <View style={{ width: 100, height: 180 }}>
+                          <Text style={{ textAlign: 'center', fontSize: 11, color: Colors.textSecondary, marginBottom: 6, fontWeight: '600' }}>MINUTES</Text>
+                          <ScrollView
+                            showsVerticalScrollIndicator={false}
+                            snapToInterval={44}
+                            decelerationRate="fast"
+                            contentContainerStyle={{ paddingVertical: 44 }}
+                            onMomentumScrollEnd={(e) => {
+                              const idx = Math.round(e.nativeEvent.contentOffset.y / 44);
+                              const mins = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55];
+                              setPickerMinute(mins[Math.min(mins.length - 1, Math.max(0, idx))]);
+                            }}
+                            contentOffset={{ x: 0, y: ([0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55].indexOf(pickerMinute) || 0) * 44 }}
+                          >
+                            {[0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55].map((m) => (
+                              <TouchableOpacity key={m} onPress={() => setPickerMinute(m)} style={{ height: 44, justifyContent: 'center', alignItems: 'center' }}>
+                                <Text style={{ fontSize: pickerMinute === m ? 28 : 18, fontWeight: pickerMinute === m ? '800' : '400', color: pickerMinute === m ? Colors.primary : '#CCC' }}>
+                                  {String(m).padStart(2, '0')}
+                                </Text>
+                              </TouchableOpacity>
+                            ))}
+                          </ScrollView>
+                          {/* Selection indicator */}
+                          <View pointerEvents="none" style={{ position: 'absolute', top: 44 + 17, left: 10, right: 10, height: 44, borderTopWidth: 2, borderBottomWidth: 2, borderColor: Colors.primary + '30', borderRadius: 8 }} />
+                        </View>
+                      </View>
+
+                      {/* Preview */}
+                      <View style={{ alignItems: 'center', paddingBottom: 8 }}>
+                        <Text style={{ fontSize: 14, color: Colors.textSecondary }}>Heure sélectionnée</Text>
+                        <Text style={{ fontSize: 36, fontWeight: '900', color: Colors.primary, marginTop: 4 }}>
+                          {String(pickerHour).padStart(2, '0')}h{String(pickerMinute).padStart(2, '0')}
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+                </Modal>
 
                 {/* Quantity and comment récupérer for Flash */}
                 {selectedFlash && (
@@ -1328,12 +1847,64 @@ export default function MobileApp() {
           isLoggedIn ? (
             <View style={styles.scrollArea}>
               <Text style={styles.sectionTitle}>Mon Profil</Text>
-              <View style={styles.profileCard}>
-                <Text style={styles.profileName}>{profile?.full_name ?? clientName}</Text>
-                <Text style={styles.profileEmail}>{profile?.email ?? clientEmail}</Text>
-                <Text style={styles.profilePhone}>{profile?.phone ?? clientPhone}</Text>
+              
+              {/* Stats Card */}
+              <View style={[styles.agentStatsCard, { backgroundColor: '#FFFDF9', borderColor: '#FDF2E2', borderWidth: 1, marginBottom: 16 }]}>
+                <Text style={{ fontSize: 13, color: Colors.textSecondary }}>Total des réservations</Text>
+                <Text style={{ fontSize: 24, fontWeight: '800', color: Colors.primary, marginTop: 4 }}>{clientOrders.length} Réservation(s)</Text>
               </View>
-              <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
+
+              {isEditingProfile ? (
+                <View style={styles.profileCard}>
+                  <Text style={styles.inputLabel}>Nom complet</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Nom complet"
+                    value={editName}
+                    onChangeText={setEditName}
+                  />
+                  <Text style={styles.inputLabel}>Téléphone</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Numéro de téléphone"
+                    value={editPhone}
+                    onChangeText={setEditPhone}
+                    keyboardType="phone-pad"
+                  />
+                  <View style={{ flexDirection: 'row', gap: 12, marginTop: 12 }}>
+                    <TouchableOpacity style={[styles.actionBtn, { flex: 1, backgroundColor: '#EBEBEB' }]} onPress={() => setIsEditingProfile(false)}>
+                      <Text style={[styles.actionBtnText, { color: Colors.textPrimary }]}>Annuler</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={[styles.actionBtn, { flex: 1 }]} onPress={handleUpdateProfile}>
+                      <Text style={styles.actionBtnText}>Enregistrer</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ) : (
+                <View style={styles.profileCard}>
+                  <Text style={{ fontSize: 11, fontWeight: '700', color: Colors.primary }}>NOM</Text>
+                  <Text style={styles.profileName}>{profile?.full_name ?? 'Client'}</Text>
+                  
+                  <Text style={{ fontSize: 11, fontWeight: '700', color: Colors.primary, marginTop: 12 }}>EMAIL</Text>
+                  <Text style={styles.profileEmail}>{profile?.email ?? ''}</Text>
+                  
+                  <Text style={{ fontSize: 11, fontWeight: '700', color: Colors.primary, marginTop: 12 }}>TÉLÉPHONE</Text>
+                  <Text style={styles.profilePhone}>{profile?.phone ?? 'Non renseigné'}</Text>
+                  
+                  <TouchableOpacity 
+                    style={[styles.actionBtn, { marginTop: 16, backgroundColor: 'white', borderWidth: 1, borderColor: Colors.textPrimary }]} 
+                    onPress={() => {
+                      setEditName(profile?.full_name || '');
+                      setEditPhone(profile?.phone || '');
+                      setIsEditingProfile(true);
+                    }}
+                  >
+                    <Text style={[styles.actionBtnText, { color: Colors.textPrimary }]}>Modifier mon profil</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+
+              <TouchableOpacity style={[styles.logoutBtn, { marginTop: 8 }]} onPress={handleLogout}>
                 <Text style={styles.logoutBtnText}>Se déconnecter</Text>
               </TouchableOpacity>
             </View>
@@ -1479,23 +2050,20 @@ export default function MobileApp() {
         <View style={styles.header}>
           <View>
             <Text style={styles.greetingText}>Espace Agent Commercial</Text>
-            <Text style={styles.locationText}>Eric Mba's (Responsable 18 Restos)</Text>
+            <Text style={styles.locationText}>{profile?.full_name ?? 'Eric Agent'} (Responsable {agentRestaurants.length} Restos)</Text>
           </View>
-          <TouchableOpacity style={styles.logoutBadge} onPress={handleLogout}>
-            <Text style={styles.logoutText}>Déconnexion</Text>
-          </TouchableOpacity>
         </View>
 
         {agentTab === 'home' && (
           <ScrollView style={styles.scrollArea}>
             <View style={styles.agentStatsCard}>
               <Text style={styles.agentStatsLabel}>Mes commissions de la semaine</Text>
-              <Text style={styles.agentStatsVal}>145 000 FCFA</Text>
-              <Text style={styles.agentStatsSub}>Objectif de vente : 34 / 50 Commandes (68%)</Text>
+              <Text style={styles.agentStatsVal}>{agentStats.commission.toLocaleString('fr-FR')} FCFA</Text>
+              <Text style={styles.agentStatsSub}>{agentStats.ordersCount} commande(s) générée(s)</Text>
             </View>
 
-            <Text style={styles.sectionTitle}>🏢 Mes Restaurants ({restaurantsList.length})</Text>
-            {restaurantsList.map((resto) => (
+            <Text style={styles.sectionTitle}>🏢 Mes Restaurants ({agentRestaurants.length})</Text>
+            {agentRestaurants.map((resto) => (
               <View key={resto.id} style={styles.partnerItem}>
                 <Text style={styles.partnerName}>{resto.name}</Text>
                 <Text style={styles.partnerSub}>{resto.address} • {resto.phone}</Text>
@@ -1521,13 +2089,23 @@ export default function MobileApp() {
               </TouchableOpacity>
             </View>
 
-            {restaurantsList.map((resto) => (
+            {agentRestaurants.map((resto) => (
               <View key={resto.id} style={styles.partnerItem}>
-                <Text style={styles.partnerName}>{resto.name}</Text>
-                <Text style={styles.partnerSub}>{resto.address} • {resto.phone}</Text>
-                <Text style={{ fontSize: 11, color: Colors.textSecondary, marginTop: 4, fontWeight: '600' }}>
-                  ✉️ Compte gérant : {resto.ownerEmail}
-                </Text>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.partnerName}>{resto.name}</Text>
+                    <Text style={styles.partnerSub}>{resto.address} • {resto.phone}</Text>
+                  </View>
+                  <TouchableOpacity 
+                    style={{ backgroundColor: Colors.primary, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 6 }} 
+                    onPress={() => {
+                      setNewProp(prev => ({ ...prev, restaurant: resto.name, restaurantId: resto.id }));
+                      setAgentTab('proposals');
+                    }}
+                  >
+                    <Text style={{ color: 'white', fontSize: 11, fontWeight: '700' }}>⚡ Proposer</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
             ))}
           </ScrollView>
@@ -1546,8 +2124,38 @@ export default function MobileApp() {
               </TouchableOpacity>
             </View>
 
-            <Text style={styles.inputLabel}>Restaurant</Text>
-            <TextInput style={styles.input} value={newProp.restaurant} editable={false} />
+            <Text style={styles.inputLabel}>Sélectionner un restaurant</Text>
+            {agentRestaurants.length === 0 ? (
+              <Text style={{ color: Colors.textSecondary, fontSize: 12, marginBottom: 12 }}>Aucun restaurant disponible. Veuillez en inscrire un d'abord.</Text>
+            ) : (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 16 }}>
+                {agentRestaurants.map((resto) => (
+                  <TouchableOpacity
+                    key={resto.id}
+                    style={[
+                      {
+                        paddingHorizontal: 12,
+                        paddingVertical: 8,
+                        borderRadius: 20,
+                        backgroundColor: '#F3F4F6',
+                        marginRight: 8,
+                        borderWidth: 1,
+                        borderColor: '#E5E7EB'
+                      },
+                      newProp.restaurantId === resto.id && {
+                        backgroundColor: Colors.primary,
+                        borderColor: Colors.primary
+                      }
+                    ]}
+                    onPress={() => setNewProp(prev => ({ ...prev, restaurant: resto.name, restaurantId: resto.id }))}
+                  >
+                    <Text style={[{ color: Colors.textPrimary, fontSize: 12, fontWeight: '600' }, newProp.restaurantId === resto.id && { color: 'white' }]}>
+                      {resto.name}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            )}
 
             <Text style={styles.inputLabel}>Titre de l'offre</Text>
             <TextInput style={styles.input} placeholder="ex: Menu Burger Duo" value={newProp.title} onChangeText={t => setNewProp({ ...newProp, title: t })} />
@@ -1592,8 +2200,45 @@ export default function MobileApp() {
         {agentTab === 'profile' && (
           <View style={styles.scrollArea}>
             <Text style={styles.sectionTitle}>Profil Agent</Text>
-            <Text style={styles.profileName}>Eric Mba's</Text>
-            <Text style={styles.profileEmail}>agent.eric@brickfood.com</Text>
+
+            {/* Agent Stats Summary Card */}
+            <View style={[styles.agentStatsCard, { backgroundColor: '#FFFDF9', borderColor: '#FDF2E2', borderWidth: 1, marginBottom: 16 }]}>
+              <Text style={{ fontSize: 13, color: Colors.textSecondary }}>Mes Statistiques Commerciales</Text>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 12 }}>
+                <View style={{ flex: 1, alignItems: 'center' }}>
+                  <Text style={{ fontSize: 11, color: Colors.textSecondary }}>Restos gérés</Text>
+                  <Text style={{ fontSize: 18, fontWeight: '800', color: Colors.textPrimary, marginTop: 2 }}>{agentRestaurants.length}</Text>
+                </View>
+                <View style={{ flex: 1, alignItems: 'center', borderLeftWidth: 1, borderLeftColor: '#EBEBEB' }}>
+                  <Text style={{ fontSize: 11, color: Colors.textSecondary }}>Ventes</Text>
+                  <Text style={{ fontSize: 18, fontWeight: '800', color: Colors.textPrimary, marginTop: 2 }}>{agentStats.ordersCount}</Text>
+                </View>
+                <View style={{ flex: 1, alignItems: 'center', borderLeftWidth: 1, borderLeftColor: '#EBEBEB' }}>
+                  <Text style={{ fontSize: 11, color: Colors.textSecondary }}>Commissions</Text>
+                  <Text style={{ fontSize: 18, fontWeight: '800', color: Colors.success, marginTop: 2 }}>{agentStats.commission.toLocaleString('fr-FR')} F</Text>
+                </View>
+              </View>
+            </View>
+
+            <View style={styles.profileCard}>
+              <Text style={{ fontSize: 11, fontWeight: '700', color: Colors.primary }}>NOM DE L'AGENT</Text>
+              <Text style={styles.profileName}>{profile?.full_name ?? 'Eric Agent'}</Text>
+              
+              <Text style={{ fontSize: 11, fontWeight: '700', color: Colors.primary, marginTop: 12 }}>EMAIL</Text>
+              <Text style={styles.profileEmail}>{profile?.email ?? ''}</Text>
+              
+              <Text style={{ fontSize: 11, fontWeight: '700', color: Colors.primary, marginTop: 12 }}>TÉLÉPHONE</Text>
+              <Text style={styles.profilePhone}>{profile?.phone ?? 'Non renseigné'}</Text>
+
+              <View style={{ marginTop: 16, backgroundColor: '#F3F4F6', borderRadius: 10, padding: 12, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Ionicons name="lock-closed-outline" size={16} color={Colors.textSecondary} />
+                <Text style={{ fontSize: 12, color: Colors.textSecondary, flex: 1 }}>Vos informations sont gérées par l'administrateur. Contactez le support pour toute modification.</Text>
+              </View>
+            </View>
+
+            <TouchableOpacity style={[styles.logoutBtn, { marginTop: 8 }]} onPress={handleLogout}>
+              <Text style={styles.logoutBtnText}>Se déconnecter</Text>
+            </TouchableOpacity>
           </View>
         )}
 
@@ -1685,74 +2330,277 @@ export default function MobileApp() {
       <SafeAreaView style={styles.mainContainer} edges={['top', 'bottom']}>
         <View style={styles.header}>
           <View>
-            <Text style={styles.greetingText}>Restaurant : Le Bateau Ivoire</Text>
-            <Text style={styles.locationText}>Cocody 2 Plateaux</Text>
+            <Text style={styles.greetingText}>Restaurant Partenaire</Text>
+            <Text style={styles.locationText}>{restaurantDetail?.name ?? 'Chargement...'}</Text>
           </View>
-          <TouchableOpacity style={styles.logoutBadge} onPress={handleLogout}>
-            <Text style={styles.logoutText}>Déconnexion</Text>
-          </TouchableOpacity>
         </View>
 
         {restaurantTab === 'home' && (
           <ScrollView style={styles.scrollArea}>
             <View style={[styles.agentStatsCard, { backgroundColor: Colors.primary }]}>
-              <Text style={[styles.agentStatsLabel, { color: 'white' }]}>Chiffre d'affaires aujourd'hui</Text>
-              <Text style={[styles.agentStatsVal, { color: 'white' }]}>4 560 000 FCFA</Text>
-              <Text style={[styles.agentStatsSub, { color: '#FFEBEB' }]}>12 commandes reçues  •  8 en préparation</Text>
+              <Text style={[styles.agentStatsLabel, { color: 'white' }]}>Chiffre d'affaires total (Validé)</Text>
+              <Text style={[styles.agentStatsVal, { color: 'white' }]}>
+                {restaurantOrders
+                  .filter(o => o.status === 'terminee' || o.status === 'livree')
+                  .reduce((sum, o) => sum + Number(o.total_amount || 0), 0)
+                  .toLocaleString('fr-FR')} FCFA
+              </Text>
+              <Text style={[styles.agentStatsSub, { color: '#FFEBEB' }]}>
+                {restaurantOrders.length} commande(s) reçue(s) • {restaurantOrders.filter(o => o.status === 'nouvelle' || o.status === 'en_preparation' || o.status === 'prete').length} en cours
+              </Text>
             </View>
 
             <Text style={styles.sectionTitle}>📦 Commandes à traiter</Text>
-            {restaurantOrders.map(order => (
-              <View key={order.id} style={styles.orderListItem}>
-                <View style={styles.orderListHeader}>
-                  <Text style={styles.orderListResto}>{order.client} ({order.id})</Text>
-                  <View style={[styles.statusBadge, order.status === 'nouvelle' ? { backgroundColor: Colors.primaryLight } : { backgroundColor: Colors.warningLight }]}>
-                    <Text style={[styles.statusText, order.status === 'nouvelle' ? { color: Colors.primary } : { color: Colors.warning }]}>
-                      {order.status === 'nouvelle' ? 'Nouvelle' : 'En préparation'}
-                    </Text>
+            {restaurantOrders.filter(o => o.status === 'nouvelle' || o.status === 'en_preparation' || o.status === 'prete').length === 0 ? (
+              <Text style={{ color: Colors.textSecondary, fontSize: 14, textAlign: 'center', marginTop: 40 }}>Aucune commande à traiter.</Text>
+            ) : (
+              restaurantOrders.filter(o => o.status === 'nouvelle' || o.status === 'en_preparation' || o.status === 'prete').map(order => (
+                <View key={order.id} style={styles.orderListItem}>
+                  <View style={styles.orderListHeader}>
+                    <Text style={styles.orderListResto}>{order.profiles?.full_name ?? 'Client'} (Réf: {order.reservation_code})</Text>
+                    <View style={[styles.statusBadge, order.status === 'nouvelle' ? { backgroundColor: Colors.primaryLight } : order.status === 'prete' ? { backgroundColor: Colors.successLight } : { backgroundColor: Colors.warningLight }]}>
+                      <Text style={[styles.statusText, order.status === 'nouvelle' ? { color: Colors.primary } : order.status === 'prete' ? { color: Colors.success } : { color: Colors.warning }]}>
+                        {order.status === 'nouvelle' ? 'Nouvelle' : order.status === 'prete' ? 'Prête' : 'En préparation'}
+                      </Text>
+                    </View>
+                  </View>
+                  <Text style={styles.orderListDetail}>{order.offers?.title ?? 'Offre'} (x{order.quantity})</Text>
+                  <Text style={styles.orderListTotal}>Total : {Number(order.total_amount).toLocaleString('fr-FR')} FCFA ({order.delivery_mode === 'retrait' ? 'Retrait' : 'Livraison'})</Text>
+                  
+                  <View style={styles.actionRow}>
+                    {order.status === 'nouvelle' && (
+                      <TouchableOpacity style={styles.actionBadgeBtn} onPress={() => handleUpdateOrderStatus(order.id, 'en_preparation')}>
+                        <Text style={styles.actionBadgeText}>Accepter</Text>
+                      </TouchableOpacity>
+                    )}
+                    {order.status === 'en_preparation' && (
+                      <TouchableOpacity style={[styles.actionBadgeBtn, { backgroundColor: Colors.success }]} onPress={() => handleUpdateOrderStatus(order.id, 'prete')}>
+                        <Text style={styles.actionBadgeText}>Marquer Prête</Text>
+                      </TouchableOpacity>
+                    )}
                   </View>
                 </View>
-                <Text style={styles.orderListDetail}>{order.items}</Text>
-                <Text style={styles.orderListTotal}>Total : {order.amount} ({order.mode})</Text>
-                
-                <View style={styles.actionRow}>
-                  {order.status === 'nouvelle' && (
-                    <TouchableOpacity style={styles.actionBadgeBtn} onPress={() => handleUpdateOrderStatus(order.id, 'en_preparation')}>
-                      <Text style={styles.actionBadgeText}>Accepter</Text>
-                    </TouchableOpacity>
-                  )}
-                  {order.status === 'en_preparation' && (
-                    <TouchableOpacity style={[styles.actionBadgeBtn, { backgroundColor: Colors.success }]} onPress={() => handleUpdateOrderStatus(order.id, 'prete')}>
-                      <Text style={styles.actionBadgeText}>Marquer Prête</Text>
-                    </TouchableOpacity>
-                  )}
-                </View>
-              </View>
-            ))}
+              ))
+            )}
           </ScrollView>
         )}
 
         {restaurantTab === 'orders' && (
           <ScrollView style={styles.scrollArea}>
             <Text style={styles.sectionTitle}>Historique des commandes</Text>
-            <View style={styles.partnerItem}>
-              <Text style={styles.partnerName}>Jean K. (#BF12458)</Text>
-              <Text style={styles.partnerSub}>Terminée • 12 000 FCFA • Retrait</Text>
+            {restaurantOrders.filter(o => o.status === 'terminee' || o.status === 'livree').length === 0 ? (
+              <Text style={{ color: Colors.textSecondary, fontSize: 14, textAlign: 'center', marginTop: 40 }}>Aucune commande terminée.</Text>
+            ) : (
+              restaurantOrders.filter(o => o.status === 'terminee' || o.status === 'livree').map(order => (
+                <View key={order.id} style={styles.partnerItem}>
+                  <Text style={styles.partnerName}>{order.profiles?.full_name ?? 'Client'} (Réf: {order.reservation_code})</Text>
+                  <Text style={styles.partnerSub}>
+                    {order.status === 'terminee' ? 'Terminée' : 'Livrée'} • {Number(order.total_amount).toLocaleString('fr-FR')} FCFA • {order.delivery_mode === 'retrait' ? 'Retrait' : 'Livraison'}
+                  </Text>
+                </View>
+              ))
+            )}
+          </ScrollView>
+        )}
+
+        {restaurantTab === 'proposals' && (
+          <ScrollView style={styles.scrollArea}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <Text style={styles.sectionTitle}>Mes Propositions</Text>
+              <TouchableOpacity style={[styles.loginBtn, { width: 'auto', paddingHorizontal: 12, height: 36 }]} onPress={() => {
+                setNewRestoProp({
+                  title: '',
+                  description: '',
+                  price_normal: '',
+                  price_promo: '',
+                  quantity: '10',
+                  pack_type: 'couple',
+                  persons: '2',
+                  prestations: '',
+                });
+                setShowAddRestoPropModal(true);
+              }}>
+                <Text style={[styles.loginBtnText, { fontSize: 13 }]}>➕ Proposer une offre</Text>
+              </TouchableOpacity>
             </View>
-            <View style={styles.partnerItem}>
-              <Text style={styles.partnerName}>Sophie K. (#BF12455)</Text>
-              <Text style={styles.partnerSub}>Livrée • 15 000 FCFA • Livraison</Text>
-            </View>
+
+            {restaurantProposals.length === 0 ? (
+              <Text style={{ color: Colors.textSecondary, fontSize: 14, textAlign: 'center', marginTop: 40 }}>Aucune proposition soumise pour le moment.</Text>
+            ) : (
+              restaurantProposals.map((prop) => (
+                <View key={prop.id} style={styles.partnerItem}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.partnerName}>{prop.title}</Text>
+                      <Text style={styles.partnerSub}>
+                        {prop.type === 'flash' ? '⚡ Brick Flash' : '❤️ Brick Deal'} • {prop.type === 'flash' ? `${Number(prop.price_promo).toLocaleString('fr-FR')} F (Promo)` : `${Number(prop.price).toLocaleString('fr-FR')} F`}
+                      </Text>
+                    </View>
+                    <View style={[
+                      styles.statusBadge,
+                      prop.status === 'validee' ? { backgroundColor: Colors.successLight } :
+                      prop.status === 'refusee' ? { backgroundColor: Colors.primaryLight } :
+                      prop.status === 'a_modifier' ? { backgroundColor: Colors.warningLight } :
+                      { backgroundColor: '#F3F4F6' }
+                    ]}>
+                      <Text style={[
+                        styles.statusText,
+                        prop.status === 'validee' ? { color: Colors.success } :
+                        prop.status === 'refusee' ? { color: Colors.primary } :
+                        prop.status === 'a_modifier' ? { color: Colors.warning } :
+                        { color: '#6B7280' }
+                      ]}>
+                        {prop.status === 'validee' ? 'Validée' :
+                         prop.status === 'refusee' ? 'Refusée' :
+                         prop.status === 'a_modifier' ? 'À modifier' : 'En attente'}
+                      </Text>
+                    </View>
+                  </View>
+                  {prop.observation && (
+                    <Text style={{ fontSize: 11, color: '#D97706', marginTop: 6, fontStyle: 'italic' }}>
+                      💡 Note Admin: {prop.observation}
+                    </Text>
+                  )}
+                </View>
+              ))
+            )}
           </ScrollView>
         )}
 
         {restaurantTab === 'profile' && (
-          <View style={styles.scrollArea}>
-            <Text style={styles.sectionTitle}>Fiche Établissement</Text>
-            <Text style={styles.profileName}>Le Bateau Ivoire</Text>
-            <Text style={styles.profileEmail}>Contact: +225 07 58 45 12 36</Text>
-            <Text style={styles.profilePhone}>Horaires: 11h30 - 23h00</Text>
-          </View>
+          <ScrollView style={styles.scrollArea} contentContainerStyle={{ paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
+            <Text style={styles.sectionTitle}>Profil & Établissement</Text>
+
+            {/* SECTION 1: PERSONAL PROFILE */}
+            <Text style={{ fontSize: 15, fontWeight: '700', color: Colors.textPrimary, marginBottom: 8, marginTop: 4 }}>👤 Profil Gérant</Text>
+            
+            {isEditingProfile ? (
+              <View style={styles.profileCard}>
+                <Text style={styles.inputLabel}>Nom complet</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Nom complet"
+                  value={editName}
+                  onChangeText={setEditName}
+                />
+                <Text style={styles.inputLabel}>Téléphone</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Numéro de téléphone"
+                  value={editPhone}
+                  onChangeText={setEditPhone}
+                  keyboardType="phone-pad"
+                />
+                <View style={{ flexDirection: 'row', gap: 12, marginTop: 12 }}>
+                  <TouchableOpacity style={[styles.actionBtn, { flex: 1, backgroundColor: '#EBEBEB' }]} onPress={() => setIsEditingProfile(false)}>
+                    <Text style={[styles.actionBtnText, { color: Colors.textPrimary }]}>Annuler</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={[styles.actionBtn, { flex: 1 }]} onPress={handleUpdateProfile}>
+                    <Text style={styles.actionBtnText}>Enregistrer</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ) : (
+              <View style={styles.profileCard}>
+                <Text style={{ fontSize: 11, fontWeight: '700', color: Colors.primary }}>NOM</Text>
+                <Text style={styles.profileName}>{profile?.full_name ?? 'Propriétaire'}</Text>
+                
+                <Text style={{ fontSize: 11, fontWeight: '700', color: Colors.primary, marginTop: 12 }}>EMAIL</Text>
+                <Text style={styles.profileEmail}>{profile?.email ?? ''}</Text>
+                
+                <Text style={{ fontSize: 11, fontWeight: '700', color: Colors.primary, marginTop: 12 }}>TÉLÉPHONE</Text>
+                <Text style={styles.profilePhone}>{profile?.phone ?? 'Non renseigné'}</Text>
+                
+                <TouchableOpacity 
+                  style={[styles.actionBtn, { marginTop: 16, backgroundColor: 'white', borderWidth: 1, borderColor: Colors.textPrimary }]} 
+                  onPress={() => {
+                    setEditName(profile?.full_name || '');
+                    setEditPhone(profile?.phone || '');
+                    setIsEditingProfile(true);
+                  }}
+                >
+                  <Text style={[styles.actionBtnText, { color: Colors.textPrimary }]}>Modifier mon profil</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {/* SECTION 2: RESTAURANT PROFILE */}
+            <Text style={{ fontSize: 15, fontWeight: '700', color: Colors.textPrimary, marginBottom: 8, marginTop: 12 }}>🏢 Fiche Restaurant</Text>
+
+            {isEditingResto ? (
+              <View style={styles.profileCard}>
+                <Text style={styles.inputLabel}>Nom de l'établissement</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Nom de l'établissement"
+                  value={editRestoName}
+                  onChangeText={setEditRestoName}
+                />
+                <Text style={styles.inputLabel}>Adresse complète</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Adresse"
+                  value={editRestoAddress}
+                  onChangeText={setEditRestoAddress}
+                />
+                <Text style={styles.inputLabel}>Téléphone de contact</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Téléphone"
+                  value={editRestoPhone}
+                  onChangeText={setEditRestoPhone}
+                  keyboardType="phone-pad"
+                />
+                <Text style={styles.inputLabel}>Description / Spécialités</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Description"
+                  value={editRestoDesc}
+                  onChangeText={setEditRestoDesc}
+                  multiline
+                />
+                <View style={{ flexDirection: 'row', gap: 12, marginTop: 12 }}>
+                  <TouchableOpacity style={[styles.actionBtn, { flex: 1, backgroundColor: '#EBEBEB' }]} onPress={() => setIsEditingResto(false)}>
+                    <Text style={[styles.actionBtnText, { color: Colors.textPrimary }]}>Annuler</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={[styles.actionBtn, { flex: 1 }]} onPress={handleUpdateRestaurant}>
+                    <Text style={styles.actionBtnText}>Enregistrer</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ) : (
+              <View style={styles.profileCard}>
+                <Text style={{ fontSize: 11, fontWeight: '700', color: Colors.primary }}>NOM DU RESTAURANT</Text>
+                <Text style={styles.profileName}>{restaurantDetail?.name ?? 'Non chargé'}</Text>
+                
+                <Text style={{ fontSize: 11, fontWeight: '700', color: Colors.primary, marginTop: 12 }}>ADRESSE</Text>
+                <Text style={styles.profileEmail}>{restaurantDetail?.address ?? ''}</Text>
+                
+                <Text style={{ fontSize: 11, fontWeight: '700', color: Colors.primary, marginTop: 12 }}>TÉLÉPHONE DE CONTACT</Text>
+                <Text style={styles.profilePhone}>{restaurantDetail?.phone ?? ''}</Text>
+
+                <Text style={{ fontSize: 11, fontWeight: '700', color: Colors.primary, marginTop: 12 }}>DESCRIPTION / SPÉCIALITÉS</Text>
+                <Text style={[styles.profilePhone, { fontStyle: 'italic' }]}>{restaurantDetail?.description || 'Aucune description.'}</Text>
+                
+                <TouchableOpacity 
+                  style={[styles.actionBtn, { marginTop: 16, backgroundColor: 'white', borderWidth: 1, borderColor: Colors.textPrimary }]} 
+                  onPress={() => {
+                    setEditRestoName(restaurantDetail?.name || '');
+                    setEditRestoAddress(restaurantDetail?.address || '');
+                    setEditRestoPhone(restaurantDetail?.phone || '');
+                    setEditRestoDesc(restaurantDetail?.description || '');
+                    setIsEditingResto(true);
+                  }}
+                >
+                  <Text style={[styles.actionBtnText, { color: Colors.textPrimary }]}>Modifier la fiche resto</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
+            <TouchableOpacity style={[styles.logoutBtn, { marginTop: 8 }]} onPress={handleLogout}>
+              <Text style={styles.logoutBtnText}>Se déconnecter</Text>
+            </TouchableOpacity>
+          </ScrollView>
         )}
 
         {/* Restaurant Bottom Navigation */}
@@ -1765,11 +2613,76 @@ export default function MobileApp() {
             <Ionicons name={restaurantTab === 'orders' ? 'receipt' : 'receipt-outline'} size={22} color={restaurantTab === 'orders' ? Colors.primary : Colors.textSecondary} />
             <Text style={[styles.navBtnText, restaurantTab === 'orders' && styles.activeNavText]}>Commandes</Text>
           </TouchableOpacity>
+          <TouchableOpacity style={styles.navBtn} onPress={() => setRestaurantTab('proposals')}>
+            <Ionicons name={restaurantTab === 'proposals' ? 'document-text' : 'document-text-outline'} size={22} color={restaurantTab === 'proposals' ? Colors.primary : Colors.textSecondary} />
+            <Text style={[styles.navBtnText, restaurantTab === 'proposals' && styles.activeNavText]}>Propositions</Text>
+          </TouchableOpacity>
           <TouchableOpacity style={styles.navBtn} onPress={() => setRestaurantTab('profile')}>
             <Ionicons name={restaurantTab === 'profile' ? 'person' : 'person-outline'} size={22} color={restaurantTab === 'profile' ? Colors.primary : Colors.textSecondary} />
             <Text style={[styles.navBtnText, restaurantTab === 'profile' && styles.activeNavText]}>Profil</Text>
           </TouchableOpacity>
         </View>
+
+        {/* RESTAURANT ADD PROPOSAL MODAL */}
+        <Modal visible={showAddRestoPropModal} animationType="slide">
+          <SafeAreaView style={{ flex: 1, backgroundColor: 'white', padding: 20 }}>
+            <View style={[styles.modalHeader, { paddingBottom: 12 }]}>
+              <Text style={styles.modalTitle}>Nouvelle Proposition d'Offre</Text>
+              <TouchableOpacity onPress={() => setShowAddRestoPropModal(false)}>
+                <Text style={styles.closeBtn}>✕</Text>
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView contentContainerStyle={{ gap: 16 }} showsVerticalScrollIndicator={false}>
+              <View style={styles.tabSelector}>
+                <TouchableOpacity style={[styles.tabSelectorBtn, restoPropType === 'flash' && styles.tabSelectorActive]} onPress={() => setRestoPropType('flash')}>
+                  <Text style={[styles.tabSelectorText, restoPropType === 'flash' && { color: 'white' }]}>⚡ Brick Flash</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.tabSelectorBtn, restoPropType === 'deal' && styles.tabSelectorActive]} onPress={() => setRestoPropType('deal')}>
+                  <Text style={[styles.tabSelectorText, restoPropType === 'deal' && { color: 'white' }]}>❤️ Brick Deal</Text>
+                </TouchableOpacity>
+              </View>
+
+              <Text style={styles.inputLabel}>Titre de l'offre</Text>
+              <TextInput style={styles.input} placeholder="ex: Menu Burger Duo" value={newRestoProp.title} onChangeText={t => setNewRestoProp({ ...newRestoProp, title: t })} />
+
+              <Text style={styles.inputLabel}>Description</Text>
+              <TextInput style={[styles.input, { height: 80 }]} multiline placeholder="Détails de l'offre" value={newRestoProp.description} onChangeText={t => setNewRestoProp({ ...newRestoProp, description: t })} />
+
+              {restoPropType === 'flash' ? (
+                <>
+                  <Text style={styles.inputLabel}>Prix normal barré (FCFA)</Text>
+                  <TextInput style={styles.input} keyboardType="numeric" placeholder="12000" value={newRestoProp.price_normal} onChangeText={t => setNewRestoProp({ ...newRestoProp, price_normal: t })} />
+                  
+                  <Text style={styles.inputLabel}>Prix Brick Flash proposé (FCFA)</Text>
+                  <TextInput style={styles.input} keyboardType="numeric" placeholder="7500" value={newRestoProp.price_promo} onChangeText={t => setNewRestoProp({ ...newRestoProp, price_promo: t })} />
+
+                  <Text style={styles.inputLabel}>Quantité disponible</Text>
+                  <TextInput style={styles.input} keyboardType="numeric" placeholder="20" value={newRestoProp.quantity} onChangeText={t => setNewRestoProp({ ...newRestoProp, quantity: t })} />
+                </>
+              ) : (
+                <>
+                  <Text style={styles.inputLabel}>Type de Pack</Text>
+                  <TextInput style={styles.input} placeholder="Couple, Famille, Business..." value={newRestoProp.pack_type} onChangeText={t => setNewRestoProp({ ...newRestoProp, pack_type: t })} />
+                  
+                  <Text style={styles.inputLabel}>Nombre de personnes</Text>
+                  <TextInput style={styles.input} keyboardType="numeric" placeholder="2" value={newRestoProp.persons} onChangeText={t => setNewRestoProp({ ...newRestoProp, persons: t })} />
+
+                  <Text style={styles.inputLabel}>Prix fixe du pack (FCFA)</Text>
+                  <TextInput style={styles.input} keyboardType="numeric" placeholder="25000" value={newRestoProp.price_promo} onChangeText={t => setNewRestoProp({ ...newRestoProp, price_promo: t })} />
+
+                  <Text style={styles.inputLabel}>Prestations incluses</Text>
+                  <TextInput style={[styles.input, { height: 60 }]} multiline placeholder="2 Plats + 2 Boissons" value={newRestoProp.prestations} onChangeText={t => setNewRestoProp({ ...newRestoProp, prestations: t })} />
+                </>
+              )}
+
+              <TouchableOpacity style={styles.actionBtn} onPress={handleCreateRestoProposal}>
+                <Text style={styles.actionBtnText}>Envoyer la proposition</Text>
+              </TouchableOpacity>
+              <View style={{ height: 40 }} />
+            </ScrollView>
+          </SafeAreaView>
+        </Modal>
       </SafeAreaView>
     );
   }

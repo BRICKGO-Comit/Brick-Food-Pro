@@ -1,14 +1,22 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '../components/AuthProvider';
 
 export default function LoginPage() {
-  const { signIn } = useAuth();
+  const { signIn, user, loading: authLoading } = useAuth();
+  const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!authLoading && user) {
+      router.replace('/');
+    }
+  }, [user, authLoading, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,6 +29,10 @@ export default function LoginPage() {
     }
     // Le redirect est géré par le layout une fois la session établie
   };
+
+  if (user) {
+    return null;
+  }
 
   return (
     <div className="login-wrapper">

@@ -1,3 +1,4 @@
+global.WebSocket = class DummyWebSocket {};
 const { createClient } = require('@supabase/supabase-js');
 const fs = require('fs');
 const path = require('path');
@@ -98,7 +99,18 @@ async function seed() {
       user = data.user;
       console.log(`Created user in auth: ${u.email} (ID: ${user.id})`);
     } else {
-      console.log(`User already exists in auth: ${u.email} (ID: ${user.id})`);
+      console.log(`User already exists in auth: ${u.email} (ID: ${user.id}). Resetting password and metadata...`);
+      const { error: updateError } = await supabase.auth.admin.updateUserById(user.id, {
+        password: u.password,
+        email_confirm: true,
+        user_metadata: {
+          full_name: u.fullName,
+          role: u.role
+        }
+      });
+      if (updateError) {
+        console.error(`Error updating user ${u.email}:`, updateError.message);
+      }
     }
     
     createdUsers[u.role] = user;

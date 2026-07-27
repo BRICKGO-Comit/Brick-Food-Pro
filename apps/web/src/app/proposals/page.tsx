@@ -127,7 +127,7 @@ export default function ProposalsModerator() {
               </thead>
               <tbody>
                 {proposals.map((prop) => {
-                  const agentName = (prop as any).profiles?.full_name ?? '—';
+                  const agentName = (prop as any).profiles?.full_name ?? 'Direct Établissement';
                   const restoName = (prop as any).restaurants?.name ?? '—';
                   const displayPrice = prop.type === 'flash' ? prop.price_promo : prop.price;
                   return (

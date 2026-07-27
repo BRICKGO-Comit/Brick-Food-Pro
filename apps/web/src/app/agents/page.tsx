@@ -3,6 +3,20 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+import { createClient } from '@supabase/supabase-js';
+
+const supabaseSignUpClient = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+  {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+      detectSessionInUrl: false,
+    },
+  }
+);
+
 import { useAuth } from '../components/AuthProvider';
 import type { Profile } from '@/types/database';
 
@@ -62,7 +76,7 @@ export default function AgentsManagement() {
   // puis on bascule son rôle via un update du profil (l'admin est authentifié et la RLS l'autorise).
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
-    const { data, error } = await supabase.auth.signUp({
+    const { data, error } = await supabaseSignUpClient.auth.signUp({
       email: newAgent.email.trim(),
       password: newAgent.password,
       options: { data: { full_name: newAgent.name, role: 'agent', phone: newAgent.phone } },

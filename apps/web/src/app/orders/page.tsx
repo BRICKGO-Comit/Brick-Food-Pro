@@ -19,6 +19,8 @@ export default function OrdersManagement() {
   const [historyMap, setHistoryMap] = useState<Record<string, OrderHistoryWithActor[]>>({});
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [typeFilter, setTypeFilter] = useState<string>('all');
+  const [restaurants, setRestaurants] = useState<any[]>([]);
+  const [restaurantFilter, setRestaurantFilter] = useState<string>('all');
 
   useEffect(() => {
     if (!authLoading && !user) router.replace('/login');
@@ -50,6 +52,16 @@ export default function OrdersManagement() {
     if (selectedOrder) fetchHistory(selectedOrder.id);
   }, [selectedOrder, fetchHistory]);
 
+  // Charge les restaurants pour le filtre
+  useEffect(() => {
+    if (!user) return;
+    const fetchRestaurants = async () => {
+      const { data } = await supabase.from('restaurants').select('id, name').order('name');
+      setRestaurants(data ?? []);
+    };
+    fetchRestaurants();
+  }, [user]);
+
   const handleUpdateStatus = async (id: string, newStatus: string) => {
     const { error: updateError } = await supabase.from('orders').update({ status: newStatus }).eq('id', id);
     if (updateError) {
@@ -78,7 +90,8 @@ export default function OrdersManagement() {
     const matchStatus = statusFilter === 'all' || order.status === statusFilter;
     const offerType = order.offers?.type;
     const matchType = typeFilter === 'all' || (typeFilter === 'flash' && offerType === 'flash') || (typeFilter === 'deal' && offerType === 'deal');
-    return matchStatus && matchType;
+    const matchRestaurant = restaurantFilter === 'all' || order.restaurant_id === restaurantFilter;
+    return matchStatus && matchType && matchRestaurant;
   });
 
   const formatDate = (iso: string) => {
@@ -113,6 +126,15 @@ export default function OrdersManagement() {
             <option value="all">Tous</option>
             <option value="flash">⚡ Brick Flash</option>
             <option value="deal">❤️ Brick Deal</option>
+          </select>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span style={{ fontSize: '13px', fontWeight: '600' }}>Établissement :</span>
+          <select className="form-input" style={{ padding: '6px 12px' }} value={restaurantFilter} onChange={(e) => setRestaurantFilter(e.target.value)}>
+            <option value="all">Tous les établissements</option>
+            {restaurants.map((resto) => (
+              <option key={resto.id} value={resto.id}>{resto.name}</option>
+            ))}
           </select>
         </div>
       </div>
