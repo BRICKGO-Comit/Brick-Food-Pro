@@ -19,6 +19,7 @@ import { useAuth } from './_layout';
 import { Colors } from '../theme/colors';
 import { supabase } from '../lib/supabase';
 import { createClient } from '@supabase/supabase-js';
+import * as ImagePicker from 'expo-image-picker';
 
 const supabaseSignUpClient = createClient(
   process.env.EXPO_PUBLIC_SUPABASE_URL!,
@@ -109,6 +110,64 @@ export default function MobileApp() {
     imageUrl: '',
   });
   const [showAddRestoPropModal, setShowAddRestoPropModal] = useState(false);
+
+  // Image Upload states
+  const [restoImageUri, setRestoImageUri] = useState<string | null>(null);
+  const [agentImageUri, setAgentImageUri] = useState<string | null>(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
+
+  // Pick Image from Gallery
+  const pickImage = async (type: 'agent' | 'resto') => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission requise', 'Nous avons besoin de votre permission pour accéder aux photos.');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 0.8,
+    });
+
+    if (!result.canceled && result.assets && result.assets.length > 0) {
+      const uri = result.assets[0].uri;
+      if (type === 'agent') {
+        setAgentImageUri(uri);
+      } else {
+        setRestoImageUri(uri);
+      }
+    }
+  };
+
+  // Upload picked image to Supabase Storage Bucket 'offer-images'
+  const uploadImage = async (uri: string) => {
+    try {
+      const response = await fetch(uri);
+      const blob = await response.blob();
+      const fileExt = uri.split('.').pop() || 'jpg';
+      const fileName = `${Date.now()}.${fileExt}`;
+      const filePath = `proposals/${fileName}`;
+
+      const { error } = await supabase.storage
+        .from('offer-images')
+        .upload(filePath, blob, {
+          contentType: `image/${fileExt === 'png' ? 'png' : 'jpeg'}`,
+        });
+
+      if (error) throw error;
+
+      const { data: publicUrlData } = supabase.storage
+        .from('offer-images')
+        .getPublicUrl(filePath);
+
+      return publicUrlData.publicUrl;
+    } catch (err: any) {
+      console.error('[UploadImage] Error:', err.message);
+      throw err;
+    }
+  };
 
   // Notifications state
   const [notifications, setNotifications] = useState<any[]>([]);
@@ -815,8 +874,22 @@ export default function MobileApp() {
       status: 'en_attente',
       is_confirmed: true, // Confirmé d'office car soumis par le restaurant
       commission_rate: 10.00, // Taux par défaut
-      photos: newRestoProp.imageUrl ? [newRestoProp.imageUrl] : [],
     };
+
+    // Gère l'upload de l'image si sélectionnée
+    let uploadedUrl = null;
+    if (restoImageUri) {
+      setUploadingImage(true);
+      try {
+        uploadedUrl = await uploadImage(restoImageUri);
+      } catch (err: any) {
+        Alert.alert('Erreur Image', "Impossible d'enregistrer l'image. L'offre sera créée sans image.");
+      } finally {
+        setUploadingImage(false);
+      }
+    }
+
+    insertData.photos = uploadedUrl ? [uploadedUrl] : (newRestoProp.imageUrl ? [newRestoProp.imageUrl] : []);
 
     if (restoPropType === 'flash') {
       insertData.price_normal = Number(newRestoProp.price_normal) || null;
@@ -850,6 +923,7 @@ export default function MobileApp() {
       prestations: '',
       imageUrl: '',
     });
+    setRestoImageUri(null);
     setShowAddRestoPropModal(false);
 
     // Refresh proposals list
@@ -874,8 +948,22 @@ export default function MobileApp() {
       title: newProp.title,
       description: proposalType === 'flash' ? newProp.description : newProp.prestations,
       status: 'en_attente',
-      photos: newProp.imageUrl ? [newProp.imageUrl] : [],
     };
+
+    // Gère l'upload de l'image si sélectionnée
+    let uploadedUrl = null;
+    if (agentImageUri) {
+      setUploadingImage(true);
+      try {
+        uploadedUrl = await uploadImage(agentImageUri);
+      } catch (err: any) {
+        Alert.alert('Erreur Image', "Impossible d'enregistrer l'image. L'offre sera créée sans image.");
+      } finally {
+        setUploadingImage(false);
+      }
+    }
+
+    insertData.photos = uploadedUrl ? [uploadedUrl] : (newProp.imageUrl ? [newProp.imageUrl] : []);
 
     if (proposalType === 'flash') {
       insertData.price_normal = Number(newProp.price_normal) || null;
@@ -909,6 +997,7 @@ export default function MobileApp() {
       prestations: '',
       imageUrl: '',
     });
+    setAgentImageUri(null);
   };
 
   // Ajoute un restaurant (agent)
@@ -2175,6 +2264,23 @@ export default function MobileApp() {
             <Text style={styles.inputLabel}>URL de l'image / photo de l'offre</Text>
             <TextInput style={styles.input} placeholder="ex: https://images.unsplash.com/..." value={newProp.imageUrl} onChangeText={t => setNewProp({ ...newProp, imageUrl: t })} />
 
+            <Text style={styles.inputLabel}>Image de l'offre (Recommandé)</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+              <TouchableOpacity style={[styles.headerActionBtn, { backgroundColor: '#4B5563', height: 40 }]} onPress={() => pickImage('agent')}>
+                <Text style={styles.headerActionBtnText}>🖼️ Choisir une photo</Text>
+              </TouchableOpacity>
+              {agentImageUri ? (
+                <View style={{ position: 'relative' }}>
+                  <Image source={{ uri: agentImageUri }} style={{ width: 60, height: 60, borderRadius: 8 }} />
+                  <TouchableOpacity onPress={() => setAgentImageUri(null)} style={{ position: 'absolute', top: -6, right: -6, backgroundColor: '#EF4444', borderRadius: 10, width: 20, height: 20, alignItems: 'center', justifyContent: 'center' }}>
+                    <Text style={{ color: 'white', fontSize: 10, fontWeight: '700' }}>✕</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <Text style={{ fontSize: 12, color: Colors.textSecondary }}>Aucune photo sélectionnée</Text>
+              )}
+            </View>
+
             {proposalType === 'flash' ? (
               <>
                 <Text style={styles.inputLabel}>Prix normal barré (FCFA)</Text>
@@ -2645,6 +2751,23 @@ export default function MobileApp() {
 
               <Text style={styles.inputLabel}>URL de l'image / photo de l'offre</Text>
               <TextInput style={styles.input} placeholder="ex: https://images.unsplash.com/..." value={newRestoProp.imageUrl} onChangeText={t => setNewRestoProp({ ...newRestoProp, imageUrl: t })} />
+
+              <Text style={styles.inputLabel}>Image de l'offre (Recommandé)</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+                <TouchableOpacity style={[styles.headerActionBtn, { backgroundColor: '#4B5563', height: 40 }]} onPress={() => pickImage('resto')}>
+                  <Text style={styles.headerActionBtnText}>🖼️ Choisir une photo</Text>
+                </TouchableOpacity>
+                {restoImageUri ? (
+                  <View style={{ position: 'relative' }}>
+                    <Image source={{ uri: restoImageUri }} style={{ width: 60, height: 60, borderRadius: 8 }} />
+                    <TouchableOpacity onPress={() => setRestoImageUri(null)} style={{ position: 'absolute', top: -6, right: -6, backgroundColor: '#EF4444', borderRadius: 10, width: 20, height: 20, alignItems: 'center', justifyContent: 'center' }}>
+                      <Text style={{ color: 'white', fontSize: 10, fontWeight: '700' }}>✕</Text>
+                    </TouchableOpacity>
+                  </View>
+                ) : (
+                  <Text style={{ fontSize: 12, color: Colors.textSecondary }}>Aucune photo sélectionnée</Text>
+                )}
+              </View>
 
               {restoPropType === 'flash' ? (
                 <>
