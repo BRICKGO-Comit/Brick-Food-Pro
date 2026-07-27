@@ -10,3 +10,8 @@ CREATE POLICY "Allow restaurant owners to insert their offers"
 CREATE POLICY "Allow restaurant owners to delete their pending offers"
     ON public.offers FOR DELETE
     USING (restaurant_id = (SELECT restaurant_id FROM public.profiles WHERE id = auth.uid()) AND status IN ('en_attente', 'a_modifier'));
+
+-- Allow agents to register (insert) new restaurants in the database
+CREATE POLICY "Allow agents to insert restaurants"
+    ON public.restaurants FOR INSERT
+    WITH CHECK ((auth.jwt() -> 'user_metadata' ->> 'role') = 'agent');
