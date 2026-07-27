@@ -4,8 +4,8 @@ import { AuthProvider } from './components/AuthProvider';
 import ShellClient from './components/ShellClient';
 
 export const metadata = {
-  title: 'Brick Food Pro - Administration',
-  description: 'Portail d\'administration centrale pour Brick Food Pro',
+  title: 'BRICK DEAL Pro - Administration',
+  description: 'Portail d\'administration centrale pour BRICK DEAL',
   icons: {
     icon: [
       { url: '/favicon.png', sizes: '32x32', type: 'image/png' },

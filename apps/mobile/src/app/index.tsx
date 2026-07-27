@@ -76,9 +76,9 @@ const getNextDays = (count: number) => {
 // Placeholder image par défaut
 const DEFAULT_IMG = 'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=500&auto=format&fit=crop&q=60';
 
-// Service client BrickFood
-const BRICKFOOD_SERVICE_PHONE = '+2250100000000';
-const BRICKFOOD_WHATSAPP = '2250100000000';
+// Service client BRICK DEAL
+const BRICKDEAL_SERVICE_PHONE = '+2250100000000';
+const BRICKDEAL_WHATSAPP = '2250100000000';
 
 export default function MobileApp() {
   const { user, profile, role, isLoggedIn, refreshProfile } = useAuth();
@@ -544,14 +544,14 @@ export default function MobileApp() {
   // Helper: open WhatsApp
   const openWhatsApp = (orderId?: string) => {
     const message = orderId
-      ? `Bonjour BrickFood, j'ai besoin d'aide pour ma commande ${orderId}. Merci !`
-      : `Bonjour BrickFood, j'ai besoin d'aide. Merci !`;
-    Linking.openURL(`https://wa.me/${BRICKFOOD_WHATSAPP}?text=${encodeURIComponent(message)}`);
+      ? `Bonjour BRICK DEAL, j'ai besoin d'aide pour ma commande ${orderId}. Merci !`
+      : `Bonjour BRICK DEAL, j'ai besoin d'aide. Merci !`;
+    Linking.openURL(`https://wa.me/${BRICKDEAL_WHATSAPP}?text=${encodeURIComponent(message)}`);
   };
 
   // Helper: call service client
   const callServiceClient = () => {
-    Linking.openURL(`tel:${BRICKFOOD_SERVICE_PHONE}`);
+    Linking.openURL(`tel:${BRICKDEAL_SERVICE_PHONE}`);
   };
 
   // Mark notifications as read
@@ -2067,7 +2067,7 @@ export default function MobileApp() {
               <Text style={{ color: 'white', fontWeight: '600' }}>Adresse email professionnelle</Text>
               <TextInput 
                 style={[styles.input, { backgroundColor: '#222', color: 'white', borderColor: '#444', height: 48, borderRadius: 8, paddingHorizontal: 12 }]} 
-                placeholder="agent@brickfood.com ou owner@resto.com" 
+                placeholder="agent@brickdeal.com ou owner@resto.com" 
                 placeholderTextColor="#777"
                 value={proEmail} 
                 onChangeText={setProEmail} 
@@ -2131,7 +2131,7 @@ export default function MobileApp() {
 
               <TouchableOpacity style={{ alignSelf: 'center', marginTop: 12 }} onPress={() => setIsSignup(!isSignup)}>
                 <Text style={{ color: Colors.primary, fontWeight: '600' }}>
-                  {isSignup ? 'Déjà un compte ? Connectez-vous' : 'Nouveau sur Brick Food ? Inscrivez-vous'}
+                  {isSignup ? 'Déjà un compte ? Connectez-vous' : 'Nouveau sur BRICK DEAL ? Inscrivez-vous'}
                 </Text>
               </TouchableOpacity>
             </ScrollView>

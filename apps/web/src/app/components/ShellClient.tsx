@@ -55,7 +55,7 @@ export default function ShellClient({ children }: { children: React.ReactNode })
         <div className="logo-container">
           <img src="/logo.png" alt="Logo" style={{ width: '60px', height: '60px', objectFit: 'contain' }} />
           <div className="logo-text">
-            BRICK<span>FOOD</span>
+            BRICK<span>DEAL</span>
           </div>
         </div>
 

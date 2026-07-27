@@ -38,9 +38,9 @@ export default function LoginPage() {
     <div className="login-wrapper">
       <div className="login-card">
         <div className="login-logo">
-          <img src="/logo.png" alt="Brick Food" />
+          <img src="/logo.png" alt="BRICK DEAL" />
           <div className="logo-text">
-            BRICK<span>FOOD</span>
+            BRICK<span>DEAL</span>
           </div>
         </div>
 
@@ -54,7 +54,7 @@ export default function LoginPage() {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="admin@brickfood.com"
+              placeholder="admin@brickdeal.com"
               required
               autoFocus
             />
