@@ -932,7 +932,10 @@ export default function MobileApp() {
         options: { data: { full_name: newRestoName, role: 'restaurant', restaurant_id: restaurantId } },
       });
     }
-    Alert.alert('Succès', `Restaurant "${newRestoName}" inscrit avec succès.`);
+    Alert.alert(
+      'Établissement enregistré !',
+      `Le restaurant "${newRestoName}" a été créé.\n\nVeuillez transmettre ces coordonnées au propriétaire pour se connecter sur l'app :\n\nEmail : ${newRestoOwnerEmail}\nMot de passe : ${newRestoOwnerPassword}`
+    );
     setShowAddRestoModal(false);
     setNewRestoName(''); setNewRestoAddress(''); setNewRestoPhone(''); setNewRestoDesc('');
     setNewRestoOwnerEmail(''); setNewRestoOwnerPassword('');
@@ -2295,26 +2298,7 @@ export default function MobileApp() {
                 <TextInput style={styles.input} placeholder="Définir un mot de passe" value={newRestoOwnerPassword} onChangeText={setNewRestoOwnerPassword} secureTextEntry />
               </View>
 
-              <TouchableOpacity style={[styles.actionBtn, { marginTop: 10 }]} onPress={() => {
-                if (!newRestoName || !newRestoOwnerEmail || !newRestoOwnerPassword) {
-                  Alert.alert('Champs requis', 'Veuillez renseigner au moins le nom du resto et les identifiants de connexion.');
-                  return;
-                }
-                const newRestoObj = {
-                  id: `resto_00${restaurantsList.length + 1}`,
-                  name: newRestoName,
-                  address: newRestoAddress,
-                  phone: newRestoPhone,
-                  description: newRestoDesc,
-                  ownerEmail: newRestoOwnerEmail
-                };
-                setRestaurantsList([...restaurantsList, newRestoObj]);
-                Alert.alert(
-                  'Établissement enregistré !',
-                  `Veuillez transmettre ces coordonnées au propriétaire pour se connecter sur l'app :\n\nEmail : ${newRestoOwnerEmail}\nMot de passe : ${newRestoOwnerPassword}`
-                );
-                setShowAddRestoModal(false);
-              }}>
+              <TouchableOpacity style={[styles.actionBtn, { marginTop: 10 }]} onPress={handleAddRestaurant}>
                 <Text style={styles.actionBtnText}>Créer le compte et le restaurant</Text>
               </TouchableOpacity>
             </ScrollView>
