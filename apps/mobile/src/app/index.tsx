@@ -106,6 +106,7 @@ export default function MobileApp() {
     pack_type: 'couple',
     persons: '2',
     prestations: '',
+    imageUrl: '',
   });
   const [showAddRestoPropModal, setShowAddRestoPropModal] = useState(false);
 
@@ -173,6 +174,7 @@ export default function MobileApp() {
     pack_type: 'couple',
     persons: '2',
     prestations: '',
+    imageUrl: '',
   });
 
   // Profile edit states
@@ -813,6 +815,7 @@ export default function MobileApp() {
       status: 'en_attente',
       is_confirmed: true, // Confirmé d'office car soumis par le restaurant
       commission_rate: 10.00, // Taux par défaut
+      photos: newRestoProp.imageUrl ? [newRestoProp.imageUrl] : [],
     };
 
     if (restoPropType === 'flash') {
@@ -845,6 +848,7 @@ export default function MobileApp() {
       pack_type: 'couple',
       persons: '2',
       prestations: '',
+      imageUrl: '',
     });
     setShowAddRestoPropModal(false);
 
@@ -870,6 +874,7 @@ export default function MobileApp() {
       title: newProp.title,
       description: proposalType === 'flash' ? newProp.description : newProp.prestations,
       status: 'en_attente',
+      photos: newProp.imageUrl ? [newProp.imageUrl] : [],
     };
 
     if (proposalType === 'flash') {
@@ -902,6 +907,7 @@ export default function MobileApp() {
       pack_type: 'couple',
       persons: '2',
       prestations: '',
+      imageUrl: '',
     });
   };
 
@@ -2166,6 +2172,9 @@ export default function MobileApp() {
             <Text style={styles.inputLabel}>Description</Text>
             <TextInput style={[styles.input, { height: 80 }]} multiline placeholder="Détails de l'offre" value={newProp.description} onChangeText={t => setNewProp({ ...newProp, description: t })} />
 
+            <Text style={styles.inputLabel}>URL de l'image / photo de l'offre</Text>
+            <TextInput style={styles.input} placeholder="ex: https://images.unsplash.com/..." value={newProp.imageUrl} onChangeText={t => setNewProp({ ...newProp, imageUrl: t })} />
+
             {proposalType === 'flash' ? (
               <>
                 <Text style={styles.inputLabel}>Prix normal barré (FCFA)</Text>
@@ -2401,6 +2410,7 @@ export default function MobileApp() {
                   pack_type: 'couple',
                   persons: '2',
                   prestations: '',
+                  imageUrl: '',
                 });
                 setShowAddRestoPropModal(true);
               }}>
@@ -2632,6 +2642,9 @@ export default function MobileApp() {
 
               <Text style={styles.inputLabel}>Description</Text>
               <TextInput style={[styles.input, { height: 80 }]} multiline placeholder="Détails de l'offre" value={newRestoProp.description} onChangeText={t => setNewRestoProp({ ...newRestoProp, description: t })} />
+
+              <Text style={styles.inputLabel}>URL de l'image / photo de l'offre</Text>
+              <TextInput style={styles.input} placeholder="ex: https://images.unsplash.com/..." value={newRestoProp.imageUrl} onChangeText={t => setNewRestoProp({ ...newRestoProp, imageUrl: t })} />
 
               {restoPropType === 'flash' ? (
                 <>
