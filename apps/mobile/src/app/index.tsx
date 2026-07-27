@@ -2079,7 +2079,7 @@ export default function MobileApp() {
           <ScrollView style={styles.scrollArea}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <Text style={styles.sectionTitle}>Inscriptions Terrain</Text>
-              <TouchableOpacity style={[styles.loginBtn, { width: 'auto', paddingHorizontal: 12, height: 36 }]} onPress={() => {
+              <TouchableOpacity style={styles.headerActionBtn} onPress={() => {
                 setNewRestoName('');
                 setNewRestoAddress('');
                 setNewRestoPhone('');
@@ -2088,7 +2088,7 @@ export default function MobileApp() {
                 setNewRestoOwnerPassword('');
                 setShowAddRestoModal(true);
               }}>
-                <Text style={[styles.loginBtnText, { fontSize: 13 }]}>➕ Inscrire un resto</Text>
+                <Text style={styles.headerActionBtnText}>➕ Inscrire un resto</Text>
               </TouchableOpacity>
             </View>
 
@@ -2391,7 +2391,7 @@ export default function MobileApp() {
           <ScrollView style={styles.scrollArea}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <Text style={styles.sectionTitle}>Mes Propositions</Text>
-              <TouchableOpacity style={[styles.loginBtn, { width: 'auto', paddingHorizontal: 12, height: 36 }]} onPress={() => {
+              <TouchableOpacity style={styles.headerActionBtn} onPress={() => {
                 setNewRestoProp({
                   title: '',
                   description: '',
@@ -2404,7 +2404,7 @@ export default function MobileApp() {
                 });
                 setShowAddRestoPropModal(true);
               }}>
-                <Text style={[styles.loginBtnText, { fontSize: 13 }]}>➕ Proposer une offre</Text>
+                <Text style={styles.headerActionBtnText}>➕ Proposer une offre</Text>
               </TouchableOpacity>
             </View>
 
@@ -2735,6 +2735,19 @@ const styles = StyleSheet.create({
   loginBtnText: {
     color: 'white',
     fontSize: 16,
+    fontWeight: '700',
+  },
+  headerActionBtn: {
+    backgroundColor: Colors.primary,
+    paddingHorizontal: 12,
+    height: 36,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerActionBtnText: {
+    color: 'white',
+    fontSize: 13,
     fontWeight: '700',
   },
 
