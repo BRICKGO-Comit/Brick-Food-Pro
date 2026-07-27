@@ -85,7 +85,22 @@ export default function AgentsManagement() {
       showNotification(`Erreur: ${error.message}`);
       return;
     }
-    showNotification(`Agent "${newAgent.name}" recruté ! Un email de confirmation a été envoyé.`);
+
+    // Insère manuellement le profil si le trigger de la base n'est pas configuré
+    if (data.user) {
+      const { error: profileError } = await supabase.from('profiles').upsert({
+        id: data.user.id,
+        email: newAgent.email.trim(),
+        full_name: newAgent.name,
+        role: 'agent',
+        phone: newAgent.phone,
+      });
+      if (profileError) {
+        console.error('[handleAdd] Fallback profile upsert error:', profileError.message);
+      }
+    }
+
+    showNotification(`Agent "${newAgent.name}" recruté !`);
     setNewAgent({ name: '', email: '', password: '', phone: '' });
     setShowAddModal(false);
     fetchAgents();
