@@ -2651,9 +2651,44 @@ export default function MobileApp() {
                 <TextInput style={styles.input} keyboardType="numeric" placeholder="25000" value={newProp.price_promo} onChangeText={t => setNewProp({ ...newProp, price_promo: t })} />
 
                 <Text style={styles.inputLabel}>Prestations incluses</Text>
-                <TextInput style={[styles.input, { height: 60 }]} multiline placeholder="2 Plats + 2 Boissons" value={newProp.prestations} onChangeText={t => setNewProp({ ...newProp, prestations: t })} />
               </>
             )}
+
+            {/* Horaires & Période de l'offre */}
+            <View style={{ backgroundColor: '#F9FAFB', padding: 14, borderRadius: 14, borderWidth: 1, borderColor: '#E5E7EB', marginVertical: 12, gap: 10 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Ionicons name="time-outline" size={18} color={Colors.primary} />
+                <Text style={{ fontSize: 13, fontWeight: '800', color: '#111827' }}>
+                  Horaires & Début / Fin de l'offre
+                </Text>
+              </View>
+
+              <View style={{ flexDirection: 'row', gap: 10 }}>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 11, fontWeight: '700', color: Colors.textSecondary, marginBottom: 4 }}>
+                    Heure Début (ex: 18:00)
+                  </Text>
+                  <TextInput
+                    style={[styles.input, { backgroundColor: 'white', marginBottom: 0 }]}
+                    placeholder="18:00"
+                    value={newProp.startTime}
+                    onChangeText={t => setNewProp({ ...newProp, startTime: t })}
+                  />
+                </View>
+
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 11, fontWeight: '700', color: Colors.textSecondary, marginBottom: 4 }}>
+                    Heure Fin (ex: 23:59)
+                  </Text>
+                  <TextInput
+                    style={[styles.input, { backgroundColor: 'white', marginBottom: 0 }]}
+                    placeholder="23:59"
+                    value={newProp.endTime}
+                    onChangeText={t => setNewProp({ ...newProp, endTime: t })}
+                  />
+                </View>
+              </View>
+            </View>
 
             <TouchableOpacity style={styles.actionBtn} onPress={handleCreateProposal}>
               <Text style={styles.actionBtnText}>Envoyer la proposition</Text>
@@ -3141,9 +3176,44 @@ export default function MobileApp() {
                   <TextInput style={styles.input} keyboardType="numeric" placeholder="25000" value={newRestoProp.price_promo} onChangeText={t => setNewRestoProp({ ...newRestoProp, price_promo: t })} />
 
                   <Text style={styles.inputLabel}>Prestations incluses</Text>
-                  <TextInput style={[styles.input, { height: 60 }]} multiline placeholder="2 Plats + 2 Boissons" value={newRestoProp.prestations} onChangeText={t => setNewRestoProp({ ...newRestoProp, prestations: t })} />
                 </>
               )}
+
+              {/* Horaires & Période de l'offre */}
+              <View style={{ backgroundColor: '#F9FAFB', padding: 14, borderRadius: 14, borderWidth: 1, borderColor: '#E5E7EB', marginVertical: 8, gap: 10 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Ionicons name="time-outline" size={18} color={Colors.primary} />
+                  <Text style={{ fontSize: 13, fontWeight: '800', color: '#111827' }}>
+                    Horaires & Début / Fin de l'offre
+                  </Text>
+                </View>
+
+                <View style={{ flexDirection: 'row', gap: 10 }}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 11, fontWeight: '700', color: Colors.textSecondary, marginBottom: 4 }}>
+                      Heure Début (ex: 18:00)
+                    </Text>
+                    <TextInput
+                      style={[styles.input, { backgroundColor: 'white', marginBottom: 0 }]}
+                      placeholder="18:00"
+                      value={newRestoProp.startTime}
+                      onChangeText={t => setNewRestoProp({ ...newRestoProp, startTime: t })}
+                    />
+                  </View>
+
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 11, fontWeight: '700', color: Colors.textSecondary, marginBottom: 4 }}>
+                      Heure Fin (ex: 23:59)
+                    </Text>
+                    <TextInput
+                      style={[styles.input, { backgroundColor: 'white', marginBottom: 0 }]}
+                      placeholder="23:59"
+                      value={newRestoProp.endTime}
+                      onChangeText={t => setNewRestoProp({ ...newRestoProp, endTime: t })}
+                    />
+                  </View>
+                </View>
+              </View>
 
               <TouchableOpacity style={styles.actionBtn} onPress={handleCreateRestoProposal}>
                 <Text style={styles.actionBtnText}>Envoyer la proposition</Text>
