@@ -1166,160 +1166,205 @@ export default function MobileApp() {
     if (selectedFlash || selectedDeal) {
       return (
         <SafeAreaView style={styles.modalContainer} edges={['top', 'bottom']}>
-          {/* STEP 0: DETAILS VIEW */}
+          {/* STEP 0: DETAILS VIEW (REDESIGNED ULTRA PREMIUM) */}
           {bookingStep === 0 && (
-            <View style={{ flex: 1 }}>
-              {/* Custom Header for Step 0 */}
-              <View style={[styles.detailHeader, selectedFlash && { borderBottomWidth: 0, paddingBottom: 0 }]}>
-                <TouchableOpacity onPress={() => { setSelectedDeal(null); setSelectedFlash(null); }}>
-                  <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
-                </TouchableOpacity>
-                <View style={{ alignItems: 'center' }}>
-                  <Text style={styles.detailHeaderTitle}>{selectedFlash ? 'Flash' : 'Deal'}</Text>
-                  {selectedFlash && <Text style={styles.detailHeaderSubtitle}>📍 Cocody, Abidjan</Text>}
+            <View style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
+              <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 110 }} showsVerticalScrollIndicator={false}>
+                {/* Hero Image Header with Translucent Controls */}
+                <View style={{ position: 'relative', width: '100%', height: 280 }}>
+                  <Image
+                    source={{ uri: selectedFlash ? selectedFlash.image : selectedDeal?.image }}
+                    style={{ width: '100%', height: '100%', resizeMode: 'cover' }}
+                  />
+
+                  {/* Gradient Back overlay buttons */}
+                  <View style={{ position: 'absolute', top: 16, left: 16, right: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <TouchableOpacity
+                      style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center' }}
+                      onPress={() => { setSelectedDeal(null); setSelectedFlash(null); }}
+                    >
+                      <Ionicons name="arrow-back" size={22} color="white" />
+                    </TouchableOpacity>
+
+                    <View style={{ flexDirection: 'row', gap: 10 }}>
+                      <TouchableOpacity
+                        style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center' }}
+                        onPress={() => openWhatsApp(selectedFlash?.id || selectedDeal?.id)}
+                      >
+                        <Ionicons name="logo-whatsapp" size={22} color="#25D366" />
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center' }}
+                      >
+                        <Ionicons name="heart-outline" size={22} color="white" />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+
+                  {/* Floating Discount & Offer Badge */}
+                  <View style={{ position: 'absolute', bottom: 16, left: 16, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <View style={{ backgroundColor: Colors.primary, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12 }}>
+                      <Text style={{ color: 'white', fontSize: 13, fontWeight: '900' }}>
+                        {selectedFlash ? selectedFlash.discount : selectedDeal?.discount}
+                      </Text>
+                    </View>
+
+                    <View style={{ backgroundColor: 'rgba(17, 24, 39, 0.85)', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 12, flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                      <Ionicons name={selectedFlash ? 'flash' : 'flame'} size={12} color={selectedFlash ? '#F5A623' : Colors.primary} />
+                      <Text style={{ color: 'white', fontSize: 11, fontWeight: '800' }}>
+                        {selectedFlash ? 'OFFRE FLASH ⚡' : 'DEAL SPÉCIAL ❤️'}
+                      </Text>
+                    </View>
+                  </View>
                 </View>
-                <TouchableOpacity style={styles.bellIconContainer}>
-                  <Ionicons name="notifications-outline" size={24} color={Colors.textPrimary} />
-                  <View style={styles.bellBadge}><Text style={styles.bellBadgeText}>3</Text></View>
-                </TouchableOpacity>
-              </View>
 
-              <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
-                {/* Image container */}
-                <View style={styles.detailImageContainer}>
-                  <Image source={{ uri: selectedFlash ? selectedFlash.image : selectedDeal?.image }} style={styles.detailImage as any} />
-                  <View style={selectedFlash ? [styles.bestDealBadge, { backgroundColor: '#E30613' }] : styles.bestDealBadge}>
-                    <Text style={styles.bestDealBadgeText}>{selectedFlash ? selectedFlash.discount : 'MEILLEUR DEAL'}</Text>
-                  </View>
-                  <TouchableOpacity style={styles.favoriteBtn}>
-                    <Ionicons name="heart-outline" size={20} color="black" />
-                  </TouchableOpacity>
-                </View>
-
-                {/* Content Area */}
-                <View style={styles.detailContent}>
-                  <View style={styles.titleRow}>
-                    <Text style={styles.detailTitle}>{selectedFlash ? selectedFlash.title : selectedDeal?.title}</Text>
-                    {!selectedFlash && (
-                      <View style={styles.discountLabel}>
-                        <Text style={styles.discountLabelText}>{selectedDeal?.discount}</Text>
-                      </View>
-                    )}
-                  </View>
-
-                  <Text style={styles.detailSubtitle}>
-                    <Text style={{ fontWeight: '700', color: Colors.textPrimary }}>{selectedFlash ? selectedFlash.restaurant : selectedDeal?.restaurant}</Text>
-                    <Text style={styles.ratingTextSecondary}>  ⭐ {selectedFlash ? '4,6 (128 avis)' : '4,8 (256 avis)'}</Text>
-                  </Text>
-
-                  {selectedFlash && (
-                    <Text style={styles.descriptionText}>{selectedFlash.description}</Text>
-                  )}
-
-                  <View style={styles.priceRow}>
-                    <Text style={styles.priceOld}>{(selectedFlash ? selectedFlash.priceOld : selectedDeal?.priceOld)?.toLocaleString()} FCFA</Text>
-                    <Text style={styles.priceBold}>{(selectedFlash ? selectedFlash.priceNew : selectedDeal?.priceNew)?.toLocaleString()} FCFA</Text>
-                    {selectedFlash && (
-                      <View style={styles.savingsBadge}>
-                        <Text style={styles.savingsBadgeText}>Économisez {(selectedFlash.priceOld - selectedFlash.priceNew).toLocaleString()} FCFA</Text>
-                      </View>
-                    )}
-                  </View>
-
-                  <View style={styles.peopleBadge}>
-                    <Ionicons name="people-outline" size={16} color={Colors.primary} />
-                    <Text style={styles.peopleBadgeText}>{selectedFlash ? 'Pour 1 personne' : 'Pour 2 personnes'}</Text>
-                  </View>
-
-                  {/* What's included block for Deal */}
-                  {!selectedFlash ? (
-                    <View style={styles.inclusionsContainer}>
-                      <View style={{ flex: 1 }}>
-                        <Text style={styles.inclusionsTitle}>Ce pack comprend :</Text>
-                        {selectedDeal?.inclusions?.map((inc: string, idx: number) => (
-                          <View key={idx} style={styles.inclusionRow}>
-                            <Text style={styles.checkIcon}>✓</Text>
-                            <Text style={styles.inclusionText}>{inc}</Text>
-                          </View>
-                        ))}
-                      </View>
-                      
-                      {/* Restaurant logo card */}
-                      <View style={styles.restoLogoCard}>
-                        <View style={styles.restoLogoCardIcon}>
-                          <Ionicons name="restaurant-outline" size={20} color={Colors.textPrimary} />
-                        </View>
-                        <Text style={styles.restoLogoText}>{selectedDeal?.restaurant?.toUpperCase()}</Text>
-                        <Text style={styles.restoLogoSub}>Restaurant</Text>
-                      </View>
-                    </View>
-                  ) : null}
-
-                  {/* Availability Box */}
-                  <View style={selectedFlash ? styles.flashAvailabilityBox : styles.availabilityBox}>
-                    <View style={styles.availabilityHalf}>
-                      <Text style={styles.availabilityLabel}>{selectedFlash ? 'Début' : 'Disponible du'}</Text>
-                      <Text style={styles.availabilityVal}>
-                        {selectedFlash ? `📅 ${getTodayFormatted()}\n${selectedFlash.startHour}` : `📅 ${getTodayFormatted()}\n12h00`}
-                      </Text>
-                    </View>
-                    <View style={styles.separatorLine} />
-                    <View style={styles.availabilityHalf}>
-                      <Text style={styles.availabilityLabel}>{selectedFlash ? 'Fin' : 'Au'}</Text>
-                      <Text style={styles.availabilityVal}>
-                        {selectedFlash ? `📅 ${getTodayFormatted()}\n${selectedFlash.endHour}` : `📅 ${getFutureFormatted(15)}\n23h00`}
-                      </Text>
-                    </View>
-                  </View>
-
-                  {/* Additional boxes for Flash */}
-                  {selectedFlash ? (
-                    <View style={{ flexDirection: 'row', gap: 12, marginBottom: 16 }}>
-                      {/* Box 1: Fin dans */}
-                      <View style={styles.countdownBox}>
-                        <Text style={{ fontSize: 10, color: Colors.textSecondary }}>Fin dans</Text>
-                        <View style={styles.countdownValRow}>
-                          <Ionicons name="time-outline" size={14} color={Colors.primary} style={{ marginRight: 4 }} />
-                          <Text style={styles.countdownValText}>
-                            {String(countdown.hours).padStart(2, '0')} : {String(countdown.minutes).padStart(2, '0')} : {String(countdown.seconds).padStart(2, '0')}
-                          </Text>
-                        </View>
-                        <View style={styles.countdownLabelsRow}>
-                          <Text style={styles.countdownLabelText}>H</Text>
-                          <Text style={styles.countdownLabelText}>MIN</Text>
-                          <Text style={styles.countdownLabelText}>SEC</Text>
-                        </View>
-                      </View>
-
-                      {/* Box 2: Offres dispo */}
-                      <View style={[styles.countdownBox, { backgroundColor: '#FFFDF9', borderColor: '#FDF2E2' }]}>
-                        <Text style={{ fontSize: 10, color: Colors.textSecondary }}>Plus que</Text>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8 }}>
-                          <Ionicons name="cube-outline" size={14} color="#D97706" style={{ marginRight: 4 }} />
-                          <Text style={{ fontSize: 13, fontWeight: '700', color: '#1A1A1A' }}>
-                            <Text style={{ color: Colors.primary, fontWeight: '800' }}>{selectedFlash.quantityRemaining}</Text> offres
-                          </Text>
-                        </View>
-                        <Text style={{ fontSize: 8, color: Colors.textSecondary, marginTop: 4, fontWeight: '600' }}>disponibles</Text>
-                      </View>
-                    </View>
-                  ) : (
-                    /* Left availability count for Deal */
-                    <View style={styles.warningRow}>
-                      <Ionicons name="people" size={16} color={Colors.primary} />
-                      <Text style={styles.warningText}>
-                        Plus que <Text style={{ color: Colors.primary, fontWeight: '700' }}>23</Text> réservations disponibles
-                      </Text>
-                    </View>
-                  )}
-
-                  <TouchableOpacity style={styles.actionBtn} onPress={() => setBookingStep(1)}>
-                    <Text style={styles.actionBtnText}>
-                      {selectedFlash ? '⚡ J\'en profite' : '❤️ Je réserve'}
+                {/* Main Content Body */}
+                <View style={{ padding: 20, gap: 16 }}>
+                  {/* Title & Rating */}
+                  <View>
+                    <Text style={{ fontSize: 24, fontWeight: '900', color: '#111827', lineHeight: 30 }}>
+                      {selectedFlash ? selectedFlash.title : selectedDeal?.title}
                     </Text>
-                  </TouchableOpacity>
+
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <Ionicons name="restaurant" size={16} color={Colors.primary} />
+                        <Text style={{ fontSize: 15, fontWeight: '800', color: '#111827' }}>
+                          {selectedFlash ? selectedFlash.restaurant : selectedDeal?.restaurant}
+                        </Text>
+                      </View>
+
+                      <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFFBEB', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, gap: 4 }}>
+                        <Ionicons name="star" size={14} color="#F5A623" />
+                        <Text style={{ fontSize: 12, fontWeight: '800', color: '#D97706' }}>
+                          {selectedFlash ? '4.7 (128 avis)' : '4.9 (256 avis)'}
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+
+                  {/* Pricing Box */}
+                  <View style={{ backgroundColor: '#FFF5F5', padding: 16, borderRadius: 16, borderWidth: 1, borderColor: '#FFEBEB', gap: 8 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 10 }}>
+                      <Text style={{ fontSize: 26, fontWeight: '900', color: Colors.primary }}>
+                        {(selectedFlash ? selectedFlash.priceNew : selectedDeal?.priceNew)?.toLocaleString()} FCFA
+                      </Text>
+                      <Text style={{ fontSize: 15, color: '#9CA3AF', textDecorationLine: 'line-through' }}>
+                        {(selectedFlash ? selectedFlash.priceOld : selectedDeal?.priceOld)?.toLocaleString()} FCFA
+                      </Text>
+                    </View>
+
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <Ionicons name="gift" size={16} color="#059669" />
+                      <Text style={{ fontSize: 12, fontWeight: '700', color: '#059669' }}>
+                        Vous économisez {((selectedFlash ? selectedFlash.priceOld - selectedFlash.priceNew : (selectedDeal?.priceOld || 0) - (selectedDeal?.priceNew || 0)))?.toLocaleString()} FCFA !
+                      </Text>
+                    </View>
+                  </View>
+
+                  {/* Live Urgency Countdown Ticker & Stock Progress */}
+                  <View style={{ backgroundColor: '#111827', padding: 16, borderRadius: 16, gap: 10 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <Ionicons name="time-outline" size={16} color={Colors.primary} />
+                        <Text style={{ color: 'white', fontSize: 12, fontWeight: '700' }}>Temps restant</Text>
+                      </View>
+
+                      <Text style={{ color: Colors.primary, fontSize: 14, fontWeight: '900', letterSpacing: 0.5 }}>
+                        {selectedFlash ? formatLiveCountdown(selectedFlash.endTimestamp) : '04h : 12m : 45s'}
+                      </Text>
+                    </View>
+
+                    {/* Stock Counter Bar */}
+                    <View style={{ gap: 4 }}>
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <Text style={{ color: '#9CA3AF', fontSize: 11 }}>
+                          🔥 {selectedFlash ? (selectedFlash.quantityInitial - selectedFlash.quantityRemaining) : 7} réservation(s) effectuée(s)
+                        </Text>
+                        <Text style={{ color: '#F87171', fontSize: 11, fontWeight: '800' }}>
+                          Plus que {selectedFlash ? selectedFlash.quantityRemaining : 3} dispo !
+                        </Text>
+                      </View>
+
+                      <View style={{ height: 6, backgroundColor: '#374151', borderRadius: 3, overflow: 'hidden' }}>
+                        <View
+                          style={{
+                            height: '100%',
+                            backgroundColor: Colors.primary,
+                            width: `${selectedFlash ? Math.min(100, Math.max(20, ((selectedFlash.quantityInitial - selectedFlash.quantityRemaining) / selectedFlash.quantityInitial) * 100)) : 70}%`
+                          }}
+                        />
+                      </View>
+                    </View>
+                  </View>
+
+                  {/* Offer Characteristics / Details */}
+                  <View style={{ backgroundColor: '#F9FAFB', padding: 16, borderRadius: 16, borderWidth: 1, borderColor: '#F3F4F6', gap: 12 }}>
+                    <Text style={{ fontSize: 14, fontWeight: '800', color: '#111827' }}>Détails de l'offre</Text>
+
+                    <Text style={{ fontSize: 13, color: '#4B5563', lineHeight: 20 }}>
+                      {selectedFlash ? selectedFlash.description : (selectedDeal?.inclusions?.join(' • ') || 'Formule complète spéciale gastronome.')}
+                    </Text>
+
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 4 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'white', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 10, borderWidth: 1, borderColor: '#E5E7EB' }}>
+                        <Ionicons name="people-outline" size={14} color={Colors.primary} />
+                        <Text style={{ fontSize: 11, fontWeight: '700', color: '#374151' }}>
+                          {selectedFlash ? 'Pour 1 Personne' : `Pour ${selectedDeal?.persons || 2} Personnes`}
+                        </Text>
+                      </View>
+
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'white', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 10, borderWidth: 1, borderColor: '#E5E7EB' }}>
+                        <Ionicons name="calendar-outline" size={14} color={Colors.primary} />
+                        <Text style={{ fontSize: 11, fontWeight: '700', color: '#374151' }}>
+                          Aujourd'hui & Demain
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+
+                  {/* Guaranteed Pillars */}
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 8, marginTop: 4 }}>
+                    <View style={{ flex: 1, alignItems: 'center', backgroundColor: '#F9FAFB', padding: 12, borderRadius: 12, borderWidth: 1, borderColor: '#F3F4F6' }}>
+                      <Ionicons name="flash-outline" size={20} color={Colors.primary} />
+                      <Text style={{ fontSize: 11, fontWeight: '800', color: '#111827', marginTop: 4 }}>Instantané</Text>
+                      <Text style={{ fontSize: 9, color: '#6B7280', textAlign: 'center' }}>Pass QR direct</Text>
+                    </View>
+
+                    <View style={{ flex: 1, alignItems: 'center', backgroundColor: '#F9FAFB', padding: 12, borderRadius: 12, borderWidth: 1, borderColor: '#F3F4F6' }}>
+                      <Ionicons name="shield-checkmark-outline" size={20} color="#059669" />
+                      <Text style={{ fontSize: 11, fontWeight: '800', color: '#111827', marginTop: 4 }}>Garanti</Text>
+                      <Text style={{ fontSize: 9, color: '#6B7280', textAlign: 'center' }}>Resto vérifié</Text>
+                    </View>
+
+                    <View style={{ flex: 1, alignItems: 'center', backgroundColor: '#F9FAFB', padding: 12, borderRadius: 12, borderWidth: 1, borderColor: '#F3F4F6' }}>
+                      <Ionicons name="headset-outline" size={20} color="#9333EA" />
+                      <Text style={{ fontSize: 11, fontWeight: '800', color: '#111827', marginTop: 4 }}>Support</Text>
+                      <Text style={{ fontSize: 9, color: '#6B7280', textAlign: 'center' }}>WhatsApp 24/7</Text>
+                    </View>
+                  </View>
                 </View>
               </ScrollView>
+
+              {/* Sticky Fixed Bottom Bar */}
+              <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: 'white', borderTopWidth: 1, borderTopColor: '#E5E7EB', paddingHorizontal: 20, paddingVertical: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', elevation: 10, shadowColor: '#000', shadowOffset: { width: 0, height: -3 }, shadowOpacity: 0.1, shadowRadius: 6 }}>
+                <View>
+                  <Text style={{ fontSize: 11, color: '#6B7280' }}>Prix avec réduction</Text>
+                  <Text style={{ fontSize: 20, fontWeight: '900', color: Colors.primary }}>
+                    {(selectedFlash ? selectedFlash.priceNew : selectedDeal?.priceNew)?.toLocaleString()} FCFA
+                  </Text>
+                </View>
+
+                <TouchableOpacity
+                  style={{ backgroundColor: Colors.primary, paddingHorizontal: 24, height: 48, borderRadius: 24, flexDirection: 'row', alignItems: 'center', gap: 8, shadowColor: Colors.primary, shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.3, shadowRadius: 6, elevation: 4 }}
+                  onPress={() => setBookingStep(1)}
+                >
+                  <Text style={{ color: 'white', fontSize: 15, fontWeight: '900' }}>
+                    {selectedFlash ? '⚡ J\'en profite' : '❤️ Je réserve'}
+                  </Text>
+                  <Ionicons name="arrow-forward" size={16} color="white" />
+                </TouchableOpacity>
+              </View>
             </View>
           )}
 
