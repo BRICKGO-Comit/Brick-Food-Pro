@@ -937,12 +937,56 @@ export default function MobileApp() {
       return;
     }
 
+    // --- FORM VALIDATION ---
+    if (!newRestoProp.title.trim()) {
+      Alert.alert('Champ requis', 'Veuillez saisir le titre de l\'offre (ex: Menu Burger Duo).');
+      return;
+    }
+
+    const descText = restoPropType === 'flash' ? newRestoProp.description : newRestoProp.prestations;
+    if (!descText.trim()) {
+      Alert.alert('Champ requis', 'Veuillez fournir une description ou la liste des prestations de l\'offre.');
+      return;
+    }
+
+    if (restoPropType === 'flash') {
+      const priceNormalNum = Number(newRestoProp.price_normal);
+      const pricePromoNum = Number(newRestoProp.price_promo);
+      const quantityNum = Number(newRestoProp.quantity);
+
+      if (!newRestoProp.price_normal || isNaN(priceNormalNum) || priceNormalNum <= 0) {
+        Alert.alert('Champ requis', 'Veuillez indiquer le prix normal (barré) de l\'offre (ex: 12000).');
+        return;
+      }
+
+      if (!newRestoProp.price_promo || isNaN(pricePromoNum) || pricePromoNum <= 0) {
+        Alert.alert('Champ requis', 'Veuillez indiquer le prix promo de l\'offre (ex: 6000).');
+        return;
+      }
+
+      if (pricePromoNum >= priceNormalNum) {
+        Alert.alert('Prix invalide', 'Le prix promo doit être strictement inférieur au prix normal barré.');
+        return;
+      }
+
+      if (!newRestoProp.quantity || isNaN(quantityNum) || quantityNum <= 0) {
+        Alert.alert('Champ requis', 'Veuillez indiquer une quantité d\'offres disponible valide (ex: 10).');
+        return;
+      }
+    } else {
+      const pricePromoNum = Number(newRestoProp.price_promo);
+      if (!newRestoProp.price_promo || isNaN(pricePromoNum) || pricePromoNum <= 0) {
+        Alert.alert('Champ requis', 'Veuillez indiquer le prix du pack Deal (ex: 15000).');
+        return;
+      }
+    }
+
     const insertData: any = {
       restaurant_id: profile.restaurant_id,
       agent_id: restaurantDetail?.agent_id || null, // Associe l'agent attribué au restaurant s'il existe
       type: restoPropType,
-      title: newRestoProp.title,
-      description: restoPropType === 'flash' ? newRestoProp.description : newRestoProp.prestations,
+      title: newRestoProp.title.trim(),
+      description: descText.trim(),
       status: 'en_attente',
       is_confirmed: true, // Confirmé d'office car soumis par le restaurant
       commission_rate: 10.00, // Taux par défaut
@@ -1047,15 +1091,60 @@ export default function MobileApp() {
   // Crée une proposition d'offre (agent)
   const handleCreateProposal = async () => {
     if (!user || !newProp.restaurantId) {
-      Alert.alert('Erreur', 'Veuillez sélectionner un restaurant.');
+      Alert.alert('Erreur', 'Veuillez sélectionner un restaurant rattaché.');
       return;
     }
+
+    // --- FORM VALIDATION ---
+    if (!newProp.title.trim()) {
+      Alert.alert('Champ requis', 'Veuillez saisir le titre de l\'offre (ex: Formule Grillade Duo).');
+      return;
+    }
+
+    const descText = proposalType === 'flash' ? newProp.description : newProp.prestations;
+    if (!descText.trim()) {
+      Alert.alert('Champ requis', 'Veuillez fournir une description ou la liste des prestations de l\'offre.');
+      return;
+    }
+
+    if (proposalType === 'flash') {
+      const priceNormalNum = Number(newProp.price_normal);
+      const pricePromoNum = Number(newProp.price_promo);
+      const quantityNum = Number(newProp.quantity);
+
+      if (!newProp.price_normal || isNaN(priceNormalNum) || priceNormalNum <= 0) {
+        Alert.alert('Champ requis', 'Veuillez indiquer le prix normal (barré) de l\'offre (ex: 12000).');
+        return;
+      }
+
+      if (!newProp.price_promo || isNaN(pricePromoNum) || pricePromoNum <= 0) {
+        Alert.alert('Champ requis', 'Veuillez indiquer le prix promo de l\'offre (ex: 6000).');
+        return;
+      }
+
+      if (pricePromoNum >= priceNormalNum) {
+        Alert.alert('Prix invalide', 'Le prix promo doit être strictement inférieur au prix normal barré.');
+        return;
+      }
+
+      if (!newProp.quantity || isNaN(quantityNum) || quantityNum <= 0) {
+        Alert.alert('Champ requis', 'Veuillez indiquer une quantité d\'offres disponible valide (ex: 10).');
+        return;
+      }
+    } else {
+      const pricePromoNum = Number(newProp.price_promo);
+      if (!newProp.price_promo || isNaN(pricePromoNum) || pricePromoNum <= 0) {
+        Alert.alert('Champ requis', 'Veuillez indiquer le prix du pack Deal (ex: 15000).');
+        return;
+      }
+    }
+
     const insertData: any = {
       agent_id: user.id,
       restaurant_id: newProp.restaurantId,
       type: proposalType,
-      title: newProp.title,
-      description: proposalType === 'flash' ? newProp.description : newProp.prestations,
+      title: newProp.title.trim(),
+      description: descText.trim(),
       status: 'en_attente',
     };
 
@@ -1148,8 +1237,26 @@ export default function MobileApp() {
   };
 
   const handleAddRestaurant = async () => {
-    if (!user || !newRestoName || !newRestoOwnerEmail) {
-      Alert.alert('Champs requis', 'Nom et email du propriétaire requis.');
+    if (!user) return;
+
+    if (!newRestoName.trim()) {
+      Alert.alert('Champ requis', 'Veuillez saisir le nom de l\'établissement.');
+      return;
+    }
+    if (!newRestoAddress.trim()) {
+      Alert.alert('Champ requis', 'Veuillez saisir l\'adresse de l\'établissement.');
+      return;
+    }
+    if (!newRestoPhone.trim()) {
+      Alert.alert('Champ requis', 'Veuillez saisir le numéro de téléphone de contact.');
+      return;
+    }
+    if (!newRestoOwnerEmail.trim()) {
+      Alert.alert('Champ requis', 'Veuillez saisir l\'email de connexion du propriétaire.');
+      return;
+    }
+    if (!newRestoOwnerPassword || newRestoOwnerPassword.length < 6) {
+      Alert.alert('Mot de passe requis', 'Veuillez définir un mot de passe d\'au moins 6 caractères pour le propriétaire.');
       return;
     }
     const { data: restoData, error } = await supabase.from('restaurants').insert({
