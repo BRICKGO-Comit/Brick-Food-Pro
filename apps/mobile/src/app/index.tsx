@@ -20,6 +20,7 @@ import { Colors } from '../theme/colors';
 import { supabase } from '../lib/supabase';
 import { createClient } from '@supabase/supabase-js';
 import * as ImagePicker from 'expo-image-picker';
+import OnboardingScreen from '../components/OnboardingScreen';
 
 const supabaseSignUpClient = createClient(
   process.env.EXPO_PUBLIC_SUPABASE_URL!,
@@ -909,7 +910,6 @@ export default function MobileApp() {
       commission_rate: 10.00, // Taux par défaut
     };
 
-    // Gère l'upload de l'image si sélectionnée
     let uploadedUrl = null;
     if (restoImageUri) {
       setUploadingImage(true);
@@ -917,7 +917,14 @@ export default function MobileApp() {
         uploadedUrl = await uploadImage(restoImageUri);
       } catch (err: any) {
         Alert.alert('Erreur Image', "Impossible d'enregistrer l'image. L'offre sera créée sans image.");
-      if (restoPropType === 'flash') {
+      } finally {
+        setUploadingImage(false);
+      }
+    }
+
+    insertData.photos = uploadedUrl ? [uploadedUrl] : (newRestoProp.imageUrl ? [newRestoProp.imageUrl] : []);
+
+    if (restoPropType === 'flash') {
       insertData.price_normal = Number(newRestoProp.price_normal) || null;
       insertData.price_promo = Number(newRestoProp.price_promo) || null;
       insertData.quantity_initial = Number(newRestoProp.quantity) || null;
@@ -1058,6 +1065,8 @@ export default function MobileApp() {
       endTime: '23:59',
     });
     setAgentImageUri(null);
+  };
+
   const handleAddRestaurant = async () => {
     if (!user || !newRestoName || !newRestoOwnerEmail) {
       Alert.alert('Champs requis', 'Nom et email du propriétaire requis.');
@@ -1837,22 +1846,16 @@ export default function MobileApp() {
     return (
       <SafeAreaView style={styles.mainContainer} edges={['top', 'bottom']}>
         {/* Top Header */}
-        <View style={styles.topHeader}>
-          <View style={styles.logoBadgeContainer}>
-            <Image source={require('../../assets/Icone.png')} style={{ width: 28, height: 28, borderRadius: 6, resizeMode: 'cover' }} />
-            <Text style={styles.brandTitleText}>
-              BRICK<Text style={styles.brandSubtitleText}>DEAL</Text>
-            </Text>
-          </View>
-
+        <View style={styles.header}>
           <TouchableOpacity
             activeOpacity={0.8}
             onLongPress={() => setShowProLoginModal(true)}
-            delayLongPress={1500}
+            delayLongPress={2000}
           >
             <Text style={styles.greetingText}>
-              Bonjour, <Text style={styles.userNameText}>{profile?.full_name || 'Gourmand 👋'}</Text>
+              Bonjour <Text style={{ fontWeight: '800', color: Colors.primary }}>{profile?.full_name || 'Invité 👋'}</Text>
             </Text>
+            <Text style={styles.locationText}>📍 Cocody, Abidjan ▾</Text>
           </TouchableOpacity>
         </View>
 
@@ -2823,6 +2826,8 @@ export default function MobileApp() {
                   persons: '2',
                   prestations: '',
                   imageUrl: '',
+                  startTime: '18:00',
+                  endTime: '23:59',
                 });
                 setShowAddRestoPropModal(true);
               }}>
