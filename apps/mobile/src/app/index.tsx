@@ -2178,8 +2178,10 @@ export default function MobileApp() {
 
             <View style={{ flex: 1, justifyContent: 'center', gap: 16 }}>
               <View style={{ alignItems: 'center', marginBottom: 24 }}>
-                <Image source={require('../../assets/Icone.png')} style={{ width: 64, height: 64, resizeMode: 'contain' }} />
-                <Text style={{ color: 'white', fontSize: 24, fontWeight: '900', marginTop: 8 }}>BRICK<Text style={{ color: Colors.primary }}>DEAL STAFF</Text></Text>
+                <View style={{ width: 72, height: 72, borderRadius: 36, backgroundColor: 'white', alignItems: 'center', justifyContent: 'center', marginBottom: 8 }}>
+                  <Image source={require('../../assets/Icone.png')} style={{ width: 50, height: 50, resizeMode: 'contain' }} />
+                </View>
+                <Text style={{ color: 'white', fontSize: 24, fontWeight: '900' }}>BRICK<Text style={{ color: Colors.primary }}>DEAL STAFF</Text></Text>
                 <Text style={{ color: '#7D7D7D', fontSize: 13, textAlign: 'center', marginTop: 4 }}>Connectez-vous à votre espace commercial ou partenaire</Text>
               </View>
 
@@ -2223,8 +2225,10 @@ export default function MobileApp() {
 
             <ScrollView contentContainerStyle={{ flex: 1, justifyContent: 'center', gap: 16 }}>
               <View style={{ alignItems: 'center', marginBottom: 12 }}>
-                <Image source={require('../../assets/Icone.png')} style={{ width: 50, height: 50, resizeMode: 'contain' }} />
-                <Text style={{ fontSize: 20, fontWeight: '900', marginTop: 4 }}>BRICK<Text style={{ color: Colors.primary }}>DEAL</Text></Text>
+                <View style={{ width: 60, height: 60, borderRadius: 30, backgroundColor: '#FFF5F5', alignItems: 'center', justifyContent: 'center', marginBottom: 4 }}>
+                  <Image source={require('../../assets/Icone.png')} style={{ width: 42, height: 42, resizeMode: 'contain' }} />
+                </View>
+                <Text style={{ fontSize: 20, fontWeight: '900' }}>BRICK<Text style={{ color: Colors.primary }}>DEAL</Text></Text>
                 <Text style={{ color: Colors.textSecondary, fontSize: 13 }}>{isSignup ? 'Inscrivez-vous pour valider votre commande' : 'Connectez-vous pour valider votre commande'}</Text>
               </View>
 
