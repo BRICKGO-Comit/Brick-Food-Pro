@@ -59,6 +59,14 @@ const getFutureFormatted = (daysToAdd: number) => {
   return `${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear()}`;
 };
 
+const getTodayYMD = () => {
+  const d = new Date();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 const getNextDays = (count: number) => {
   const list = [];
   const daysOfWeek = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
@@ -133,6 +141,8 @@ export default function MobileApp() {
     persons: '2',
     prestations: '',
     imageUrl: '',
+    startDate: getTodayYMD(),
+    endDate: getTodayYMD(),
     startTime: '18:00',
     endTime: '23:59',
   });
@@ -261,6 +271,8 @@ export default function MobileApp() {
     persons: '2',
     prestations: '',
     imageUrl: '',
+    startDate: getTodayYMD(),
+    endDate: getTodayYMD(),
     startTime: '18:00',
     endTime: '23:59',
   });
@@ -927,22 +939,24 @@ export default function MobileApp() {
       insertData.quantity_initial = Number(newRestoProp.quantity) || null;
       insertData.quantity_remaining = Number(newRestoProp.quantity) || null;
 
-      const now = new Date();
-      if (newRestoProp.startTime) {
-        const [sh, sm] = newRestoProp.startTime.split(':').map(Number);
-        if (!isNaN(sh)) now.setHours(sh, sm || 0, 0, 0);
-      }
-      insertData.start_timestamp = now.toISOString();
+      const startDateVal = newRestoProp.startDate || getTodayYMD();
+      const startTimeVal = newRestoProp.startTime || '18:00';
+      const endDateVal = newRestoProp.endDate || startDateVal;
+      const endTimeVal = newRestoProp.endTime || '23:59';
 
-      const end = new Date(now);
-      if (newRestoProp.endTime) {
-        const [eh, em] = newRestoProp.endTime.split(':').map(Number);
-        if (!isNaN(eh)) end.setHours(eh, em || 0, 0, 0);
-        else end.setHours(end.getHours() + 4);
-      } else {
-        end.setHours(end.getHours() + 4);
+      try {
+        insertData.start_timestamp = new Date(`${startDateVal}T${startTimeVal}:00`).toISOString();
+      } catch {
+        insertData.start_timestamp = new Date().toISOString();
       }
-      insertData.end_timestamp = end.toISOString();
+
+      try {
+        insertData.end_timestamp = new Date(`${endDateVal}T${endTimeVal}:00`).toISOString();
+      } catch {
+        const fallbackEnd = new Date();
+        fallbackEnd.setHours(fallbackEnd.getHours() + 4);
+        insertData.end_timestamp = fallbackEnd.toISOString();
+      }
     } else {
       insertData.pack_type = newRestoProp.pack_type;
       insertData.price = Number(newRestoProp.price_promo) || null;
@@ -967,6 +981,8 @@ export default function MobileApp() {
       persons: '2',
       prestations: '',
       imageUrl: '',
+      startDate: getTodayYMD(),
+      endDate: getTodayYMD(),
       startTime: '18:00',
       endTime: '23:59',
     });
@@ -1018,22 +1034,24 @@ export default function MobileApp() {
       insertData.quantity_initial = Number(newProp.quantity) || null;
       insertData.quantity_remaining = Number(newProp.quantity) || null;
 
-      const now = new Date();
-      if (newProp.startTime) {
-        const [sh, sm] = newProp.startTime.split(':').map(Number);
-        if (!isNaN(sh)) now.setHours(sh, sm || 0, 0, 0);
-      }
-      insertData.start_timestamp = now.toISOString();
+      const startDateVal = newProp.startDate || getTodayYMD();
+      const startTimeVal = newProp.startTime || '18:00';
+      const endDateVal = newProp.endDate || startDateVal;
+      const endTimeVal = newProp.endTime || '23:59';
 
-      const end = new Date(now);
-      if (newProp.endTime) {
-        const [eh, em] = newProp.endTime.split(':').map(Number);
-        if (!isNaN(eh)) end.setHours(eh, em || 0, 0, 0);
-        else end.setHours(end.getHours() + 4);
-      } else {
-        end.setHours(end.getHours() + 4);
+      try {
+        insertData.start_timestamp = new Date(`${startDateVal}T${startTimeVal}:00`).toISOString();
+      } catch {
+        insertData.start_timestamp = new Date().toISOString();
       }
-      insertData.end_timestamp = end.toISOString();
+
+      try {
+        insertData.end_timestamp = new Date(`${endDateVal}T${endTimeVal}:00`).toISOString();
+      } catch {
+        const fallbackEnd = new Date();
+        fallbackEnd.setHours(fallbackEnd.getHours() + 4);
+        insertData.end_timestamp = fallbackEnd.toISOString();
+      }
     } else {
       insertData.pack_type = newProp.pack_type;
       insertData.price = Number(newProp.price_promo) || null;
@@ -1058,6 +1076,8 @@ export default function MobileApp() {
       persons: '2',
       prestations: '',
       imageUrl: '',
+      startDate: getTodayYMD(),
+      endDate: getTodayYMD(),
       startTime: '18:00',
       endTime: '23:59',
     });
@@ -2654,38 +2674,72 @@ export default function MobileApp() {
               </>
             )}
 
-            {/* Horaires & Période de l'offre */}
-            <View style={{ backgroundColor: '#F9FAFB', padding: 14, borderRadius: 14, borderWidth: 1, borderColor: '#E5E7EB', marginVertical: 12, gap: 10 }}>
+            {/* Horaires & Dates de Début / Fin de l'offre */}
+            <View style={{ backgroundColor: '#F9FAFB', padding: 14, borderRadius: 14, borderWidth: 1, borderColor: '#E5E7EB', marginVertical: 12, gap: 12 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <Ionicons name="time-outline" size={18} color={Colors.primary} />
+                <Ionicons name="calendar-outline" size={18} color={Colors.primary} />
                 <Text style={{ fontSize: 13, fontWeight: '800', color: '#111827' }}>
-                  Horaires & Début / Fin de l'offre
+                  Dates & Horaires de l'offre
                 </Text>
               </View>
 
-              <View style={{ flexDirection: 'row', gap: 10 }}>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 11, fontWeight: '700', color: Colors.textSecondary, marginBottom: 4 }}>
-                    Heure Début (ex: 18:00)
-                  </Text>
-                  <TextInput
-                    style={[styles.input, { backgroundColor: 'white', marginBottom: 0 }]}
-                    placeholder="18:00"
-                    value={newProp.startTime}
-                    onChangeText={t => setNewProp({ ...newProp, startTime: t })}
-                  />
-                </View>
+              {/* Start Date & Time Row */}
+              <View style={{ gap: 4 }}>
+                <Text style={{ fontSize: 11, fontWeight: '800', color: Colors.primary }}>🟢 DÉBUT DE L'OFFRE</Text>
+                <View style={{ flexDirection: 'row', gap: 10 }}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 10, fontWeight: '700', color: Colors.textSecondary, marginBottom: 2 }}>
+                      Date Début (AAAA-MM-JJ)
+                    </Text>
+                    <TextInput
+                      style={[styles.input, { backgroundColor: 'white', marginBottom: 0 }]}
+                      placeholder={getTodayYMD()}
+                      value={newProp.startDate}
+                      onChangeText={t => setNewProp({ ...newProp, startDate: t })}
+                    />
+                  </View>
 
-                <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 11, fontWeight: '700', color: Colors.textSecondary, marginBottom: 4 }}>
-                    Heure Fin (ex: 23:59)
-                  </Text>
-                  <TextInput
-                    style={[styles.input, { backgroundColor: 'white', marginBottom: 0 }]}
-                    placeholder="23:59"
-                    value={newProp.endTime}
-                    onChangeText={t => setNewProp({ ...newProp, endTime: t })}
-                  />
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 10, fontWeight: '700', color: Colors.textSecondary, marginBottom: 2 }}>
+                      Heure Début (18:00)
+                    </Text>
+                    <TextInput
+                      style={[styles.input, { backgroundColor: 'white', marginBottom: 0 }]}
+                      placeholder="18:00"
+                      value={newProp.startTime}
+                      onChangeText={t => setNewProp({ ...newProp, startTime: t })}
+                    />
+                  </View>
+                </View>
+              </View>
+
+              {/* End Date & Time Row */}
+              <View style={{ gap: 4, marginTop: 4 }}>
+                <Text style={{ fontSize: 11, fontWeight: '800', color: '#EF4444' }}>🔴 FIN DE L'OFFRE</Text>
+                <View style={{ flexDirection: 'row', gap: 10 }}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 10, fontWeight: '700', color: Colors.textSecondary, marginBottom: 2 }}>
+                      Date Fin (AAAA-MM-JJ)
+                    </Text>
+                    <TextInput
+                      style={[styles.input, { backgroundColor: 'white', marginBottom: 0 }]}
+                      placeholder={getTodayYMD()}
+                      value={newProp.endDate}
+                      onChangeText={t => setNewProp({ ...newProp, endDate: t })}
+                    />
+                  </View>
+
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 10, fontWeight: '700', color: Colors.textSecondary, marginBottom: 2 }}>
+                      Heure Fin (23:59)
+                    </Text>
+                    <TextInput
+                      style={[styles.input, { backgroundColor: 'white', marginBottom: 0 }]}
+                      placeholder="23:59"
+                      value={newProp.endTime}
+                      onChangeText={t => setNewProp({ ...newProp, endTime: t })}
+                    />
+                  </View>
                 </View>
               </View>
             </View>
@@ -2899,6 +2953,8 @@ export default function MobileApp() {
                   persons: '2',
                   prestations: '',
                   imageUrl: '',
+                  startDate: getTodayYMD(),
+                  endDate: getTodayYMD(),
                   startTime: '18:00',
                   endTime: '23:59',
                 });
@@ -3179,38 +3235,72 @@ export default function MobileApp() {
                 </>
               )}
 
-              {/* Horaires & Période de l'offre */}
-              <View style={{ backgroundColor: '#F9FAFB', padding: 14, borderRadius: 14, borderWidth: 1, borderColor: '#E5E7EB', marginVertical: 8, gap: 10 }}>
+              {/* Horaires & Dates de Début / Fin de l'offre */}
+              <View style={{ backgroundColor: '#F9FAFB', padding: 14, borderRadius: 14, borderWidth: 1, borderColor: '#E5E7EB', marginVertical: 8, gap: 12 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <Ionicons name="time-outline" size={18} color={Colors.primary} />
+                  <Ionicons name="calendar-outline" size={18} color={Colors.primary} />
                   <Text style={{ fontSize: 13, fontWeight: '800', color: '#111827' }}>
-                    Horaires & Début / Fin de l'offre
+                    Dates & Horaires de l'offre
                   </Text>
                 </View>
 
-                <View style={{ flexDirection: 'row', gap: 10 }}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ fontSize: 11, fontWeight: '700', color: Colors.textSecondary, marginBottom: 4 }}>
-                      Heure Début (ex: 18:00)
-                    </Text>
-                    <TextInput
-                      style={[styles.input, { backgroundColor: 'white', marginBottom: 0 }]}
-                      placeholder="18:00"
-                      value={newRestoProp.startTime}
-                      onChangeText={t => setNewRestoProp({ ...newRestoProp, startTime: t })}
-                    />
-                  </View>
+                {/* Start Date & Time Row */}
+                <View style={{ gap: 4 }}>
+                  <Text style={{ fontSize: 11, fontWeight: '800', color: Colors.primary }}>🟢 DÉBUT DE L'OFFRE</Text>
+                  <View style={{ flexDirection: 'row', gap: 10 }}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 10, fontWeight: '700', color: Colors.textSecondary, marginBottom: 2 }}>
+                        Date Début (AAAA-MM-JJ)
+                      </Text>
+                      <TextInput
+                        style={[styles.input, { backgroundColor: 'white', marginBottom: 0 }]}
+                        placeholder={getTodayYMD()}
+                        value={newRestoProp.startDate}
+                        onChangeText={t => setNewRestoProp({ ...newRestoProp, startDate: t })}
+                      />
+                    </View>
 
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ fontSize: 11, fontWeight: '700', color: Colors.textSecondary, marginBottom: 4 }}>
-                      Heure Fin (ex: 23:59)
-                    </Text>
-                    <TextInput
-                      style={[styles.input, { backgroundColor: 'white', marginBottom: 0 }]}
-                      placeholder="23:59"
-                      value={newRestoProp.endTime}
-                      onChangeText={t => setNewRestoProp({ ...newRestoProp, endTime: t })}
-                    />
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 10, fontWeight: '700', color: Colors.textSecondary, marginBottom: 2 }}>
+                        Heure Début (18:00)
+                      </Text>
+                      <TextInput
+                        style={[styles.input, { backgroundColor: 'white', marginBottom: 0 }]}
+                        placeholder="18:00"
+                        value={newRestoProp.startTime}
+                        onChangeText={t => setNewRestoProp({ ...newRestoProp, startTime: t })}
+                      />
+                    </View>
+                  </View>
+                </View>
+
+                {/* End Date & Time Row */}
+                <View style={{ gap: 4, marginTop: 4 }}>
+                  <Text style={{ fontSize: 11, fontWeight: '800', color: '#EF4444' }}>🔴 FIN DE L'OFFRE</Text>
+                  <View style={{ flexDirection: 'row', gap: 10 }}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 10, fontWeight: '700', color: Colors.textSecondary, marginBottom: 2 }}>
+                        Date Fin (AAAA-MM-JJ)
+                      </Text>
+                      <TextInput
+                        style={[styles.input, { backgroundColor: 'white', marginBottom: 0 }]}
+                        placeholder={getTodayYMD()}
+                        value={newRestoProp.endDate}
+                        onChangeText={t => setNewRestoProp({ ...newRestoProp, endDate: t })}
+                      />
+                    </View>
+
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 10, fontWeight: '700', color: Colors.textSecondary, marginBottom: 2 }}>
+                        Heure Fin (23:59)
+                      </Text>
+                      <TextInput
+                        style={[styles.input, { backgroundColor: 'white', marginBottom: 0 }]}
+                        placeholder="23:59"
+                        value={newRestoProp.endTime}
+                        onChangeText={t => setNewRestoProp({ ...newRestoProp, endTime: t })}
+                      />
+                    </View>
                   </View>
                 </View>
               </View>
