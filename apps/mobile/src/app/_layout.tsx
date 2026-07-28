@@ -1,5 +1,5 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
-import { View, StyleSheet } from 'react-native';
+import React, { createContext, useState, useContext, useEffect, useRef } from 'react';
+import { View, StyleSheet, Animated, Image, StatusBar } from 'react-native';
 import { Slot } from 'expo-router';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Session, User } from '@supabase/supabase-js';
@@ -29,6 +29,24 @@ export default function RootLayout() {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Splash Screen Overlay State
+  const [showSplashOverlay, setShowSplashOverlay] = useState(true);
+  const fadeAnim = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      Animated.timing(fadeAnim, {
+        toValue: 0,
+        duration: 500,
+        useNativeDriver: true,
+      }).start(() => {
+        setShowSplashOverlay(false);
+      });
+    }, 2200);
+
+    return () => clearTimeout(timer);
+  }, []);
 
   const refreshProfile = async (userId?: string) => {
     const targetId = userId ?? user?.id;
@@ -97,8 +115,18 @@ export default function RootLayout() {
   return (
     <AuthContext.Provider value={{ user, session, profile, role, isLoggedIn, loading, refreshProfile }}>
       <SafeAreaProvider>
+        <StatusBar barStyle="light-content" backgroundColor="#D60309" />
         <View style={styles.container}>
           <Slot />
+          {showSplashOverlay && (
+            <Animated.View style={[styles.splashOverlay, { opacity: fadeAnim }]} pointerEvents="none">
+              <Image 
+                source={require('../../assets/splash.png')} 
+                style={styles.splashImage} 
+                resizeMode="contain" 
+              />
+            </Animated.View>
+          )}
         </View>
       </SafeAreaProvider>
     </AuthContext.Provider>
@@ -109,5 +137,16 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F8F9FA',
+  },
+  splashOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: '#D60309',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 99999,
+  },
+  splashImage: {
+    width: '90%',
+    height: '90%',
   },
 });
