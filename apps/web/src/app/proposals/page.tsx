@@ -28,6 +28,25 @@ export default function ProposalsModerator() {
   useEffect(() => {
     if (!user) return;
     fetchProposals();
+
+    // Realtime subscription for live proposals updates from mobile app
+    const channel = supabase
+      .channel('admin-offers-realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'offers' },
+        (payload: any) => {
+          if (payload.eventType === 'INSERT') {
+            showNotification(`⚡ NOUVELLE PROPOSITION SOUPOUSE : "${payload.new.title || 'Sans titre'}" !`);
+          }
+          fetchProposals();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [user]);
 
   const handleAction = async (id: string, newStatus: OfferStatus) => {

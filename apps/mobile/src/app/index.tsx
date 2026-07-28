@@ -997,6 +997,23 @@ export default function MobileApp() {
       Alert.alert('Erreur', error.message);
       return;
     }
+
+    // Send notification to Admin Dashboard
+    try {
+      const { data: admins } = await supabase.from('profiles').select('id').eq('role', 'admin');
+      if (admins && admins.length > 0) {
+        const adminNotifs = admins.map((a) => ({
+          user_id: a.id,
+          title: '📩 Nouvelle proposition d\'offre',
+          body: `Le restaurant a soumis l'offre "${insertData.title}" pour validation.`,
+          is_read: false,
+        }));
+        await supabase.from('notifications').insert(adminNotifs);
+      }
+    } catch (e) {
+      console.warn('[AdminNotif] Error:', e);
+    }
+
     Alert.alert('Proposition soumise', `Votre proposition "${newRestoProp.title}" a été envoyée pour validation par l'administration.`);
     
     // Reset form
@@ -1092,6 +1109,23 @@ export default function MobileApp() {
       Alert.alert('Erreur', error.message);
       return;
     }
+
+    // Send notification to Admin Dashboard
+    try {
+      const { data: admins } = await supabase.from('profiles').select('id').eq('role', 'admin');
+      if (admins && admins.length > 0) {
+        const adminNotifs = admins.map((a) => ({
+          user_id: a.id,
+          title: '📩 Nouvelle proposition d\'offre',
+          body: `L'agent commercial a soumis l'offre "${insertData.title}" pour validation.`,
+          is_read: false,
+        }));
+        await supabase.from('notifications').insert(adminNotifs);
+      }
+    } catch (e) {
+      console.warn('[AdminNotif] Error:', e);
+    }
+
     Alert.alert('Proposition soumise', `Votre proposition "${newProp.title}" a été envoyée en statut EN ATTENTE.`);
     setNewProp({
       restaurant: newProp.restaurant,
