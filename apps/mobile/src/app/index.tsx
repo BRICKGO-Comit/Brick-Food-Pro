@@ -115,7 +115,7 @@ export default function MobileApp() {
 
   // Navigation tabs states for each role
   const [clientTab, setClientTab] = useState<'home' | 'reservations' | 'profile'>('home');
-  const [agentTab, setAgentTab] = useState<'home' | 'restaurants' | 'proposals' | 'profile'>('home');
+  const [agentTab, setAgentTab] = useState<'home' | 'restaurants' | 'proposals' | 'orders' | 'profile'>('home');
   const [restaurantTab, setRestaurantTab] = useState<'home' | 'orders' | 'proposals' | 'profile'>('home');
 
   // Search & Filter states
@@ -128,6 +128,9 @@ export default function MobileApp() {
   const [restaurantsList, setRestaurantsList] = useState<any[]>([]);
   const [clientOrders, setClientOrders] = useState<any[]>([]);
   const [agentRestaurants, setAgentRestaurants] = useState<any[]>([]);
+  const [agentOrders, setAgentOrders] = useState<any[]>([]);
+  const [selectedAgentOrder, setSelectedAgentOrder] = useState<any | null>(null);
+  const [selectedClientOrder, setSelectedClientOrder] = useState<any | null>(null);
   const [agentStats, setAgentStats] = useState({ commission: 0, ordersCount: 0 });
   const [restaurantOrders, setRestaurantOrders] = useState<any[]>([]);
   const [restaurantProposals, setRestaurantProposals] = useState<any[]>([]);
@@ -454,8 +457,10 @@ export default function MobileApp() {
 
       const { data: orders } = await supabase
         .from('orders')
-        .select('commission_amount')
-        .eq('agent_id', user.id);
+        .select('*, restaurants(name, address, phone), offers(title, type), profiles!client_id(full_name, phone)')
+        .eq('agent_id', user.id)
+        .order('created_at', { ascending: false });
+      setAgentOrders(orders ?? []);
       const commission = (orders ?? []).reduce((s: number, o: any) => s + Number(o.commission_amount || 0), 0);
       setAgentStats({ commission, ordersCount: orders?.length ?? 0 });
 
@@ -2220,17 +2225,43 @@ export default function MobileApp() {
                 if (orderFilter === 'en_cours') return o.status !== 'terminee' && o.status !== 'annulee' && o.status !== 'refusee';
                 return true;
               }).map((order) => (
-                <View key={order.id} style={styles.orderListItem}>
+                <View key={order.id} style={[styles.orderListItem, { gap: 8, padding: 16, borderRadius: 16, borderWidth: 1, borderColor: '#E5E7EB', marginBottom: 12 }]}>
                   <View style={styles.orderListHeader}>
                     <Text style={styles.orderListResto}>{order.restaurants?.name ?? 'Restaurant'}</Text>
-                    <View style={[styles.statusBadge, { backgroundColor: order.status === 'terminee' ? Colors.successLight : Colors.warningLight }]}>
-                      <Text style={[styles.statusText, { color: order.status === 'terminee' ? Colors.success : Colors.warning }]}>
-                        {order.status === 'nouvelle' ? 'Nouvelle' : order.status === 'en_preparation' ? 'En préparation' : order.status === 'prete' ? 'Prête' : order.status === 'terminee' ? 'Terminée' : order.status}
+                    <View style={[
+                      styles.statusBadge,
+                      {
+                        backgroundColor:
+                          order.status === 'terminee' || order.status === 'livree' ? '#ECFDF5' :
+                          order.status === 'prete' ? '#EFF6FF' :
+                          order.status === 'en_preparation' ? '#FFF7ED' : '#F3F4F6'
+                      }
+                    ]}>
+                      <Text style={[
+                        styles.statusText,
+                        {
+                          color:
+                            order.status === 'terminee' || order.status === 'livree' ? '#047857' :
+                            order.status === 'prete' ? '#1D4ED8' :
+                            order.status === 'en_preparation' ? '#C2410C' : '#4B5563'
+                        }
+                      ]}>
+                        {order.status === 'nouvelle' ? '🟢 Nouvelle' : order.status === 'en_preparation' ? '🍳 En préparation' : order.status === 'prete' ? '🛍️ Prête' : order.status === 'terminee' ? '✅ Terminée' : order.status}
                       </Text>
                     </View>
                   </View>
+
                   <Text style={styles.orderListDetail}>{order.offers?.title ?? 'Offre'} • {new Date(order.created_at).toLocaleDateString('fr-FR')}</Text>
-                  <Text style={styles.orderListTotal}>Montant payé : {Number(order.total_amount).toLocaleString('fr-FR')} FCFA (Réf: {order.reservation_code})</Text>
+                  <Text style={styles.orderListTotal}>Montant payé : {Number(order.total_amount).toLocaleString('fr-FR')} FCFA (Pass: {order.reservation_code})</Text>
+
+                  {/* Direct Tracking Button */}
+                  <TouchableOpacity
+                    style={{ backgroundColor: Colors.primary, borderRadius: 12, paddingVertical: 10, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 4 }}
+                    onPress={() => setSelectedClientOrder(order)}
+                  >
+                    <Ionicons name="time" size={16} color="white" />
+                    <Text style={{ color: 'white', fontWeight: '800', fontSize: 13 }}>⚡ Suivre la commande en direct</Text>
+                  </TouchableOpacity>
                 </View>
               ))}
             </ScrollView>
@@ -2778,6 +2809,109 @@ export default function MobileApp() {
           </ScrollView>
         )}
 
+        {agentTab === 'orders' && (
+          <ScrollView style={styles.scrollArea} showsVerticalScrollIndicator={false}>
+            <Text style={styles.sectionTitle}>📦 Commandes Restos Inscrits ({agentOrders.length})</Text>
+
+            {/* Agent Read Only Info Banner */}
+            <View style={{ backgroundColor: '#F0FDF4', padding: 14, borderRadius: 14, borderWidth: 1, borderColor: '#BBF7D0', marginBottom: 16, gap: 6 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Ionicons name="eye" size={18} color="#059669" />
+                <Text style={{ fontSize: 13, fontWeight: '800', color: '#166534' }}>Mode Suivi Commercial (Lecture seule)</Text>
+              </View>
+              <Text style={{ fontSize: 11, color: '#15803D', lineHeight: 16 }}>
+                Consultez le statut en direct de toutes les commandes de vos restaurants affiliés. Le changement de statut est réservé aux restaurateurs.
+              </Text>
+            </View>
+
+            {/* Stats Summary */}
+            <View style={{ flexDirection: 'row', gap: 10, marginBottom: 16 }}>
+              <View style={{ flex: 1, backgroundColor: 'white', padding: 12, borderRadius: 14, borderWidth: 1, borderColor: '#E5E7EB', alignItems: 'center' }}>
+                <Text style={{ fontSize: 11, color: Colors.textSecondary }}>Total Commandes</Text>
+                <Text style={{ fontSize: 20, fontWeight: '900', color: Colors.textPrimary, marginTop: 2 }}>{agentOrders.length}</Text>
+              </View>
+
+              <View style={{ flex: 1, backgroundColor: '#FFF5F5', padding: 12, borderRadius: 14, borderWidth: 1, borderColor: '#FFEBEB', alignItems: 'center' }}>
+                <Text style={{ fontSize: 11, color: Colors.primary }}>Total Commissions</Text>
+                <Text style={{ fontSize: 20, fontWeight: '900', color: Colors.primary, marginTop: 2 }}>
+                  {agentStats.commission.toLocaleString('fr-FR')} FCFA
+                </Text>
+              </View>
+            </View>
+
+            {agentOrders.length === 0 ? (
+              <View style={{ backgroundColor: 'white', borderRadius: 14, padding: 30, alignItems: 'center', gap: 10, borderWidth: 1, borderColor: '#E5E7EB' }}>
+                <Ionicons name="receipt-outline" size={48} color={Colors.textSecondary} />
+                <Text style={{ fontSize: 15, fontWeight: '700', color: Colors.textPrimary }}>Aucune commande enregistrée</Text>
+                <Text style={{ fontSize: 12, color: Colors.textSecondary, textAlign: 'center' }}>
+                  Les commandes passées sur les offres de vos restaurants rattachés apparaîtront automatiquement ici.
+                </Text>
+              </View>
+            ) : (
+              agentOrders.map((order) => (
+                <View key={order.id} style={{ backgroundColor: 'white', padding: 16, borderRadius: 16, borderWidth: 1, borderColor: '#E5E7EB', marginBottom: 12, gap: 10 }}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Text style={{ fontSize: 15, fontWeight: '800', color: Colors.textPrimary }}>
+                      🏢 {order.restaurants?.name ?? 'Restaurant'}
+                    </Text>
+
+                    <View style={[
+                      styles.statusBadge,
+                      {
+                        backgroundColor:
+                          order.status === 'terminee' || order.status === 'livree' ? '#ECFDF5' :
+                          order.status === 'prete' ? '#EFF6FF' :
+                          order.status === 'en_preparation' ? '#FFF7ED' : '#F3F4F6'
+                      }
+                    ]}>
+                      <Text style={[
+                        styles.statusText,
+                        {
+                          color:
+                            order.status === 'terminee' || order.status === 'livree' ? '#047857' :
+                            order.status === 'prete' ? '#1D4ED8' :
+                            order.status === 'en_preparation' ? '#C2410C' : '#4B5563'
+                        }
+                      ]}>
+                        {order.status === 'nouvelle' ? '🟢 Nouvelle' : order.status === 'en_preparation' ? '🍳 En préparation' : order.status === 'prete' ? '🛍️ Prête' : order.status === 'terminee' ? '✅ Terminée' : order.status}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: Colors.primary }}>
+                    {order.offers?.title ?? 'Offre'}
+                  </Text>
+
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#F9FAFB', padding: 10, borderRadius: 10 }}>
+                    <View>
+                      <Text style={{ fontSize: 11, color: Colors.textSecondary }}>Client : {order.profiles?.full_name || 'Gourmand'}</Text>
+                      <Text style={{ fontSize: 11, color: Colors.textSecondary }}>Tél : {order.profiles?.phone || 'Non renseigné'}</Text>
+                    </View>
+                    <View style={{ alignItems: 'flex-end' }}>
+                      <Text style={{ fontSize: 13, fontWeight: '800', color: Colors.textPrimary }}>
+                        {Number(order.total_amount || 0).toLocaleString('fr-FR')} FCFA
+                      </Text>
+                      <Text style={{ fontSize: 10, fontWeight: '800', color: Colors.success }}>
+                        + {Number(order.commission_amount || 0).toLocaleString('fr-FR')} F Com.
+                      </Text>
+                    </View>
+                  </View>
+
+                  {/* Read Only Details Button */}
+                  <TouchableOpacity
+                    style={{ backgroundColor: '#F3F4F6', borderRadius: 10, paddingVertical: 8, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+                    onPress={() => setSelectedAgentOrder(order)}
+                  >
+                    <Ionicons name="eye-outline" size={16} color="#374151" />
+                    <Text style={{ color: '#374151', fontWeight: '800', fontSize: 12 }}>🔍 Voir le suivi détaillé (Lecture Seule)</Text>
+                  </TouchableOpacity>
+                </View>
+              ))
+            )}
+            <View style={{ height: 40 }} />
+          </ScrollView>
+        )}
+
         {agentTab === 'profile' && (
           <View style={styles.scrollArea}>
             <Text style={styles.sectionTitle}>Profil Agent</Text>
@@ -2836,6 +2970,10 @@ export default function MobileApp() {
           <TouchableOpacity style={styles.navBtn} onPress={() => setAgentTab('proposals')}>
             <Ionicons name={agentTab === 'proposals' ? 'document-text' : 'document-text-outline'} size={22} color={agentTab === 'proposals' ? Colors.primary : Colors.textSecondary} />
             <Text style={[styles.navBtnText, agentTab === 'proposals' && styles.activeNavText]}>Proposition</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.navBtn} onPress={() => setAgentTab('orders')}>
+            <Ionicons name={agentTab === 'orders' ? 'receipt' : 'receipt-outline'} size={22} color={agentTab === 'orders' ? Colors.primary : Colors.textSecondary} />
+            <Text style={[styles.navBtnText, agentTab === 'orders' && styles.activeNavText]}>Commandes</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.navBtn} onPress={() => setAgentTab('profile')}>
             <Ionicons name={agentTab === 'profile' ? 'person' : 'person-outline'} size={22} color={agentTab === 'profile' ? Colors.primary : Colors.textSecondary} />
@@ -3380,7 +3518,280 @@ export default function MobileApp() {
     );
   }
 
-  return null;
+  return (
+    <>
+      {/* CLIENT ORDER LIVE TRACKING MODAL */}
+      <Modal visible={!!selectedClientOrder} animationType="slide" transparent={false}>
+        <SafeAreaView style={{ flex: 1, backgroundColor: 'white', padding: 20 }}>
+          {selectedClientOrder && (
+            <View style={{ flex: 1 }}>
+              <View style={[styles.modalHeader, { paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: '#F3F4F6' }]}>
+                <View>
+                  <Text style={styles.modalTitle}>Suivi de la Commande</Text>
+                  <Text style={{ fontSize: 12, color: Colors.textSecondary }}>Pass : {selectedClientOrder.reservation_code}</Text>
+                </View>
+                <TouchableOpacity onPress={() => setSelectedClientOrder(null)}>
+                  <Text style={styles.closeBtn}>✕</Text>
+                </TouchableOpacity>
+              </View>
+
+              <ScrollView style={{ flex: 1, marginTop: 10 }} showsVerticalScrollIndicator={false}>
+                {/* Restaurant Info Header */}
+                <View style={{ backgroundColor: '#FFF5F5', padding: 14, borderRadius: 16, borderWidth: 1, borderColor: '#FFEBEB', gap: 4 }}>
+                  <Text style={{ fontSize: 16, fontWeight: '900', color: Colors.primary }}>
+                    🏢 {selectedClientOrder.restaurants?.name || 'Restaurant Partenaire'}
+                  </Text>
+                  <Text style={{ fontSize: 12, color: '#4B5563' }}>📍 {selectedClientOrder.restaurants?.address}</Text>
+                  <Text style={{ fontSize: 12, color: '#4B5563' }}>📞 {selectedClientOrder.restaurants?.phone}</Text>
+                </View>
+
+                {/* Real-time Order Progress Stepper */}
+                <View style={{ backgroundColor: '#F9FAFB', padding: 16, borderRadius: 16, borderWidth: 1, borderColor: '#E5E7EB', marginVertical: 14 }}>
+                  <Text style={{ fontSize: 14, fontWeight: '800', color: '#111827', marginBottom: 14 }}>
+                    ⚡ Évolution du statut en direct
+                  </Text>
+
+                  {/* Stepper Timeline 4 steps */}
+                  <View style={{ gap: 16 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                      <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: '#059669', alignItems: 'center', justifyContent: 'center' }}>
+                        <Ionicons name="checkmark" size={18} color="white" />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ fontSize: 13, fontWeight: '800', color: '#111827' }}>1. Commande Enregistrée</Text>
+                        <Text style={{ fontSize: 11, color: '#6B7280' }}>Paiement et réservation confirmés</Text>
+                      </View>
+                    </View>
+
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                      <View style={[
+                        { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+                        selectedClientOrder.status === 'en_preparation' || selectedClientOrder.status === 'prete' || selectedClientOrder.status === 'terminee' || selectedClientOrder.status === 'livree' ? { backgroundColor: '#059669' } : { backgroundColor: '#E5E7EB' }
+                      ]}>
+                        {selectedClientOrder.status === 'en_preparation' ? (
+                          <Ionicons name="time" size={16} color="white" />
+                        ) : (selectedClientOrder.status === 'prete' || selectedClientOrder.status === 'terminee' || selectedClientOrder.status === 'livree') ? (
+                          <Ionicons name="checkmark" size={18} color="white" />
+                        ) : (
+                          <Text style={{ fontSize: 12, color: '#9CA3AF', fontWeight: '700' }}>2</Text>
+                        )}
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={[{ fontSize: 13, fontWeight: '700', color: '#9CA3AF' }, (selectedClientOrder.status === 'en_preparation' || selectedClientOrder.status === 'prete' || selectedClientOrder.status === 'terminee' || selectedClientOrder.status === 'livree') && { color: '#111827', fontWeight: '800' }]}>
+                          2. En préparation par le restaurant
+                        </Text>
+                        <Text style={{ fontSize: 11, color: '#6B7280' }}>Le chef prépare votre formule gourmande</Text>
+                      </View>
+                    </View>
+
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                      <View style={[
+                        { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+                        selectedClientOrder.status === 'prete' || selectedClientOrder.status === 'terminee' || selectedClientOrder.status === 'livree' ? { backgroundColor: '#059669' } : { backgroundColor: '#E5E7EB' }
+                      ]}>
+                        {(selectedClientOrder.status === 'terminee' || selectedClientOrder.status === 'livree') ? (
+                          <Ionicons name="checkmark" size={18} color="white" />
+                        ) : selectedClientOrder.status === 'prete' ? (
+                          <Ionicons name="restaurant" size={16} color="white" />
+                        ) : (
+                          <Text style={{ fontSize: 12, color: '#9CA3AF', fontWeight: '700' }}>3</Text>
+                        )}
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={[{ fontSize: 13, fontWeight: '700', color: '#9CA3AF' }, (selectedClientOrder.status === 'prete' || selectedClientOrder.status === 'terminee' || selectedClientOrder.status === 'livree') && { color: '#111827', fontWeight: '800' }]}>
+                          3. Prête pour dégustation / retrait
+                        </Text>
+                        <Text style={{ fontSize: 11, color: '#6B7280' }}>Présentez votre pass lors de votre arrivée</Text>
+                      </View>
+                    </View>
+
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                      <View style={[
+                        { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+                        (selectedClientOrder.status === 'terminee' || selectedClientOrder.status === 'livree') ? { backgroundColor: '#059669' } : { backgroundColor: '#E5E7EB' }
+                      ]}>
+                        {(selectedClientOrder.status === 'terminee' || selectedClientOrder.status === 'livree') ? (
+                          <Ionicons name="checkmark" size={18} color="white" />
+                        ) : (
+                          <Text style={{ fontSize: 12, color: '#9CA3AF', fontWeight: '700' }}>4</Text>
+                        )}
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={[{ fontSize: 13, fontWeight: '700', color: '#9CA3AF' }, (selectedClientOrder.status === 'terminee' || selectedClientOrder.status === 'livree') && { color: '#111827', fontWeight: '800' }]}>
+                          4. Commande Servie & Terminée
+                        </Text>
+                        <Text style={{ fontSize: 11, color: '#6B7280' }}>Bon appétit ! Merci pour votre confiance.</Text>
+                      </View>
+                    </View>
+                  </View>
+                </View>
+
+                {/* QR Code Pass Widget */}
+                <View style={{ backgroundColor: '#111827', borderRadius: 16, padding: 16, alignItems: 'center', gap: 10 }}>
+                  <Text style={{ color: Colors.primary, fontSize: 12, fontWeight: '800', letterSpacing: 0.5 }}>PASS DE RÉSERVATION ACCUEIL</Text>
+                  <View style={{ width: 110, height: 110, backgroundColor: 'white', borderRadius: 12, alignItems: 'center', justifyContent: 'center' }}>
+                    <Ionicons name="qr-code-outline" size={90} color="#111827" />
+                  </View>
+                  <Text style={{ color: 'white', fontSize: 18, fontWeight: '900', letterSpacing: 1 }}>{selectedClientOrder.reservation_code}</Text>
+                  <Text style={{ color: '#9CA3AF', fontSize: 11, textAlign: 'center' }}>Montrez cet écran à la caisse du restaurant.</Text>
+                </View>
+
+                {/* Contact Action Buttons */}
+                <View style={{ flexDirection: 'row', gap: 10, marginVertical: 16 }}>
+                  <TouchableOpacity
+                    style={{ flex: 1, backgroundColor: '#25D366', height: 46, borderRadius: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+                    onPress={() => openWhatsApp(selectedClientOrder.id)}
+                  >
+                    <Ionicons name="logo-whatsapp" size={18} color="white" />
+                    <Text style={{ color: 'white', fontWeight: '800', fontSize: 13 }}>Contact Resto</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={{ flex: 1, backgroundColor: '#374151', height: 46, borderRadius: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+                    onPress={callServiceClient}
+                  >
+                    <Ionicons name="call" size={16} color="white" />
+                    <Text style={{ color: 'white', fontWeight: '800', fontSize: 13 }}>Service Client</Text>
+                  </TouchableOpacity>
+                </View>
+              </ScrollView>
+            </View>
+          )}
+        </SafeAreaView>
+      </Modal>
+
+      {/* AGENT READ-ONLY ORDER TRACKING MODAL */}
+      <Modal visible={!!selectedAgentOrder} animationType="slide" transparent={false}>
+        <SafeAreaView style={{ flex: 1, backgroundColor: 'white', padding: 20 }}>
+          {selectedAgentOrder && (
+            <View style={{ flex: 1 }}>
+              <View style={[styles.modalHeader, { paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: '#F3F4F6' }]}>
+                <View>
+                  <Text style={styles.modalTitle}>Suivi Agent (Lecture Seule)</Text>
+                  <Text style={{ fontSize: 12, color: Colors.textSecondary }}>Réf : {selectedAgentOrder.reservation_code}</Text>
+                </View>
+                <TouchableOpacity onPress={() => setSelectedAgentOrder(null)}>
+                  <Text style={styles.closeBtn}>✕</Text>
+                </TouchableOpacity>
+              </View>
+
+              <ScrollView style={{ flex: 1, marginTop: 10 }} showsVerticalScrollIndicator={false}>
+                {/* Read only Notice */}
+                <View style={{ backgroundColor: '#FFFBEB', padding: 14, borderRadius: 14, borderWidth: 1, borderColor: '#FDE68A', flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+                  <Ionicons name="eye" size={20} color="#D97706" />
+                  <Text style={{ fontSize: 11, color: '#92400E', flex: 1, fontWeight: '700', lineHeight: 16 }}>
+                    👁️ Mode Suivi Commercial (Lecture seule) : Vous observez le déroulement de la commande en temps réel sans modification possible.
+                  </Text>
+                </View>
+
+                {/* Restaurant & Client Details */}
+                <View style={{ backgroundColor: '#F9FAFB', padding: 16, borderRadius: 16, borderWidth: 1, borderColor: '#E5E7EB', gap: 10, marginBottom: 16 }}>
+                  <Text style={{ fontSize: 16, fontWeight: '800', color: '#111827' }}>
+                    🏢 {selectedAgentOrder.restaurants?.name || 'Restaurant Partenaire'}
+                  </Text>
+                  <Text style={{ fontSize: 12, color: '#4B5563' }}>📍 {selectedAgentOrder.restaurants?.address}</Text>
+                  <Text style={{ fontSize: 12, color: '#4B5563' }}>📞 {selectedAgentOrder.restaurants?.phone}</Text>
+                  
+                  <View style={{ height: 1, backgroundColor: '#E5E7EB', marginVertical: 4 }} />
+
+                  <Text style={{ fontSize: 12, fontWeight: '700', color: Colors.primary }}>
+                    👤 Client : {selectedAgentOrder.profiles?.full_name || 'Gourmand'} ({selectedAgentOrder.profiles?.phone || 'Pas de tél'})
+                  </Text>
+                  <Text style={{ fontSize: 12, fontWeight: '700', color: Colors.textPrimary }}>
+                    📦 Offre : {selectedAgentOrder.offers?.title || 'Offre Spéciale'}
+                  </Text>
+                  <Text style={{ fontSize: 13, fontWeight: '800', color: Colors.success }}>
+                    💰 Commission Agent : {Number(selectedAgentOrder.commission_amount || 0).toLocaleString('fr-FR')} FCFA
+                  </Text>
+                </View>
+
+                {/* Real-time Order Progress Stepper */}
+                <View style={{ backgroundColor: '#F9FAFB', padding: 16, borderRadius: 16, borderWidth: 1, borderColor: '#E5E7EB', marginVertical: 4 }}>
+                  <Text style={{ fontSize: 14, fontWeight: '800', color: '#111827', marginBottom: 14 }}>
+                    ⚡ Évolution du statut en direct
+                  </Text>
+
+                  {/* Stepper Timeline 4 steps */}
+                  <View style={{ gap: 16 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                      <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: '#059669', alignItems: 'center', justifyContent: 'center' }}>
+                        <Ionicons name="checkmark" size={18} color="white" />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ fontSize: 13, fontWeight: '800', color: '#111827' }}>1. Commande Enregistrée</Text>
+                        <Text style={{ fontSize: 11, color: '#6B7280' }}>Paiement et réservation confirmés</Text>
+                      </View>
+                    </View>
+
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                      <View style={[
+                        { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+                        selectedAgentOrder.status === 'en_preparation' || selectedAgentOrder.status === 'prete' || selectedAgentOrder.status === 'terminee' || selectedAgentOrder.status === 'livree' ? { backgroundColor: '#059669' } : { backgroundColor: '#E5E7EB' }
+                      ]}>
+                        {selectedAgentOrder.status === 'en_preparation' ? (
+                          <Ionicons name="time" size={16} color="white" />
+                        ) : (selectedAgentOrder.status === 'prete' || selectedAgentOrder.status === 'terminee' || selectedAgentOrder.status === 'livree') ? (
+                          <Ionicons name="checkmark" size={18} color="white" />
+                        ) : (
+                          <Text style={{ fontSize: 12, color: '#9CA3AF', fontWeight: '700' }}>2</Text>
+                        )}
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={[{ fontSize: 13, fontWeight: '700', color: '#9CA3AF' }, (selectedAgentOrder.status === 'en_preparation' || selectedAgentOrder.status === 'prete' || selectedAgentOrder.status === 'terminee' || selectedAgentOrder.status === 'livree') && { color: '#111827', fontWeight: '800' }]}>
+                          2. En préparation par le restaurant
+                        </Text>
+                        <Text style={{ fontSize: 11, color: '#6B7280' }}>Le chef prépare la formule</Text>
+                      </View>
+                    </View>
+
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                      <View style={[
+                        { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+                        selectedAgentOrder.status === 'prete' || selectedAgentOrder.status === 'terminee' || selectedAgentOrder.status === 'livree' ? { backgroundColor: '#059669' } : { backgroundColor: '#E5E7EB' }
+                      ]}>
+                        {(selectedAgentOrder.status === 'terminee' || selectedAgentOrder.status === 'livree') ? (
+                          <Ionicons name="checkmark" size={18} color="white" />
+                        ) : selectedAgentOrder.status === 'prete' ? (
+                          <Ionicons name="restaurant" size={16} color="white" />
+                        ) : (
+                          <Text style={{ fontSize: 12, color: '#9CA3AF', fontWeight: '700' }}>3</Text>
+                        )}
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={[{ fontSize: 13, fontWeight: '700', color: '#9CA3AF' }, (selectedAgentOrder.status === 'prete' || selectedAgentOrder.status === 'terminee' || selectedAgentOrder.status === 'livree') && { color: '#111827', fontWeight: '800' }]}>
+                          3. Prête pour dégustation / retrait
+                        </Text>
+                        <Text style={{ fontSize: 11, color: '#6B7280' }}>Prête en salle ou comptoir</Text>
+                      </View>
+                    </View>
+
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                      <View style={[
+                        { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+                        (selectedAgentOrder.status === 'terminee' || selectedAgentOrder.status === 'livree') ? { backgroundColor: '#059669' } : { backgroundColor: '#E5E7EB' }
+                      ]}>
+                        {(selectedAgentOrder.status === 'terminee' || selectedAgentOrder.status === 'livree') ? (
+                          <Ionicons name="checkmark" size={18} color="white" />
+                        ) : (
+                          <Text style={{ fontSize: 12, color: '#9CA3AF', fontWeight: '700' }}>4</Text>
+                        )}
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={[{ fontSize: 13, fontWeight: '700', color: '#9CA3AF' }, (selectedAgentOrder.status === 'terminee' || selectedAgentOrder.status === 'livree') && { color: '#111827', fontWeight: '800' }]}>
+                          4. Commande Servie & Terminée
+                        </Text>
+                        <Text style={{ fontSize: 11, color: '#6B7280' }}>Commande terminée</Text>
+                      </View>
+                    </View>
+                  </View>
+                </View>
+              </ScrollView>
+            </View>
+          )}
+        </SafeAreaView>
+      </Modal>
+    </>
+  );
 }
 
 const styles = StyleSheet.create({
