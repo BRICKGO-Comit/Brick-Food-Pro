@@ -84,9 +84,6 @@ const BRICKDEAL_WHATSAPP = '2250100000000';
 export default function MobileApp() {
   const { user, profile, role, isLoggedIn, refreshProfile } = useAuth();
 
-  // Onboarding State
-  const [showOnboarding, setShowOnboarding] = useState(true);
-
   // Live ticker for countdown timers (updates every second)
   const [ticker, setTicker] = useState(0);
   useEffect(() => {
@@ -1838,10 +1835,6 @@ export default function MobileApp() {
         (resto.description && resto.description.toLowerCase().includes(searchLow))
       );
     });
-
-    if (showOnboarding) {
-      return <OnboardingScreen onComplete={() => setShowOnboarding(false)} />;
-    }
 
     return (
       <SafeAreaView style={styles.mainContainer} edges={['top', 'bottom']}>
