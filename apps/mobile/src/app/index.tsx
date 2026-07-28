@@ -83,6 +83,29 @@ const BRICKDEAL_WHATSAPP = '2250100000000';
 export default function MobileApp() {
   const { user, profile, role, isLoggedIn, refreshProfile } = useAuth();
 
+  // Onboarding State
+  const [showOnboarding, setShowOnboarding] = useState(true);
+
+  // Live ticker for countdown timers (updates every second)
+  const [ticker, setTicker] = useState(0);
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setTicker((t) => t + 1);
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const formatLiveCountdown = (endIsoStr?: string) => {
+    if (!endIsoStr) return '02h : 45m : 30s';
+    const end = new Date(endIsoStr).getTime();
+    const diffMs = Math.max(0, end - Date.now());
+    const h = Math.floor(diffMs / 3600000);
+    const m = Math.floor((diffMs % 3600000) / 60000);
+    const s = Math.floor((diffMs % 60000) / 1000);
+    const pad = (n: number) => (n < 10 ? `0${n}` : `${n}`);
+    return `${pad(h)}h : ${pad(m)}m : ${pad(s)}s`;
+  };
+
   // Navigation tabs states for each role
   const [clientTab, setClientTab] = useState<'home' | 'reservations' | 'profile'>('home');
   const [agentTab, setAgentTab] = useState<'home' | 'restaurants' | 'proposals' | 'profile'>('home');
@@ -112,6 +135,8 @@ export default function MobileApp() {
     persons: '2',
     prestations: '',
     imageUrl: '',
+    startTime: '18:00',
+    endTime: '23:59',
   });
   const [showAddRestoPropModal, setShowAddRestoPropModal] = useState(false);
 
@@ -238,6 +263,8 @@ export default function MobileApp() {
     persons: '2',
     prestations: '',
     imageUrl: '',
+    startTime: '18:00',
+    endTime: '23:59',
   });
 
   // Profile edit states
@@ -305,7 +332,9 @@ export default function MobileApp() {
             rating: '4.5',
             priceOld: oldP,
             priceNew: newP,
-            quantityRemaining: o.quantity_remaining ?? 0,
+            quantityInitial: Number(o.quantity_initial ?? 10),
+            quantityRemaining: Number(o.quantity_remaining ?? 0),
+            endTimestamp: o.end_timestamp,
             image: o.photos?.[0] || DEFAULT_IMG,
             discount,
             description: o.description,
@@ -888,20 +917,28 @@ export default function MobileApp() {
         uploadedUrl = await uploadImage(restoImageUri);
       } catch (err: any) {
         Alert.alert('Erreur Image', "Impossible d'enregistrer l'image. L'offre sera créée sans image.");
-      } finally {
-        setUploadingImage(false);
-      }
-    }
-
-    insertData.photos = uploadedUrl ? [uploadedUrl] : (newRestoProp.imageUrl ? [newRestoProp.imageUrl] : []);
-
-    if (restoPropType === 'flash') {
+      if (restoPropType === 'flash') {
       insertData.price_normal = Number(newRestoProp.price_normal) || null;
       insertData.price_promo = Number(newRestoProp.price_promo) || null;
       insertData.quantity_initial = Number(newRestoProp.quantity) || null;
       insertData.quantity_remaining = Number(newRestoProp.quantity) || null;
-      insertData.start_timestamp = new Date().toISOString();
-      insertData.end_timestamp = new Date(Date.now() + 4 * 3600000).toISOString();
+
+      const now = new Date();
+      if (newRestoProp.startTime) {
+        const [sh, sm] = newRestoProp.startTime.split(':').map(Number);
+        if (!isNaN(sh)) now.setHours(sh, sm || 0, 0, 0);
+      }
+      insertData.start_timestamp = now.toISOString();
+
+      const end = new Date(now);
+      if (newRestoProp.endTime) {
+        const [eh, em] = newRestoProp.endTime.split(':').map(Number);
+        if (!isNaN(eh)) end.setHours(eh, em || 0, 0, 0);
+        else end.setHours(end.getHours() + 4);
+      } else {
+        end.setHours(end.getHours() + 4);
+      }
+      insertData.end_timestamp = end.toISOString();
     } else {
       insertData.pack_type = newRestoProp.pack_type;
       insertData.price = Number(newRestoProp.price_promo) || null;
@@ -926,6 +963,8 @@ export default function MobileApp() {
       persons: '2',
       prestations: '',
       imageUrl: '',
+      startTime: '18:00',
+      endTime: '23:59',
     });
     setRestoImageUri(null);
     setShowAddRestoPropModal(false);
@@ -974,8 +1013,23 @@ export default function MobileApp() {
       insertData.price_promo = Number(newProp.price_promo) || null;
       insertData.quantity_initial = Number(newProp.quantity) || null;
       insertData.quantity_remaining = Number(newProp.quantity) || null;
-      insertData.start_timestamp = new Date().toISOString();
-      insertData.end_timestamp = new Date(Date.now() + 4 * 3600000).toISOString();
+
+      const now = new Date();
+      if (newProp.startTime) {
+        const [sh, sm] = newProp.startTime.split(':').map(Number);
+        if (!isNaN(sh)) now.setHours(sh, sm || 0, 0, 0);
+      }
+      insertData.start_timestamp = now.toISOString();
+
+      const end = new Date(now);
+      if (newProp.endTime) {
+        const [eh, em] = newProp.endTime.split(':').map(Number);
+        if (!isNaN(eh)) end.setHours(eh, em || 0, 0, 0);
+        else end.setHours(end.getHours() + 4);
+      } else {
+        end.setHours(end.getHours() + 4);
+      }
+      insertData.end_timestamp = end.toISOString();
     } else {
       insertData.pack_type = newProp.pack_type;
       insertData.price = Number(newProp.price_promo) || null;
@@ -1000,11 +1054,10 @@ export default function MobileApp() {
       persons: '2',
       prestations: '',
       imageUrl: '',
+      startTime: '18:00',
+      endTime: '23:59',
     });
     setAgentImageUri(null);
-  };
-
-  // Ajoute un restaurant (agent)
   const handleAddRestaurant = async () => {
     if (!user || !newRestoName || !newRestoOwnerEmail) {
       Alert.alert('Champs requis', 'Nom et email du propriétaire requis.');
@@ -1766,8 +1819,6 @@ export default function MobileApp() {
         (item.inclusions && item.inclusions.some((inc: string) => inc.toLowerCase().includes(searchLow))) ||
         'deal'.includes(searchLow)
       );
-    });
-
     const filteredRestaurants = restaurantsList.filter(resto => {
       if (!searchLow) return true;
       return (
@@ -1777,13 +1828,29 @@ export default function MobileApp() {
       );
     });
 
+    if (showOnboarding) {
+      return <OnboardingScreen onComplete={() => setShowOnboarding(false)} />;
+    }
+
     return (
       <SafeAreaView style={styles.mainContainer} edges={['top', 'bottom']}>
         {/* Top Header */}
-        <View style={styles.header}>
-          <TouchableOpacity onLongPress={() => { setProEmail(''); setProPassword(''); setShowProLoginModal(true); }} delayLongPress={2000} activeOpacity={0.8}>
-            <Text style={styles.greetingText}>{isLoggedIn ? `Bonjour ${clientName.split(' ')[0]} 👋` : 'Bonjour Invité 👋'}</Text>
-            <Text style={styles.locationText}>📍 Cocody, Abidjan ▾</Text>
+        <View style={styles.topHeader}>
+          <View style={styles.logoBadgeContainer}>
+            <Image source={require('../../assets/Icone.png')} style={{ width: 28, height: 28, borderRadius: 6, resizeMode: 'cover' }} />
+            <Text style={styles.brandTitleText}>
+              BRICK<Text style={styles.brandSubtitleText}>DEAL</Text>
+            </Text>
+          </View>
+
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onLongPress={() => setShowProLoginModal(true)}
+            delayLongPress={1500}
+          >
+            <Text style={styles.greetingText}>
+              Bonjour, <Text style={styles.userNameText}>{profile?.full_name || 'Gourmand 👋'}</Text>
+            </Text>
           </TouchableOpacity>
         </View>
 
@@ -1791,7 +1858,7 @@ export default function MobileApp() {
           <ScrollView style={styles.scrollArea} showsVerticalScrollIndicator={false}>
             {/* Search Bar */}
             <View style={styles.searchBarContainer}>
-              <Ionicons name="search-outline" size={18} color={Colors.textSecondary} style={styles.searchIcon} />
+              <Ionicons name="search-outline" size={18} color="#9CA3AF" />
               <TextInput 
                 placeholder="Rechercher un plat, un resto, un deal..." 
                 placeholderTextColor={Colors.textSecondary}
@@ -1886,7 +1953,7 @@ export default function MobileApp() {
                       <Text style={styles.badgeText}>{item.discount}</Text>
                     </View>
                     <View style={styles.cardContent}>
-                      <Text style={styles.cardCategory}>FLASH</Text>
+                      <Text style={styles.cardCategory}>FLASH ⚡</Text>
                       <Text style={styles.cardTitle} numberOfLines={1}>{item.title}</Text>
                       <View style={styles.restoRow}>
                         <Text style={styles.cardResto}>{item.restaurant}</Text>
@@ -1899,8 +1966,32 @@ export default function MobileApp() {
                         <Text style={styles.priceOld}>{item.priceOld.toLocaleString()} F</Text>
                         <Text style={styles.priceNew}>{item.priceNew.toLocaleString()} FCFA</Text>
                       </View>
-                      <Text style={styles.cardMeta}>⏳ Fin dans {item.timeRemaining}  •  📦 {item.quantityRemaining} restants</Text>
-                      <View style={styles.cardBtn}>
+
+                      {/* Live Urgency Countdown & Stock Bar */}
+                      <View style={{ marginTop: 6, backgroundColor: '#FFF5F5', padding: 8, borderRadius: 8, borderWidth: 1, borderColor: '#FFEBEB' }}>
+                        <Text style={{ fontSize: 11, fontWeight: '800', color: Colors.primary }}>
+                          ⏳ Fin dans : {formatLiveCountdown(item.endTimestamp)}
+                        </Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 4 }}>
+                          <Text style={{ fontSize: 10, color: Colors.textSecondary }}>
+                            🔥 {item.quantityInitial - item.quantityRemaining} réservé(s)
+                          </Text>
+                          <Text style={{ fontSize: 10, fontWeight: '700', color: '#D10000' }}>
+                            {item.quantityRemaining} restant(s) !
+                          </Text>
+                        </View>
+                        <View style={{ height: 4, backgroundColor: '#E5E7EB', borderRadius: 2, marginTop: 4, overflow: 'hidden' }}>
+                          <View 
+                            style={{ 
+                              height: '100%', 
+                              backgroundColor: Colors.primary, 
+                              width: `${Math.min(100, Math.max(15, ((item.quantityInitial - item.quantityRemaining) / (item.quantityInitial || 1)) * 100))}%` 
+                            }} 
+                          />
+                        </View>
+                      </View>
+
+                      <View style={[styles.cardBtn, { marginTop: 8 }]}>
                         <Text style={styles.cardBtnText}>⚡ J'en profite</Text>
                       </View>
                     </View>
