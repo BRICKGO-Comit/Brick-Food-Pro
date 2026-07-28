@@ -88,6 +88,10 @@ export default function MobileApp() {
   const [agentTab, setAgentTab] = useState<'home' | 'restaurants' | 'proposals' | 'profile'>('home');
   const [restaurantTab, setRestaurantTab] = useState<'home' | 'orders' | 'proposals' | 'profile'>('home');
 
+  // Search & Filter states
+  const [searchQuery, setSearchQuery] = useState('');
+  const [orderFilter, setOrderFilter] = useState<'toutes' | 'en_cours' | 'terminees'>('toutes');
+
   // Data states (chargés depuis Supabase)
   const [flashOffers, setFlashOffers] = useState<any[]>([]);
   const [dealOffers, setDealOffers] = useState<any[]>([]);
@@ -1112,7 +1116,7 @@ export default function MobileApp() {
                   <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
                 </TouchableOpacity>
                 <View style={{ alignItems: 'center' }}>
-                  <Text style={styles.detailHeaderTitle}>{selectedFlash ? 'Brick Flash' : 'Brick Deal'}</Text>
+                  <Text style={styles.detailHeaderTitle}>{selectedFlash ? 'Flash' : 'Deal'}</Text>
                   {selectedFlash && <Text style={styles.detailHeaderSubtitle}>📍 Cocody, Abidjan</Text>}
                 </View>
                 <TouchableOpacity style={styles.bellIconContainer}>
@@ -1664,7 +1668,7 @@ export default function MobileApp() {
                 </View>
                 <Text style={styles.successTitle}>Réservation confirmée !</Text>
                 <Text style={styles.successSubtitle}>
-                  {selectedFlash ? 'Votre Brick Flash est réservé.' : 'Votre Brick Deal est réservé.'}
+                  {selectedFlash ? 'Votre Flash est réservé.' : 'Votre Deal est réservé.'}
                 </Text>
                 
                 {/* Detailed Receipt Card */}
@@ -1729,14 +1733,58 @@ export default function MobileApp() {
       );
     }
 
+    // Dynamic metrics calculation for client
+    const totalReservationsCount = clientOrders.length;
+    const completedOrdersCount = clientOrders.filter(o => o.status === 'terminee' || o.status === 'livree').length;
+    const pendingOrdersCount = clientOrders.filter(o => o.status !== 'terminee' && o.status !== 'annulee' && o.status !== 'refusee').length;
+    const totalSavingsAmount = clientOrders.reduce((sum, order) => {
+      const normalP = Number(order.offers?.price_normal ?? (Number(order.offers?.price ?? 0) * 1.3));
+      const promoP = Number(order.offers?.price_promo ?? order.offers?.price ?? 0);
+      const diff = Math.max(0, normalP - promoP);
+      return sum + (diff * (order.quantity || 1));
+    }, 0);
+
+    // Search filters
+    const searchLow = searchQuery.toLowerCase().trim();
+
+    const filteredFlashOffers = flashOffers.filter(item => {
+      if (!searchLow) return true;
+      return (
+        (item.title && item.title.toLowerCase().includes(searchLow)) ||
+        (item.restaurant && item.restaurant.toLowerCase().includes(searchLow)) ||
+        (item.description && item.description.toLowerCase().includes(searchLow)) ||
+        'flash'.includes(searchLow)
+      );
+    });
+
+    const filteredDealOffers = dealOffers.filter(item => {
+      if (!searchLow) return true;
+      return (
+        (item.title && item.title.toLowerCase().includes(searchLow)) ||
+        (item.restaurant && item.restaurant.toLowerCase().includes(searchLow)) ||
+        (item.description && item.description.toLowerCase().includes(searchLow)) ||
+        (item.inclusions && item.inclusions.some((inc: string) => inc.toLowerCase().includes(searchLow))) ||
+        'deal'.includes(searchLow)
+      );
+    });
+
+    const filteredRestaurants = restaurantsList.filter(resto => {
+      if (!searchLow) return true;
+      return (
+        (resto.name && resto.name.toLowerCase().includes(searchLow)) ||
+        (resto.address && resto.address.toLowerCase().includes(searchLow)) ||
+        (resto.description && resto.description.toLowerCase().includes(searchLow))
+      );
+    });
+
     return (
       <SafeAreaView style={styles.mainContainer} edges={['top', 'bottom']}>
         {/* Top Header */}
         <View style={styles.header}>
-          <View>
+          <TouchableOpacity onLongPress={() => { setProEmail(''); setProPassword(''); setShowProLoginModal(true); }} delayLongPress={2000} activeOpacity={0.8}>
             <Text style={styles.greetingText}>{isLoggedIn ? `Bonjour ${clientName.split(' ')[0]} 👋` : 'Bonjour Invité 👋'}</Text>
             <Text style={styles.locationText}>📍 Cocody, Abidjan ▾</Text>
-          </View>
+          </TouchableOpacity>
         </View>
 
         {clientTab === 'home' && (
@@ -1745,51 +1793,79 @@ export default function MobileApp() {
             <View style={styles.searchBarContainer}>
               <Ionicons name="search-outline" size={18} color={Colors.textSecondary} style={styles.searchIcon} />
               <TextInput 
-                placeholder="Rechercher un plat, un resto..." 
+                placeholder="Rechercher un plat, un resto, un deal..." 
                 placeholderTextColor={Colors.textSecondary}
                 style={styles.searchInput}
+                value={searchQuery}
+                onChangeText={setSearchQuery}
               />
-              <TouchableOpacity style={styles.filterBtn}>
-                <Ionicons name="options-outline" size={18} color={Colors.primary} />
-              </TouchableOpacity>
+              {searchQuery.length > 0 ? (
+                <TouchableOpacity onPress={() => setSearchQuery('')} style={{ padding: 4 }}>
+                  <Ionicons name="close-circle" size={18} color={Colors.textSecondary} />
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity style={styles.filterBtn}>
+                  <Ionicons name="options-outline" size={18} color={Colors.primary} />
+                </TouchableOpacity>
+              )}
             </View>
 
             {/* Quick Metrics */}
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.metricsScroll}>
-              <View style={[styles.metricCard, { backgroundColor: '#F3E8FF' }]}>
+              <TouchableOpacity 
+                style={[styles.metricCard, { backgroundColor: '#F3E8FF' }]}
+                onPress={() => { setOrderFilter('toutes'); setClientTab('reservations'); }}
+              >
                 <View style={styles.metricCardHeader}>
-                  <Text style={[styles.metricCardVal, { color: '#6B21A8' }]}>12</Text>
+                  <Text style={[styles.metricCardVal, { color: '#6B21A8' }]}>{totalReservationsCount}</Text>
                   <Ionicons name="calendar-outline" size={18} color="#6B21A8" />
                 </View>
                 <Text style={[styles.metricCardTitle, { color: '#6B21A8' }]}>Réservations</Text>
-              </View>
-              <View style={[styles.metricCard, { backgroundColor: '#E6F8F3' }]}>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={[styles.metricCard, { backgroundColor: '#E6F8F3' }]}
+                onPress={() => { setOrderFilter('terminees'); setClientTab('reservations'); }}
+              >
                 <View style={styles.metricCardHeader}>
-                  <Text style={[styles.metricCardVal, { color: '#047857' }]}>8</Text>
+                  <Text style={[styles.metricCardVal, { color: '#047857' }]}>{completedOrdersCount}</Text>
                   <Ionicons name="checkmark-circle-outline" size={18} color="#047857" />
                 </View>
                 <Text style={[styles.metricCardTitle, { color: '#047857' }]}>Terminées</Text>
-              </View>
-              <View style={[styles.metricCard, { backgroundColor: '#FFF7ED' }]}>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={[styles.metricCard, { backgroundColor: '#FFF7ED' }]}
+                onPress={() => { setOrderFilter('en_cours'); setClientTab('reservations'); }}
+              >
                 <View style={styles.metricCardHeader}>
-                  <Text style={[styles.metricCardVal, { color: '#C2410C' }]}>3</Text>
+                  <Text style={[styles.metricCardVal, { color: '#C2410C' }]}>{pendingOrdersCount}</Text>
                   <Ionicons name="time-outline" size={18} color="#C2410C" />
                 </View>
                 <Text style={[styles.metricCardTitle, { color: '#C2410C' }]}>En cours</Text>
-              </View>
-              <View style={[styles.metricCard, { backgroundColor: '#FFEBEB' }]}>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={[styles.metricCard, { backgroundColor: '#FFEBEB' }]}
+                onPress={() => {
+                  Alert.alert(
+                    '💰 Vos Économies BRICK DEAL',
+                    `Grâce aux promos exclusives FLASH et DEAL, vous avez déjà économisé un total cumulé de ${totalSavingsAmount.toLocaleString('fr-FR')} FCFA sur vos réservations !`
+                  );
+                }}
+              >
                 <View style={styles.metricCardHeader}>
-                  <Text style={[styles.metricCardVal, { color: Colors.primary }]}>24 500 F</Text>
+                  <Text style={[styles.metricCardVal, { color: Colors.primary }]}>{totalSavingsAmount.toLocaleString('fr-FR')} F</Text>
                   <Ionicons name="wallet-outline" size={18} color={Colors.primary} />
                 </View>
                 <Text style={[styles.metricCardTitle, { color: Colors.primary }]}>Économies</Text>
-              </View>
+              </TouchableOpacity>
             </ScrollView>
 
-            {/* Brick Flash Section */}
+            {/* FLASH Section */}
             <View style={styles.sectionHeaderRow}>
               <View>
-                <Text style={styles.sectionTitleText}>⚡ BRICK FLASH</Text>
+                <Text style={styles.sectionTitleText}>⚡ FLASH</Text>
                 <Text style={styles.sectionSubtitleText}>Offres exclusives de dernière minute</Text>
               </View>
               <TouchableOpacity>
@@ -1797,40 +1873,46 @@ export default function MobileApp() {
               </TouchableOpacity>
             </View>
             
-             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.horizontalScroll}>
-              {flashOffers.map((item) => (
-                <TouchableOpacity key={item.id} style={styles.dealCard} onPress={() => handleSelectFlash(item)}>
-                  <Image source={{ uri: item.image }} style={styles.cardImage as any} />
-                  <View style={styles.cardBadge}>
-                    <Text style={styles.badgeText}>{item.discount}</Text>
-                  </View>
-                  <View style={styles.cardContent}>
-                    <Text style={styles.cardCategory}>BRICK FLASH</Text>
-                    <Text style={styles.cardTitle} numberOfLines={1}>{item.title}</Text>
-                    <View style={styles.restoRow}>
-                      <Text style={styles.cardResto}>{item.restaurant}</Text>
-                      <View style={styles.starBadge}>
-                        <Ionicons name="star" size={10} color="#F5A623" />
-                        <Text style={styles.starText}>{item.rating}</Text>
+            {filteredFlashOffers.length === 0 ? (
+              <View style={{ padding: 20, alignItems: 'center' }}>
+                <Text style={{ color: Colors.textSecondary, fontSize: 13 }}>Aucun offre Flash ne correspond à la recherche.</Text>
+              </View>
+            ) : (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.horizontalScroll}>
+                {filteredFlashOffers.map((item) => (
+                  <TouchableOpacity key={item.id} style={styles.dealCard} onPress={() => handleSelectFlash(item)}>
+                    <Image source={{ uri: item.image }} style={styles.cardImage as any} />
+                    <View style={styles.cardBadge}>
+                      <Text style={styles.badgeText}>{item.discount}</Text>
+                    </View>
+                    <View style={styles.cardContent}>
+                      <Text style={styles.cardCategory}>FLASH</Text>
+                      <Text style={styles.cardTitle} numberOfLines={1}>{item.title}</Text>
+                      <View style={styles.restoRow}>
+                        <Text style={styles.cardResto}>{item.restaurant}</Text>
+                        <View style={styles.starBadge}>
+                          <Ionicons name="star" size={10} color="#F5A623" />
+                          <Text style={styles.starText}>{item.rating}</Text>
+                        </View>
+                      </View>
+                      <View style={styles.priceRow}>
+                        <Text style={styles.priceOld}>{item.priceOld.toLocaleString()} F</Text>
+                        <Text style={styles.priceNew}>{item.priceNew.toLocaleString()} FCFA</Text>
+                      </View>
+                      <Text style={styles.cardMeta}>⏳ Fin dans {item.timeRemaining}  •  📦 {item.quantityRemaining} restants</Text>
+                      <View style={styles.cardBtn}>
+                        <Text style={styles.cardBtnText}>⚡ J'en profite</Text>
                       </View>
                     </View>
-                    <View style={styles.priceRow}>
-                      <Text style={styles.priceOld}>{item.priceOld.toLocaleString()} F</Text>
-                      <Text style={styles.priceNew}>{item.priceNew.toLocaleString()} FCFA</Text>
-                    </View>
-                    <Text style={styles.cardMeta}>⏳ Fin dans {item.timeRemaining}  •  📦 {item.quantityRemaining} restants</Text>
-                    <View style={styles.cardBtn}>
-                      <Text style={styles.cardBtnText}>⚡ J'en profite</Text>
-                    </View>
-                  </View>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            )}
 
-            {/* Brick Deal Section */}
+            {/* DEAL Section */}
             <View style={styles.sectionHeaderRow}>
               <View>
-                <Text style={styles.sectionTitleText}>❤️ BRICK DEAL</Text>
+                <Text style={styles.sectionTitleText}>❤️ DEAL</Text>
                 <Text style={styles.sectionSubtitleText}>Expériences et formules de groupe</Text>
               </View>
               <TouchableOpacity>
@@ -1838,35 +1920,41 @@ export default function MobileApp() {
               </TouchableOpacity>
             </View>
 
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.horizontalScroll}>
-              {dealOffers.map((item) => (
-                <TouchableOpacity key={item.id} style={styles.dealCard} onPress={() => handleSelectDeal(item)}>
-                  <Image source={{ uri: item.image }} style={styles.cardImage as any} />
-                  <View style={[styles.cardBadge, { backgroundColor: '#F59E0B' }]}>
-                    <Text style={styles.badgeText}>{item.discount}</Text>
-                  </View>
-                  <View style={styles.cardContent}>
-                    <Text style={[styles.cardCategory, { color: '#F59E0B' }]}>BRICK DEAL</Text>
-                    <Text style={styles.cardTitle} numberOfLines={1}>{item.title}</Text>
-                    <View style={styles.restoRow}>
-                      <Text style={styles.cardResto}>{item.restaurant}</Text>
-                      <View style={styles.starBadge}>
-                        <Ionicons name="star" size={10} color="#F5A623" />
-                        <Text style={styles.starText}>{item.rating}</Text>
+            {filteredDealOffers.length === 0 ? (
+              <View style={{ padding: 20, alignItems: 'center' }}>
+                <Text style={{ color: Colors.textSecondary, fontSize: 13 }}>Aucun Deal ne correspond à la recherche.</Text>
+              </View>
+            ) : (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.horizontalScroll}>
+                {filteredDealOffers.map((item) => (
+                  <TouchableOpacity key={item.id} style={styles.dealCard} onPress={() => handleSelectDeal(item)}>
+                    <Image source={{ uri: item.image }} style={styles.cardImage as any} />
+                    <View style={[styles.cardBadge, { backgroundColor: '#F59E0B' }]}>
+                      <Text style={styles.badgeText}>{item.discount}</Text>
+                    </View>
+                    <View style={styles.cardContent}>
+                      <Text style={[styles.cardCategory, { color: '#F59E0B' }]}>DEAL</Text>
+                      <Text style={styles.cardTitle} numberOfLines={1}>{item.title}</Text>
+                      <View style={styles.restoRow}>
+                        <Text style={styles.cardResto}>{item.restaurant}</Text>
+                        <View style={styles.starBadge}>
+                          <Ionicons name="star" size={10} color="#F5A623" />
+                          <Text style={styles.starText}>{item.rating}</Text>
+                        </View>
+                      </View>
+                      <View style={styles.priceRow}>
+                        <Text style={styles.priceOld}>{item.priceOld.toLocaleString()} F</Text>
+                        <Text style={styles.priceNew}>{item.priceNew.toLocaleString()} FCFA</Text>
+                      </View>
+                      <Text style={styles.cardMeta}>👥 Pour {item.persons} pers  •  📅 {item.validity}</Text>
+                      <View style={[styles.cardBtn, { backgroundColor: Colors.primary }]}>
+                        <Text style={styles.cardBtnText}>❤️ Je réserve</Text>
                       </View>
                     </View>
-                    <View style={styles.priceRow}>
-                      <Text style={styles.priceOld}>{item.priceOld.toLocaleString()} F</Text>
-                      <Text style={styles.priceNew}>{item.priceNew.toLocaleString()} FCFA</Text>
-                    </View>
-                    <Text style={styles.cardMeta}>👥 Pour {item.persons} pers  •  📅 {item.validity}</Text>
-                    <View style={[styles.cardBtn, { backgroundColor: Colors.primary }]}>
-                      <Text style={styles.cardBtnText}>❤️ Je réserve</Text>
-                    </View>
-                  </View>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            )}
 
             {/* Partners */}
             <View style={styles.sectionHeaderRow}>
@@ -1908,11 +1996,49 @@ export default function MobileApp() {
             <ScrollView style={styles.scrollArea}>
               <Text style={styles.sectionTitle}>Mes Réservations</Text>
 
-              {clientOrders.length === 0 && (
-                <Text style={{ color: Colors.textSecondary, fontSize: 14, textAlign: 'center', marginTop: 40 }}>Aucune réservation pour le moment.</Text>
+              {/* Filter Pills */}
+              <View style={{ flexDirection: 'row', gap: 8, marginBottom: 16, marginTop: 4 }}>
+                <TouchableOpacity 
+                  style={[{ paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, backgroundColor: '#F3F4F6' }, orderFilter === 'toutes' && { backgroundColor: Colors.primary }]}
+                  onPress={() => setOrderFilter('toutes')}
+                >
+                  <Text style={[{ fontSize: 12, fontWeight: '700', color: Colors.textSecondary }, orderFilter === 'toutes' && { color: 'white' }]}>
+                    Toutes ({clientOrders.length})
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity 
+                  style={[{ paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, backgroundColor: '#FFF7ED' }, orderFilter === 'en_cours' && { backgroundColor: '#C2410C' }]}
+                  onPress={() => setOrderFilter('en_cours')}
+                >
+                  <Text style={[{ fontSize: 12, fontWeight: '700', color: '#C2410C' }, orderFilter === 'en_cours' && { color: 'white' }]}>
+                    En cours ({clientOrders.filter(o => o.status !== 'terminee' && o.status !== 'annulee' && o.status !== 'refusee').length})
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity 
+                  style={[{ paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, backgroundColor: '#E6F8F3' }, orderFilter === 'terminees' && { backgroundColor: '#047857' }]}
+                  onPress={() => setOrderFilter('terminees')}
+                >
+                  <Text style={[{ fontSize: 12, fontWeight: '700', color: '#047857' }, orderFilter === 'terminees' && { color: 'white' }]}>
+                    Terminées ({clientOrders.filter(o => o.status === 'terminee' || o.status === 'livree').length})
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              {clientOrders.filter(o => {
+                if (orderFilter === 'terminees') return o.status === 'terminee' || o.status === 'livree';
+                if (orderFilter === 'en_cours') return o.status !== 'terminee' && o.status !== 'annulee' && o.status !== 'refusee';
+                return true;
+              }).length === 0 && (
+                <Text style={{ color: Colors.textSecondary, fontSize: 14, textAlign: 'center', marginTop: 40 }}>Aucune réservation trouvée dans cette catégorie.</Text>
               )}
 
-              {clientOrders.map((order) => (
+              {clientOrders.filter(o => {
+                if (orderFilter === 'terminees') return o.status === 'terminee' || o.status === 'livree';
+                if (orderFilter === 'en_cours') return o.status !== 'terminee' && o.status !== 'annulee' && o.status !== 'refusee';
+                return true;
+              }).map((order) => (
                 <View key={order.id} style={styles.orderListItem}>
                   <View style={styles.orderListHeader}>
                     <Text style={styles.orderListResto}>{order.restaurants?.name ?? 'Restaurant'}</Text>
@@ -2007,7 +2133,7 @@ export default function MobileApp() {
               </TouchableOpacity>
             </View>
           ) : (
-            <View style={[styles.scrollArea, { justifyContent: 'space-between', paddingBottom: 24, flex: 1 }]}>
+            <View style={[styles.scrollArea, { justifyContent: 'center', paddingBottom: 24, flex: 1 }]}>
               <View style={{ gap: 24 }}>
                 <Text style={styles.sectionTitle}>Mon Profil</Text>
                 <View style={[styles.profileCard, { alignItems: 'center', paddingVertical: 32, gap: 12 }]}>
@@ -2018,13 +2144,6 @@ export default function MobileApp() {
                   </TouchableOpacity>
                 </View>
               </View>
-
-              {/* Link to Pro space */}
-              <TouchableOpacity style={{ alignSelf: 'center', padding: 12 }} onPress={() => { setProEmail(''); setProPassword(''); setShowProLoginModal(true); }}>
-                <Text style={{ color: Colors.primary, fontWeight: '700', fontSize: 13, textDecorationLine: 'underline' }}>
-                  🔑 Espace Professionnel (Commerciaux & Restaurants)
-                </Text>
-              </TouchableOpacity>
             </View>
           )
         )}
@@ -2153,20 +2272,114 @@ export default function MobileApp() {
         </View>
 
         {agentTab === 'home' && (
-          <ScrollView style={styles.scrollArea}>
-            <View style={styles.agentStatsCard}>
-              <Text style={styles.agentStatsLabel}>Mes commissions de la semaine</Text>
-              <Text style={styles.agentStatsVal}>{agentStats.commission.toLocaleString('fr-FR')} FCFA</Text>
-              <Text style={styles.agentStatsSub}>{agentStats.ordersCount} commande(s) générée(s)</Text>
+          <ScrollView style={styles.scrollArea} showsVerticalScrollIndicator={false}>
+            {/* Agent Hero Banner */}
+            <View style={{ backgroundColor: '#1E1E24', borderRadius: 16, padding: 20, marginBottom: 20 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                  <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: Colors.primary, alignItems: 'center', justifyContent: 'center' }}>
+                    <Ionicons name="briefcase" size={22} color="white" />
+                  </View>
+                  <View>
+                    <Text style={{ color: 'white', fontSize: 16, fontWeight: '800' }}>{profile?.full_name ?? 'Agent Commercial'}</Text>
+                    <Text style={{ color: '#9CA3AF', fontSize: 12 }}>Supervision Terrain • Abidjan</Text>
+                  </View>
+                </View>
+                <View style={{ backgroundColor: 'rgba(209, 0, 0, 0.2)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, borderWidth: 1, borderColor: Colors.primary }}>
+                  <Text style={{ color: '#FF4D4D', fontSize: 11, fontWeight: '700' }}>AGENT PRO</Text>
+                </View>
+              </View>
+
+              {/* Commission Stats */}
+              <View style={{ backgroundColor: '#2D2D35', borderRadius: 12, padding: 16 }}>
+                <Text style={{ color: '#9CA3AF', fontSize: 12, fontWeight: '600', textTransform: 'uppercase' }}>Commissions cumulées</Text>
+                <Text style={{ color: '#10B981', fontSize: 28, fontWeight: '900', marginTop: 4 }}>
+                  {agentStats.commission.toLocaleString('fr-FR')} <Text style={{ fontSize: 16, color: '#10B981' }}>FCFA</Text>
+                </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8 }}>
+                  <Ionicons name="trending-up" size={16} color="#10B981" />
+                  <Text style={{ color: '#D1D5DB', fontSize: 12 }}>{agentStats.ordersCount} commande(s) générée(s)</Text>
+                </View>
+              </View>
             </View>
 
-            <Text style={styles.sectionTitle}>🏢 Mes Restaurants ({agentRestaurants.length})</Text>
-            {agentRestaurants.map((resto) => (
-              <View key={resto.id} style={styles.partnerItem}>
-                <Text style={styles.partnerName}>{resto.name}</Text>
-                <Text style={styles.partnerSub}>{resto.address} • {resto.phone}</Text>
+            {/* Quick Actions Row */}
+            <Text style={[styles.sectionTitle, { marginBottom: 12 }]}>🚀 Actions Rapides</Text>
+            <View style={{ flexDirection: 'row', gap: 12, marginBottom: 24 }}>
+              <TouchableOpacity 
+                style={{ flex: 1, backgroundColor: Colors.primary, borderRadius: 12, padding: 14, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 8 }}
+                onPress={() => {
+                  setNewRestoName('');
+                  setNewRestoAddress('');
+                  setNewRestoPhone('');
+                  setNewRestoDesc('');
+                  setNewRestoOwnerEmail('');
+                  setNewRestoOwnerPassword('');
+                  setShowAddRestoModal(true);
+                }}
+              >
+                <Ionicons name="add-circle-outline" size={20} color="white" />
+                <Text style={{ color: 'white', fontWeight: '800', fontSize: 13 }}>Inscrire Resto</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={{ flex: 1, backgroundColor: '#374151', borderRadius: 12, padding: 14, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 8 }}
+                onPress={() => setAgentTab('proposals')}
+              >
+                <Ionicons name="flash-outline" size={20} color="white" />
+                <Text style={{ color: 'white', fontWeight: '800', fontSize: 13 }}>Créer Offre</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Managed Restaurants Section */}
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+              <Text style={styles.sectionTitle}>🏢 Établissements Rattachés ({agentRestaurants.length})</Text>
+              <TouchableOpacity onPress={() => setAgentTab('restaurants')}>
+                <Text style={{ color: Colors.primary, fontWeight: '700', fontSize: 13 }}>Voir tout ➔</Text>
+              </TouchableOpacity>
+            </View>
+
+            {agentRestaurants.length === 0 ? (
+              <View style={{ backgroundColor: 'white', borderRadius: 12, padding: 24, alignItems: 'center', gap: 12, borderWidth: 1, borderColor: '#E5E7EB' }}>
+                <Ionicons name="business-outline" size={44} color={Colors.textSecondary} />
+                <Text style={{ fontSize: 15, fontWeight: '700', color: Colors.textPrimary }}>Aucun restaurant inscrit</Text>
+                <Text style={{ fontSize: 13, color: Colors.textSecondary, textAlign: 'center' }}>
+                  Commencez la prospection terrain et inscrivez votre premier partenaire.
+                </Text>
+                <TouchableOpacity 
+                  style={{ backgroundColor: Colors.primary, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 8, marginTop: 4 }}
+                  onPress={() => setShowAddRestoModal(true)}
+                >
+                  <Text style={{ color: 'white', fontWeight: '700', fontSize: 13 }}>➕ Inscrire un établissement</Text>
+                </TouchableOpacity>
               </View>
-            ))}
+            ) : (
+              agentRestaurants.map((resto) => (
+                <View key={resto.id} style={[styles.partnerCard, { marginBottom: 12, padding: 14 }]}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
+                    <View style={{ width: 44, height: 44, borderRadius: 10, backgroundColor: '#FFEBEB', alignItems: 'center', justifyContent: 'center' }}>
+                      <Ionicons name="restaurant" size={22} color={Colors.primary} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 15, fontWeight: '800', color: Colors.textPrimary }}>{resto.name}</Text>
+                      <Text style={{ fontSize: 12, color: Colors.textSecondary, marginTop: 2 }}>📍 {resto.address}</Text>
+                      <Text style={{ fontSize: 12, color: Colors.textSecondary, marginTop: 1 }}>📞 {resto.phone}</Text>
+                    </View>
+                    <TouchableOpacity 
+                      style={{ backgroundColor: Colors.primary, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8 }}
+                      onPress={() => {
+                        setNewProp(prev => ({ ...prev, restaurant: resto.name, restaurantId: resto.id }));
+                        setAgentTab('proposals');
+                      }}
+                    >
+                      <Text style={{ color: 'white', fontSize: 12, fontWeight: '800' }}>⚡ Offre</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ))
+            )}
+
+            <View style={{ height: 32 }} />
           </ScrollView>
         )}
 
@@ -2215,10 +2428,10 @@ export default function MobileApp() {
             
             <View style={styles.tabSelector}>
               <TouchableOpacity style={[styles.tabSelectorBtn, proposalType === 'flash' && styles.tabSelectorActive]} onPress={() => setProposalType('flash')}>
-                <Text style={[styles.tabSelectorText, proposalType === 'flash' && { color: 'white' }]}>⚡ Brick Flash</Text>
+                <Text style={[styles.tabSelectorText, proposalType === 'flash' && { color: 'white' }]}>⚡ Flash</Text>
               </TouchableOpacity>
               <TouchableOpacity style={[styles.tabSelectorBtn, proposalType === 'deal' && styles.tabSelectorActive]} onPress={() => setProposalType('deal')}>
-                <Text style={[styles.tabSelectorText, proposalType === 'deal' && { color: 'white' }]}>❤️ Brick Deal</Text>
+                <Text style={[styles.tabSelectorText, proposalType === 'deal' && { color: 'white' }]}>❤️ Deal</Text>
               </TouchableOpacity>
             </View>
 
@@ -2533,7 +2746,7 @@ export default function MobileApp() {
                     <View style={{ flex: 1 }}>
                       <Text style={styles.partnerName}>{prop.title}</Text>
                       <Text style={styles.partnerSub}>
-                        {prop.type === 'flash' ? '⚡ Brick Flash' : '❤️ Brick Deal'} • {prop.type === 'flash' ? `${Number(prop.price_promo).toLocaleString('fr-FR')} F (Promo)` : `${Number(prop.price).toLocaleString('fr-FR')} F`}
+                        {prop.type === 'flash' ? '⚡ Flash' : '❤️ Deal'} • {prop.type === 'flash' ? `${Number(prop.price_promo).toLocaleString('fr-FR')} F (Promo)` : `${Number(prop.price).toLocaleString('fr-FR')} F`}
                       </Text>
                     </View>
                     <View style={[
@@ -2736,10 +2949,10 @@ export default function MobileApp() {
             <ScrollView contentContainerStyle={{ gap: 16 }} showsVerticalScrollIndicator={false}>
               <View style={styles.tabSelector}>
                 <TouchableOpacity style={[styles.tabSelectorBtn, restoPropType === 'flash' && styles.tabSelectorActive]} onPress={() => setRestoPropType('flash')}>
-                  <Text style={[styles.tabSelectorText, restoPropType === 'flash' && { color: 'white' }]}>⚡ Brick Flash</Text>
+                  <Text style={[styles.tabSelectorText, restoPropType === 'flash' && { color: 'white' }]}>⚡ Flash</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={[styles.tabSelectorBtn, restoPropType === 'deal' && styles.tabSelectorActive]} onPress={() => setRestoPropType('deal')}>
-                  <Text style={[styles.tabSelectorText, restoPropType === 'deal' && { color: 'white' }]}>❤️ Brick Deal</Text>
+                  <Text style={[styles.tabSelectorText, restoPropType === 'deal' && { color: 'white' }]}>❤️ Deal</Text>
                 </TouchableOpacity>
               </View>
 
@@ -2774,7 +2987,7 @@ export default function MobileApp() {
                   <Text style={styles.inputLabel}>Prix normal barré (FCFA)</Text>
                   <TextInput style={styles.input} keyboardType="numeric" placeholder="12000" value={newRestoProp.price_normal} onChangeText={t => setNewRestoProp({ ...newRestoProp, price_normal: t })} />
                   
-                  <Text style={styles.inputLabel}>Prix Brick Flash proposé (FCFA)</Text>
+                  <Text style={styles.inputLabel}>Prix Flash proposé (FCFA)</Text>
                   <TextInput style={styles.input} keyboardType="numeric" placeholder="7500" value={newRestoProp.price_promo} onChangeText={t => setNewRestoProp({ ...newRestoProp, price_promo: t })} />
 
                   <Text style={styles.inputLabel}>Quantité disponible</Text>
