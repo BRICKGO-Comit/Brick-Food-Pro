@@ -20,6 +20,7 @@ import { Colors } from '../theme/colors';
 import { supabase } from '../lib/supabase';
 import { createClient } from '@supabase/supabase-js';
 import * as ImagePicker from 'expo-image-picker';
+import * as Location from 'expo-location';
 import OnboardingScreen from '../components/OnboardingScreen';
 
 const supabaseSignUpClient = createClient(
@@ -242,6 +243,29 @@ export default function MobileApp() {
   const [newRestoDesc, setNewRestoDesc] = useState('');
   const [newRestoOwnerEmail, setNewRestoOwnerEmail] = useState('');
   const [newRestoOwnerPassword, setNewRestoOwnerPassword] = useState('');
+  const [newRestoLat, setNewRestoLat] = useState('');
+  const [newRestoLng, setNewRestoLng] = useState('');
+  const [isLocating, setIsLocating] = useState(false);
+
+  const handleGetLocation = async () => {
+    setIsLocating(true);
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission refusée', 'Veuillez autoriser l\'accès à la géolocalisation pour capturer les coordonnées GPS du restaurant.');
+        setIsLocating(false);
+        return;
+      }
+      const location = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+      setNewRestoLat(location.coords.latitude.toString());
+      setNewRestoLng(location.coords.longitude.toString());
+      Alert.alert('Géolocalisation réussie 📍', `Coordonnées GPS capturées :\nLatitude : ${location.coords.latitude.toFixed(6)}\nLongitude : ${location.coords.longitude.toFixed(6)}`);
+    } catch (err: any) {
+      Alert.alert('Erreur GPS', err.message || 'Impossible de récupérer la position GPS actuelle.');
+    } finally {
+      setIsLocating(false);
+    }
+  };
 
   // Form booking selections
   const [bookingDate, setBookingDate] = useState<string>('');
@@ -1094,6 +1118,8 @@ export default function MobileApp() {
       address: newRestoAddress,
       phone: newRestoPhone,
       description: newRestoDesc,
+      latitude: newRestoLat ? parseFloat(newRestoLat) : null,
+      longitude: newRestoLng ? parseFloat(newRestoLng) : null,
       agent_id: user.id,
     }).select('id').single();
     if (error) {
@@ -1117,6 +1143,7 @@ export default function MobileApp() {
     setShowAddRestoModal(false);
     setNewRestoName(''); setNewRestoAddress(''); setNewRestoPhone(''); setNewRestoDesc('');
     setNewRestoOwnerEmail(''); setNewRestoOwnerPassword('');
+    setNewRestoLat(''); setNewRestoLng('');
     // Recharge
     const { data: restos } = await supabase.from('restaurants').select('*').eq('agent_id', user.id).order('name');
     setAgentRestaurants(restos ?? []);
@@ -2832,6 +2859,43 @@ export default function MobileApp() {
 
               <Text style={styles.inputLabel}>Adresse complète</Text>
               <TextInput style={styles.input} placeholder="ex: Zone 4, Rue des Jardins" value={newRestoAddress} onChangeText={setNewRestoAddress} />
+
+              {/* GPS Localization Button & Field */}
+              <View style={{ backgroundColor: '#F0FDF4', padding: 14, borderRadius: 14, borderWidth: 1, borderColor: '#BBF7D0', marginVertical: 8, gap: 10 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1 }}>
+                    <Ionicons name="location" size={18} color="#059669" />
+                    <Text style={{ fontSize: 13, fontWeight: '800', color: '#166534' }}>Coordonnées GPS</Text>
+                  </View>
+
+                  <TouchableOpacity
+                    style={{ backgroundColor: '#059669', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, flexDirection: 'row', alignItems: 'center', gap: 6 }}
+                    onPress={handleGetLocation}
+                    disabled={isLocating}
+                  >
+                    <Ionicons name="navigate" size={14} color="white" />
+                    <Text style={{ color: 'white', fontWeight: '800', fontSize: 12 }}>
+                      {isLocating ? 'Patienter...' : '📍 Me localiser'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+
+                {newRestoLat && newRestoLng ? (
+                  <View style={{ backgroundColor: 'white', padding: 10, borderRadius: 8, borderWidth: 1, borderColor: '#86EFAC', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <View>
+                      <Text style={{ fontSize: 10, fontWeight: '700', color: '#166534' }}>Position GPS capturée :</Text>
+                      <Text style={{ fontSize: 12, fontWeight: '900', color: '#047857', marginTop: 2 }}>
+                        LAT: {Number(newRestoLat).toFixed(6)} | LNG: {Number(newRestoLng).toFixed(6)}
+                      </Text>
+                    </View>
+                    <Ionicons name="checkmark-circle" size={22} color="#059669" />
+                  </View>
+                ) : (
+                  <Text style={{ fontSize: 11, color: '#15803D' }}>
+                    Cliquez sur "Me localiser" pour enregistrer la position géographique exacte sur la carte.
+                  </Text>
+                )}
+              </View>
 
               <Text style={styles.inputLabel}>Téléphone de contact</Text>
               <TextInput style={styles.input} placeholder="ex: +225 07 01 02 03" value={newRestoPhone} onChangeText={setNewRestoPhone} keyboardType="phone-pad" />
