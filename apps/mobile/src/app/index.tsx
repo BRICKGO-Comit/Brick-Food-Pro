@@ -1819,6 +1819,8 @@ export default function MobileApp() {
         (item.inclusions && item.inclusions.some((inc: string) => inc.toLowerCase().includes(searchLow))) ||
         'deal'.includes(searchLow)
       );
+    });
+
     const filteredRestaurants = restaurantsList.filter(resto => {
       if (!searchLow) return true;
       return (
