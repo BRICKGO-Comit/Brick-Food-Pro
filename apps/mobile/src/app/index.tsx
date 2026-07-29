@@ -222,11 +222,24 @@ export default function MobileApp() {
   const [notifications, setNotifications] = useState<any[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
 
+const getCategoryLabel = (cat?: string) => {
+  switch (cat?.toLowerCase()) {
+    case 'hotel': return '🏨 Hôtel';
+    case 'maquis': return '🍺 Maquis';
+    case 'lounge_bar':
+    case 'bar': return '🍸 Lounge & Bar';
+    case 'fast_food': return '🍔 Fast Food';
+    case 'patisserie': return '🍰 Pâtisserie';
+    default: return '🍽️ Restaurant';
+  }
+};
+
   // Real PDF Receipt Generator
   const generateReceiptPDF = async (order?: any) => {
     try {
       const orderRef = order?.reservation_code || order?.id?.slice(0, 8)?.toUpperCase() || reservationId || 'BD-' + Math.floor(100000 + Math.random() * 900000);
       const restoName = order?.restaurants?.name || order?.offers?.restaurant_name || selectedFlash?.restaurant || selectedDeal?.restaurant || 'Établissement Partenaire';
+      const categoryLabel = getCategoryLabel(order?.restaurants?.category || selectedPartnerResto?.category);
       const offerTitle = order?.offers?.title || selectedFlash?.title || selectedDeal?.title || 'Formule Gourmande';
       const totalPrice = order?.total_amount || (selectedFlash ? selectedFlash.priceNew * bookingQty : selectedDeal?.priceNew) || 0;
       const orderDate = order?.created_at ? new Date(order.created_at).toLocaleDateString('fr-FR') : bookingDate;
@@ -271,7 +284,7 @@ export default function MobileApp() {
 
             <div class="divider"></div>
 
-            <div class="row"><span class="label">Établissement :</span><span class="val">${restoName}</span></div>
+            <div class="row"><span class="label">${categoryLabel} :</span><span class="val">${restoName}</span></div>
             <div class="row"><span class="label">Offre Réservée :</span><span class="val">${offerTitle}</span></div>
 
             <div class="total-box">
@@ -345,6 +358,7 @@ export default function MobileApp() {
   const [newRestoAddress, setNewRestoAddress] = useState('');
   const [newRestoPhone, setNewRestoPhone] = useState('');
   const [newRestoDesc, setNewRestoDesc] = useState('');
+  const [newRestoCategory, setNewRestoCategory] = useState<string>('restaurant');
   const [newRestoOwnerEmail, setNewRestoOwnerEmail] = useState('');
   const [newRestoOwnerPassword, setNewRestoOwnerPassword] = useState('');
   const [newRestoLat, setNewRestoLat] = useState('');
@@ -1386,6 +1400,7 @@ export default function MobileApp() {
       address: newRestoAddress,
       phone: newRestoPhone,
       description: newRestoDesc,
+      category: newRestoCategory || 'restaurant',
       logo_url: newRestoLogo || null,
       cover_url: newRestoCover || null,
       latitude: newRestoLat ? parseFloat(newRestoLat) : null,
@@ -1408,13 +1423,13 @@ export default function MobileApp() {
     }
     Alert.alert(
       'Établissement enregistré !',
-      `Le restaurant "${newRestoName}" a été créé.\n\nVeuillez transmettre ces coordonnées au propriétaire pour se connecter sur l'app :\n\nEmail : ${newRestoOwnerEmail}\nMot de passe : ${newRestoOwnerPassword}`
+      `L'établissement "${newRestoName}" a été créé.\n\nVeuillez transmettre ces coordonnées au propriétaire pour se connecter sur l'app :\n\nEmail : ${newRestoOwnerEmail}\nMot de passe : ${newRestoOwnerPassword}`
     );
     setShowAddRestoModal(false);
     setNewRestoName(''); setNewRestoAddress(''); setNewRestoPhone(''); setNewRestoDesc('');
     setNewRestoOwnerEmail(''); setNewRestoOwnerPassword('');
     setNewRestoLat(''); setNewRestoLng('');
-    setNewRestoLogo(''); setNewRestoCover('');
+    setNewRestoLogo(''); setNewRestoCover(''); setNewRestoCategory('restaurant');
     // Recharge
     const { data: restos } = await supabase.from('restaurants').select('*').eq('agent_id', user.id).order('name');
     setAgentRestaurants(restos ?? []);
@@ -3404,6 +3419,31 @@ export default function MobileApp() {
             </View>
 
             <ScrollView style={{ flex: 1, marginTop: 10 }}>
+              <Text style={styles.inputLabel}>Catégorie de l'Établissement</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }} contentContainerStyle={{ gap: 8 }}>
+                {[
+                  { id: 'restaurant', label: '🍽️ Restaurant' },
+                  { id: 'hotel', label: '🏨 Hôtel' },
+                  { id: 'maquis', label: '🍺 Maquis' },
+                  { id: 'lounge_bar', label: '🍸 Lounge & Bar' },
+                  { id: 'fast_food', label: '🍔 Fast Food' },
+                  { id: 'patisserie', label: '🍰 Pâtisserie' },
+                ].map((cat) => (
+                  <TouchableOpacity
+                    key={cat.id}
+                    style={[
+                      { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 12, backgroundColor: '#F3F4F6', borderWidth: 1, borderColor: '#E5E7EB' },
+                      newRestoCategory === cat.id && { backgroundColor: Colors.primary, borderColor: Colors.primary }
+                    ]}
+                    onPress={() => setNewRestoCategory(cat.id)}
+                  >
+                    <Text style={[{ fontSize: 13, fontWeight: '700', color: Colors.textPrimary }, newRestoCategory === cat.id && { color: 'white' }]}>
+                      {cat.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+
               <Text style={styles.inputLabel}>Nom de l'établissement</Text>
               <TextInput style={styles.input} placeholder="ex: Chez Georges" value={newRestoName} onChangeText={setNewRestoName} />
 
@@ -4364,7 +4404,7 @@ export default function MobileApp() {
                     </View>
 
                     <View style={{ backgroundColor: '#ECFDF5', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, borderWidth: 1, borderColor: '#A7F3D0' }}>
-                      <Text style={{ fontSize: 12, fontWeight: '800', color: '#047857' }}>● Ouvert & Partenaire Officiel</Text>
+                      <Text style={{ fontSize: 12, fontWeight: '800', color: '#047857' }}>● {getCategoryLabel(selectedPartnerResto.category)} Partenaire</Text>
                     </View>
                   </View>
 
@@ -4380,7 +4420,7 @@ export default function MobileApp() {
 
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#F3F4F6', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10 }}>
                       <Ionicons name="star" size={14} color="#F5A623" />
-                      <Text style={{ fontSize: 12, fontWeight: '700', color: Colors.textPrimary }}>4.8 (Resto Vérifié)</Text>
+                      <Text style={{ fontSize: 12, fontWeight: '700', color: Colors.textPrimary }}>4.8 ({getCategoryLabel(selectedPartnerResto.category)})</Text>
                     </View>
                   </View>
 
