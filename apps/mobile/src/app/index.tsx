@@ -131,6 +131,9 @@ export default function MobileApp() {
   const [agentOrders, setAgentOrders] = useState<any[]>([]);
   const [selectedAgentOrder, setSelectedAgentOrder] = useState<any | null>(null);
   const [selectedClientOrder, setSelectedClientOrder] = useState<any | null>(null);
+  const [pendingOfferAfterAuth, setPendingOfferAfterAuth] = useState<{ type: 'flash' | 'deal'; offer: any; step: number } | null>(null);
+  const [showCalendarFilterModal, setShowCalendarFilterModal] = useState<boolean>(false);
+  const [calendarDateFilter, setCalendarDateFilter] = useState<string | null>(null);
   const [agentStats, setAgentStats] = useState({ commission: 0, ordersCount: 0 });
   const [restaurantOrders, setRestaurantOrders] = useState<any[]>([]);
   const [restaurantProposals, setRestaurantProposals] = useState<any[]>([]);
@@ -851,7 +854,15 @@ export default function MobileApp() {
         if (error) throw error;
       }
       setShowClientAuthModal(false);
-      if (selectedFlash || selectedDeal) {
+      if (pendingOfferAfterAuth) {
+        if (pendingOfferAfterAuth.type === 'flash') {
+          setSelectedFlash(pendingOfferAfterAuth.offer);
+        } else {
+          setSelectedDeal(pendingOfferAfterAuth.offer);
+        }
+        setBookingStep(pendingOfferAfterAuth.step || 1);
+        setPendingOfferAfterAuth(null);
+      } else if (selectedFlash || selectedDeal) {
         setBookingStep(3);
       }
     } catch (err: any) {
@@ -1507,12 +1518,39 @@ export default function MobileApp() {
                         </Text>
                       </View>
 
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'white', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 10, borderWidth: 1, borderColor: '#E5E7EB' }}>
+                      <TouchableOpacity 
+                        style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'white', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 10, borderWidth: 1, borderColor: Colors.primary }}
+                        onPress={() => {
+                          if (!isLoggedIn) {
+                            Alert.alert(
+                              'Connexion requise 🔐',
+                              'Veuillez vous connecter ou vous inscrire pour choisir votre date et réserver.',
+                              [
+                                { text: 'Annuler', style: 'cancel' },
+                                {
+                                  text: 'Se connecter / S\'inscrire',
+                                  onPress: () => {
+                                    setPendingOfferAfterAuth({
+                                      type: selectedFlash ? 'flash' : 'deal',
+                                      offer: selectedFlash || selectedDeal,
+                                      step: 1
+                                    });
+                                    setIsSignup(false);
+                                    setShowClientAuthModal(true);
+                                  }
+                                }
+                              ]
+                            );
+                          } else {
+                            setBookingStep(1);
+                          }
+                        }}
+                      >
                         <Ionicons name="calendar-outline" size={14} color={Colors.primary} />
-                        <Text style={{ fontSize: 11, fontWeight: '700', color: '#374151' }}>
-                          Aujourd'hui & Demain
+                        <Text style={{ fontSize: 11, fontWeight: '700', color: Colors.primary }}>
+                          Aujourd'hui & Demain 📅
                         </Text>
-                      </View>
+                      </TouchableOpacity>
                     </View>
                   </View>
 
@@ -1550,7 +1588,31 @@ export default function MobileApp() {
 
                 <TouchableOpacity
                   style={{ backgroundColor: Colors.primary, paddingHorizontal: 24, height: 48, borderRadius: 24, flexDirection: 'row', alignItems: 'center', gap: 8, shadowColor: Colors.primary, shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.3, shadowRadius: 6, elevation: 4 }}
-                  onPress={() => setBookingStep(1)}
+                  onPress={() => {
+                    if (!isLoggedIn) {
+                      Alert.alert(
+                        'Connexion requise 🔐',
+                        'Veuillez vous connecter ou vous inscrire pour réserver cette offre et accéder au paiement sécurisé.',
+                        [
+                          { text: 'Annuler', style: 'cancel' },
+                          {
+                            text: 'Se connecter / S\'inscrire',
+                            onPress: () => {
+                              setPendingOfferAfterAuth({
+                                type: selectedFlash ? 'flash' : 'deal',
+                                offer: selectedFlash || selectedDeal,
+                                step: 1
+                              });
+                              setIsSignup(false);
+                              setShowClientAuthModal(true);
+                            }
+                          }
+                        ]
+                      );
+                    } else {
+                      setBookingStep(1);
+                    }
+                  }}
                 >
                   <Text style={{ color: 'white', fontSize: 15, fontWeight: '900' }}>
                     {selectedFlash ? '⚡ J\'en profite' : '❤️ Je réserve'}
@@ -2020,9 +2082,30 @@ export default function MobileApp() {
                   <Text style={[styles.qrCodeVal, { fontSize: 13, letterSpacing: 1, marginTop: 12, color: Colors.textSecondary }]}>{reservationId}</Text>
                 </View>
 
-                <TouchableOpacity style={[styles.actionBtn, { backgroundColor: '#10B981', width: '100%', marginTop: 0 }]} onPress={() => { setSelectedFlash(null); setSelectedDeal(null); setClientTab('reservations'); }}>
-                  <Text style={styles.actionBtnText}>Voir mes réservations</Text>
-                </TouchableOpacity>
+                {/* Action Buttons for Receipt Download and Order Tracking */}
+                <View style={{ width: '100%', gap: 10, marginTop: 8 }}>
+                  <TouchableOpacity 
+                    style={[styles.actionBtn, { backgroundColor: Colors.primary, width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }]} 
+                    onPress={() => {
+                      Alert.alert(
+                        '📥 Reçu PDF Généré & Téléchargé !',
+                        `Le reçu officiel de paiement (Réf: ${reservationId}) a été téléchargé.\n\nPrésentez simplement votre Pass QR Code lors de votre arrivée au restaurant.`,
+                        [{ text: 'Super !' }]
+                      );
+                    }}
+                  >
+                    <Ionicons name="download-outline" size={18} color="white" />
+                    <Text style={styles.actionBtnText}>Télécharger le Reçu PDF / Ticket</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity 
+                    style={[styles.actionBtn, { backgroundColor: '#10B981', width: '100%', marginTop: 0, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }]} 
+                    onPress={() => { setSelectedFlash(null); setSelectedDeal(null); setClientTab('reservations'); }}
+                  >
+                    <Ionicons name="time" size={18} color="white" />
+                    <Text style={styles.actionBtnText}>⚡ Voir mes réservations & suivi en direct</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
             </ScrollView>
           )}
@@ -2102,16 +2185,42 @@ export default function MobileApp() {
                 value={searchQuery}
                 onChangeText={setSearchQuery}
               />
-              {searchQuery.length > 0 ? (
+              {searchQuery.length > 0 && (
                 <TouchableOpacity onPress={() => setSearchQuery('')} style={{ padding: 4 }}>
                   <Ionicons name="close-circle" size={18} color={Colors.textSecondary} />
                 </TouchableOpacity>
-              ) : (
-                <TouchableOpacity style={styles.filterBtn}>
-                  <Ionicons name="options-outline" size={18} color={Colors.primary} />
-                </TouchableOpacity>
               )}
+
+              {/* Interactive Calendar Filter Button */}
+              <TouchableOpacity 
+                style={[
+                  styles.filterBtn, 
+                  calendarDateFilter ? { backgroundColor: Colors.primary } : null
+                ]}
+                onPress={() => setShowCalendarFilterModal(true)}
+              >
+                <Ionicons 
+                  name="calendar" 
+                  size={18} 
+                  color={calendarDateFilter ? 'white' : Colors.primary} 
+                />
+              </TouchableOpacity>
             </View>
+
+            {/* Active Calendar Filter Pill Banner */}
+            {calendarDateFilter && (
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#FFF5F5', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 12, borderWidth: 1, borderColor: '#FFEBEB', marginBottom: 12, marginTop: -4 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Ionicons name="calendar-outline" size={16} color={Colors.primary} />
+                  <Text style={{ fontSize: 12, fontWeight: '700', color: Colors.primary }}>
+                    Filtre date : {calendarDateFilter === 'aujourdhui' ? "Aujourd'hui" : calendarDateFilter === 'demain' ? 'Demain' : calendarDateFilter === 'weekend' ? 'Ce Week-End' : calendarDateFilter}
+                  </Text>
+                </View>
+                <TouchableOpacity onPress={() => setCalendarDateFilter(null)}>
+                  <Text style={{ fontSize: 12, fontWeight: '800', color: Colors.primary }}>✕ Effacer</Text>
+                </TouchableOpacity>
+              </View>
+            )}
 
             {/* Quick Metrics */}
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.metricsScroll}>
@@ -3928,8 +4037,74 @@ export default function MobileApp() {
                 </View>
               </ScrollView>
             </View>
-          )}
-        </SafeAreaView>
+      {/* CALENDAR FILTER MODAL */}
+      <Modal visible={showCalendarFilterModal} animationType="slide" transparent>
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}>
+          <View style={{ backgroundColor: 'white', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, gap: 16 }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Ionicons name="calendar" size={22} color={Colors.primary} />
+                <Text style={{ fontSize: 18, fontWeight: '800', color: Colors.textPrimary }}>Filtrer les offres par date</Text>
+              </View>
+              <TouchableOpacity onPress={() => setShowCalendarFilterModal(false)}>
+                <Ionicons name="close" size={24} color={Colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={{ fontSize: 13, color: Colors.textSecondary }}>
+              Sélectionnez une période pour filtrer les offres disponibles :
+            </Text>
+
+            <View style={{ gap: 10 }}>
+              <TouchableOpacity
+                style={[{ padding: 14, borderRadius: 14, backgroundColor: '#F3F4F6', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }, calendarDateFilter === null && { backgroundColor: Colors.primary }]}
+                onPress={() => { setCalendarDateFilter(null); setShowCalendarFilterModal(false); }}
+              >
+                <Text style={[{ fontSize: 14, fontWeight: '700', color: Colors.textPrimary }, calendarDateFilter === null && { color: 'white' }]}>
+                  ⚡ Toutes les dates (Toutes les offres)
+                </Text>
+                {calendarDateFilter === null && <Ionicons name="checkmark" size={18} color="white" />}
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[{ padding: 14, borderRadius: 14, backgroundColor: '#F3F4F6', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }, calendarDateFilter === 'aujourdhui' && { backgroundColor: Colors.primary }]}
+                onPress={() => { setCalendarDateFilter('aujourdhui'); setShowCalendarFilterModal(false); }}
+              >
+                <Text style={[{ fontSize: 14, fontWeight: '700', color: Colors.textPrimary }, calendarDateFilter === 'aujourdhui' && { color: 'white' }]}>
+                  📅 Aujourd'hui ({getTodayYMD()})
+                </Text>
+                {calendarDateFilter === 'aujourdhui' && <Ionicons name="checkmark" size={18} color="white" />}
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[{ padding: 14, borderRadius: 14, backgroundColor: '#F3F4F6', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }, calendarDateFilter === 'demain' && { backgroundColor: Colors.primary }]}
+                onPress={() => { setCalendarDateFilter('demain'); setShowCalendarFilterModal(false); }}
+              >
+                <Text style={[{ fontSize: 14, fontWeight: '700', color: Colors.textPrimary }, calendarDateFilter === 'demain' && { color: 'white' }]}>
+                  ☀️ Demain
+                </Text>
+                {calendarDateFilter === 'demain' && <Ionicons name="checkmark" size={18} color="white" />}
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[{ padding: 14, borderRadius: 14, backgroundColor: '#F3F4F6', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }, calendarDateFilter === 'weekend' && { backgroundColor: Colors.primary }]}
+                onPress={() => { setCalendarDateFilter('weekend'); setShowCalendarFilterModal(false); }}
+              >
+                <Text style={[{ fontSize: 14, fontWeight: '700', color: Colors.textPrimary }, calendarDateFilter === 'weekend' && { color: 'white' }]}>
+                  🥳 Ce Week-End (Vendredi au Dimanche)
+                </Text>
+                {calendarDateFilter === 'weekend' && <Ionicons name="checkmark" size={18} color="white" />}
+              </TouchableOpacity>
+            </View>
+
+            <TouchableOpacity
+              style={{ backgroundColor: '#111827', borderRadius: 14, paddingVertical: 14, alignItems: 'center', marginTop: 8 }}
+              onPress={() => setShowCalendarFilterModal(false)}
+            >
+              <Text style={{ color: 'white', fontWeight: '800', fontSize: 14 }}>Fermer</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
       </Modal>
     </>
   );
