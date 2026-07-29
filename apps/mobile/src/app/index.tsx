@@ -840,18 +840,31 @@ export default function MobileApp() {
     setAuthLoading(true);
     try {
       if (isSignup) {
-        const { error } = await supabase.auth.signUp({
+        const { data: signUpData, error } = await supabase.auth.signUp({
           email: clientEmail.trim(),
           password: clientPassword,
           options: { data: { full_name: clientName, phone: clientPhone, role: 'client' } },
         });
         if (error) throw error;
+
+        // Explicitly update profiles table with phone and full_name
+        if (signUpData?.user?.id) {
+          await supabase.from('profiles').update({
+            phone: clientPhone ? clientPhone.trim() : null,
+            full_name: clientName ? clientName.trim() : null,
+          }).eq('id', signUpData.user.id);
+          await refreshProfile(signUpData.user.id);
+        }
       } else {
-        const { error } = await supabase.auth.signInWithPassword({
+        const { data: signInData, error } = await supabase.auth.signInWithPassword({
           email: clientEmail.trim(),
           password: clientPassword,
         });
         if (error) throw error;
+
+        if (signInData?.user?.id) {
+          await refreshProfile(signInData.user.id);
+        }
       }
       setShowClientAuthModal(false);
       if (pendingOfferAfterAuth) {
