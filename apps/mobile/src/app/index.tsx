@@ -4037,6 +4037,10 @@ export default function MobileApp() {
                 </View>
               </ScrollView>
             </View>
+          )}
+        </SafeAreaView>
+      </Modal>
+
       {/* CALENDAR FILTER MODAL */}
       <Modal visible={showCalendarFilterModal} animationType="slide" transparent>
         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}>
