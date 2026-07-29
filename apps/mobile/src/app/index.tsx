@@ -1364,7 +1364,21 @@ const getCategoryLabel = (cat?: string) => {
       console.warn('[AdminNotif] Error:', e);
     }
 
-    Alert.alert('Proposition soumise', `Votre proposition "${newProp.title}" a été envoyée en statut EN ATTENTE.`);
+    Alert.alert(
+      '✅ Proposition transmise !',
+      `Votre offre "${newProp.title}" a été soumise avec succès.\n\nElle est maintenant en attente de validation par l'administrateur.`,
+      [{
+        text: 'Voir mes propositions',
+        onPress: () => {
+          if (role === 'agent') {
+            setAgentTab('proposals');
+          } else if (role === 'restaurant') {
+            setRestaurantTab('proposals');
+          }
+        }
+      }]
+    );
+
     setNewProp({
       restaurant: newProp.restaurant,
       restaurantId: newProp.restaurantId,
@@ -1383,6 +1397,20 @@ const getCategoryLabel = (cat?: string) => {
       endTime: '23:59',
     });
     setAgentImageUri(null);
+
+    if (role === 'agent') {
+      setAgentTab('proposals');
+    } else if (role === 'restaurant') {
+      setRestaurantTab('proposals');
+      if (profile?.restaurant_id) {
+        const { data: propsData } = await supabase
+          .from('offers')
+          .select('*')
+          .eq('restaurant_id', profile.restaurant_id)
+          .order('created_at', { ascending: false });
+        setRestaurantProposals(propsData ?? []);
+      }
+    }
   };
 
   const handleAddRestaurant = async () => {
