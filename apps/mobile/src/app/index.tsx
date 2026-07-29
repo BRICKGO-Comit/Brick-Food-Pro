@@ -2096,7 +2096,7 @@ export default function MobileApp() {
                 </TouchableOpacity>
               </View>
 
-              <ScrollView contentContainerStyle={{ flex: 1, justifyContent: 'center', gap: 16 }}>
+              <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingVertical: 20, paddingBottom: 60, gap: 14 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
                 {pendingOfferAfterAuth && (
                   <View style={{ backgroundColor: '#FFF5F5', padding: 14, borderRadius: 16, borderWidth: 1, borderColor: '#FFEBEB', marginBottom: 4, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
                     <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: Colors.primary, alignItems: 'center', justifyContent: 'center' }}>
@@ -2719,7 +2719,7 @@ export default function MobileApp() {
               </TouchableOpacity>
             </View>
 
-            <ScrollView contentContainerStyle={{ flex: 1, justifyContent: 'center', gap: 16 }}>
+            <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingVertical: 20, paddingBottom: 60, gap: 14 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
               {pendingOfferAfterAuth && (
                 <View style={{ backgroundColor: '#FFF5F5', padding: 14, borderRadius: 16, borderWidth: 1, borderColor: '#FFEBEB', marginBottom: 4, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
                   <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: Colors.primary, alignItems: 'center', justifyContent: 'center' }}>
