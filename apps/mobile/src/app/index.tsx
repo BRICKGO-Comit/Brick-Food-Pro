@@ -251,54 +251,67 @@ const getCategoryLabel = (cat?: string) => {
           <meta charset="utf-8">
           <title>Reçu BRICK DEAL #${orderRef}</title>
           <style>
-            body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; margin: 0; padding: 24px; color: #111827; background-color: #ffffff; }
-            .receipt-card { max-width: 480px; margin: 0 auto; border: 2px solid #E11D48; border-radius: 16px; padding: 24px; box-shadow: 0 4px 12px rgba(225,29,72,0.1); }
-            .header { text-align: center; border-bottom: 2px dashed #E5E7EB; padding-bottom: 16px; margin-bottom: 20px; }
-            .logo-text { font-size: 28px; font-weight: 900; letter-spacing: -0.5px; }
+            body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; margin: 0; padding: 32px 16px; color: #111827; background-color: #f8fafc; }
+            .receipt-card { max-width: 680px; margin: 0 auto; border: 3px solid #E11D48; border-radius: 24px; padding: 36px 40px; background-color: #ffffff; box-shadow: 0 10px 30px rgba(225,29,72,0.12); }
+            .header { text-align: center; border-bottom: 2px dashed #E5E7EB; padding-bottom: 24px; margin-bottom: 28px; }
+            
+            .green-check { width: 76px; height: 76px; border-radius: 38px; background-color: #10B981; color: #ffffff; font-size: 46px; font-weight: 900; line-height: 76px; margin: 0 auto 12px auto; text-align: center; box-shadow: 0 6px 18px rgba(16,185,129,0.35); }
+            .status-title { font-size: 24px; font-weight: 900; color: #047857; letter-spacing: 0.5px; margin-bottom: 6px; }
+            .logo-text { font-size: 32px; font-weight: 900; letter-spacing: -0.5px; margin-top: 12px; color: #111827; }
             .logo-text span { color: #E11D48; }
-            .badge { background: #ECFDF5; color: #047857; font-weight: 800; font-size: 12px; padding: 6px 14px; border-radius: 20px; display: inline-block; margin-top: 8px; }
-            .row { display: flex; justify-content: space-between; margin-bottom: 12px; font-size: 14px; }
+            .subtitle { font-size: 13px; color: #6B7280; margin-top: 4px; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; }
+            
+            .section-box { background: #F9FAFB; padding: 20px 24px; border-radius: 16px; border: 1px solid #F3F4F6; margin-bottom: 20px; }
+            .row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; font-size: 16px; border-bottom: 1px dashed #E5E7EB; }
+            .row:last-child { border-bottom: none; }
             .label { color: #6B7280; font-weight: 600; }
-            .val { font-weight: 800; color: #111827; }
-            .divider { border-top: 1px dashed #E5E7EB; margin: 16px 0; }
-            .total-box { background: #FFF5F5; padding: 14px; border-radius: 12px; border: 1px solid #FFEBEB; margin-top: 16px; display: flex; justify-content: space-between; align-items: center; }
-            .total-title { font-size: 14px; font-weight: 800; color: #111827; }
-            .total-price { font-size: 22px; font-weight: 900; color: #E11D48; }
-            .pass-box { text-align: center; background: #111827; color: white; padding: 16px; border-radius: 12px; margin-top: 20px; }
-            .pass-code { font-size: 24px; font-weight: 900; font-family: monospace; color: #F43F5E; letter-spacing: 2px; margin-top: 4px; }
-            .footer { text-align: center; font-size: 11px; color: #9CA3AF; margin-top: 24px; }
+            .val { font-weight: 800; color: #111827; font-size: 16px; text-align: right; }
+            
+            .total-box { background: #FFF5F5; padding: 20px 24px; border-radius: 16px; border: 2px solid #FFEBEB; margin-top: 24px; display: flex; justify-content: space-between; align-items: center; }
+            .total-title { font-size: 16px; font-weight: 800; color: #111827; }
+            .total-price { font-size: 28px; font-weight: 900; color: #E11D48; }
+            
+            .pass-box { text-align: center; background: #111827; color: white; padding: 22px; border-radius: 18px; margin-top: 24px; }
+            .pass-label { font-size: 12px; text-transform: uppercase; letter-spacing: 2px; color: #9CA3AF; font-weight: 800; }
+            .pass-code { font-size: 32px; font-weight: 900; font-family: monospace; color: #F43F5E; letter-spacing: 4px; margin-top: 6px; }
+            
+            .footer { text-align: center; font-size: 12px; color: #9CA3AF; margin-top: 30px; line-height: 1.6; }
           </style>
         </head>
         <body>
           <div class="receipt-card">
             <div class="header">
+              <div class="green-check">✓</div>
+              <div class="status-title">Réservation Confirmée</div>
               <div class="logo-text">BRICK<span>DEAL</span></div>
-              <div style="font-size: 12px; color: #6B7280; margin-top: 4px; text-transform: uppercase;">Reçu Officiel & Pass Réservation</div>
-              <div class="badge">✅ PAIEMENT EFFECTUÉ ET CONFIRMÉ</div>
+              <div class="subtitle">Reçu Officiel & Ticket De Réservation</div>
             </div>
 
-            <div class="row"><span class="label">N° Réservation / Code Pass :</span><span class="val">${orderRef}</span></div>
-            <div class="row"><span class="label">Date du Pass :</span><span class="val">${orderDate}</span></div>
-            <div class="row"><span class="label">Client :</span><span class="val">${profile?.full_name || 'Client BRICK DEAL'}</span></div>
-            <div class="row"><span class="label">Téléphone :</span><span class="val">${profile?.phone || 'Non renseigné'}</span></div>
+            <div class="section-box">
+              <div class="row"><span class="label">N° Réservation / Code Pass :</span><span class="val" style="color: #E11D48; font-family: monospace;">${orderRef}</span></div>
+              <div class="row"><span class="label">Date du Pass :</span><span class="val">${orderDate}</span></div>
+              <div class="row"><span class="label">Client :</span><span class="val">${profile?.full_name || 'Client BRICK DEAL'}</span></div>
+              <div class="row"><span class="label">Téléphone :</span><span class="val">${profile?.phone || 'Non renseigné'}</span></div>
+            </div>
 
-            <div class="divider"></div>
-
-            <div class="row"><span class="label">${categoryLabel} :</span><span class="val">${restoName}</span></div>
-            <div class="row"><span class="label">Offre Réservée :</span><span class="val">${offerTitle}</span></div>
+            <div class="section-box">
+              <div class="row"><span class="label">${categoryLabel} :</span><span class="val" style="color: #111827; font-size: 17px;">${restoName}</span></div>
+              <div class="row"><span class="label">Offre Réservée :</span><span class="val" style="color: #E11D48;">${offerTitle}</span></div>
+            </div>
 
             <div class="total-box">
-              <span class="total-title">Total Payé (TTC) :</span>
+              <span class="total-title">MONTANT TOTAL PAYÉ (TTC) :</span>
               <span class="total-price">${totalPrice.toLocaleString('fr-FR')} FCFA</span>
             </div>
 
             <div class="pass-box">
-              <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #9CA3AF;">Code Pass QR à Présenter</div>
+              <div class="pass-label">CODE PASS À PRÉSENTER À L'ÉTABLISSEMENT</div>
               <div class="pass-code">${orderRef}</div>
             </div>
 
             <div class="footer">
-              BRICK DEAL • Application Officielle de Restauration<br>
+              <strong>BRICK DEAL</strong> • Application Officielle de Réservation & Restauration<br>
+              Présentez ce reçu ou votre Pass QR au restaurateur pour profiter de votre formule.<br>
               Support 24/7 WhatsApp & Email • contact@brickdeal.com
             </div>
           </div>
