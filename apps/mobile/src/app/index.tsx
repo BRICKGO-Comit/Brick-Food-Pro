@@ -490,7 +490,7 @@ const getCategoryLabel = (cat?: string) => {
     const loadOffers = async () => {
       const { data } = await supabase
         .from('offers')
-        .select('*, restaurants(*)')
+        .select('*, restaurants!left(*)')
         .eq('status', 'validee')
         .order('created_at', { ascending: false });
 
@@ -618,14 +618,14 @@ const getCategoryLabel = (cat?: string) => {
 
       const { data: propsData } = await supabase
         .from('offers')
-        .select('*, restaurants(name, address, category)')
+        .select('*, restaurants!left(name, address, category)')
         .eq('agent_id', user.id)
         .order('created_at', { ascending: false });
       setAgentProposals(propsData ?? []);
 
       const { data: orders } = await supabase
         .from('orders')
-        .select('*, restaurants(name, address, phone), offers(title, type), profiles!client_id(full_name, phone)')
+        .select('*, restaurants!left(name, address, phone), offers!left(title, type), profiles!client_id!left(full_name, phone)')
         .eq('agent_id', user.id)
         .order('created_at', { ascending: false });
       setAgentOrders(orders ?? []);
@@ -1458,7 +1458,7 @@ const getCategoryLabel = (cat?: string) => {
     if (role === 'agent' && user) {
       const { data: propsData } = await supabase
         .from('offers')
-        .select('*, restaurants(name, address, category)')
+        .select('*, restaurants!left(name, address, category)')
         .eq('agent_id', user.id)
         .order('created_at', { ascending: false });
       setAgentProposals(propsData ?? []);
