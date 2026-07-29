@@ -226,7 +226,7 @@ export default function MobileApp() {
   const generateReceiptPDF = async (order?: any) => {
     try {
       const orderRef = order?.reservation_code || order?.id?.slice(0, 8)?.toUpperCase() || reservationId || 'BD-' + Math.floor(100000 + Math.random() * 900000);
-      const restoName = order?.restaurants?.name || order?.offers?.restaurant_name || selectedFlash?.restaurant || selectedDeal?.restaurant || 'Restaurant Partenaire';
+      const restoName = order?.restaurants?.name || order?.offers?.restaurant_name || selectedFlash?.restaurant || selectedDeal?.restaurant || 'Établissement Partenaire';
       const offerTitle = order?.offers?.title || selectedFlash?.title || selectedDeal?.title || 'Formule Gourmande';
       const totalPrice = order?.total_amount || (selectedFlash ? selectedFlash.priceNew * bookingQty : selectedDeal?.priceNew) || 0;
       const orderDate = order?.created_at ? new Date(order.created_at).toLocaleDateString('fr-FR') : bookingDate;
@@ -264,14 +264,14 @@ export default function MobileApp() {
               <div class="badge">✅ PAIEMENT EFFECTUÉ ET CONFIRMÉ</div>
             </div>
 
-            <div class="row"><span class="label">N° Réservation :</span><span class="val">${orderRef}</span></div>
+            <div class="row"><span class="label">N° Réservation / Code Pass :</span><span class="val">${orderRef}</span></div>
             <div class="row"><span class="label">Date du Pass :</span><span class="val">${orderDate}</span></div>
             <div class="row"><span class="label">Client :</span><span class="val">${profile?.full_name || 'Client BRICK DEAL'}</span></div>
             <div class="row"><span class="label">Téléphone :</span><span class="val">${profile?.phone || 'Non renseigné'}</span></div>
 
             <div class="divider"></div>
 
-            <div class="row"><span class="label">Restaurant :</span><span class="val">${restoName}</span></div>
+            <div class="row"><span class="label">Établissement :</span><span class="val">${restoName}</span></div>
             <div class="row"><span class="label">Offre Réservée :</span><span class="val">${offerTitle}</span></div>
 
             <div class="total-box">
@@ -2539,8 +2539,8 @@ export default function MobileApp() {
             {/* Partners */}
             <View style={styles.sectionHeaderRow}>
               <View>
-                <Text style={styles.sectionTitleText}>🏪 Restaurants Partenaires</Text>
-                <Text style={styles.sectionSubtitleText}>Commandez directement auprès de nos partenaires</Text>
+                <Text style={styles.sectionTitleText}>🏢 Établissements Partenaires</Text>
+                <Text style={styles.sectionSubtitleText}>Restaurants, Hôtels, Maquis, Lounges et Bars partenaires</Text>
               </View>
             </View>
 
