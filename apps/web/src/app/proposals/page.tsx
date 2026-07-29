@@ -20,10 +20,13 @@ export default function ProposalsModerator() {
   }, [authLoading, user, router]);
 
   const fetchProposals = async () => {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('offers')
-      .select('*, profiles!agent_id(full_name), restaurants(name, address, category)')
+      .select('*, profiles(full_name), restaurants(name, address, category)')
       .order('created_at', { ascending: false });
+    if (error) {
+      console.error('[FetchProposals] Error:', error.message);
+    }
     setProposals((data ?? []) as unknown as OfferWithRelations[]);
   };
 

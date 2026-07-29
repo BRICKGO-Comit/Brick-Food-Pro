@@ -559,6 +559,17 @@ const getCategoryLabel = (cat?: string) => {
       setDealOffers(deals);
     };
     loadOffers();
+
+    const channel = supabase
+      .channel('client-offers-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'offers' }, () => {
+        loadOffers();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   // Charge les restaurants (page d'accueil client + agent)
