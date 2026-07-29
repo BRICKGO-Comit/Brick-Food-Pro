@@ -23,6 +23,8 @@ import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
+import * as FileSystem from 'expo-file-system';
+import { decode } from 'base64-arraybuffer';
 import OnboardingScreen from '../components/OnboardingScreen';
 
 const supabaseSignUpClient = createClient(
@@ -174,7 +176,7 @@ export default function MobileApp() {
     }
 
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ['images'],
       allowsEditing: true,
       aspect: [4, 3],
       quality: 0.8,
@@ -190,25 +192,31 @@ export default function MobileApp() {
     }
   };
 
-  // Upload picked image to Supabase Storage Bucket 'offer-images'
+  // Upload picked image to Supabase Storage Bucket 'images'
   const uploadImage = async (uri: string) => {
     try {
-      const response = await fetch(uri);
-      const blob = await response.blob();
-      const fileExt = uri.split('.').pop() || 'jpg';
-      const fileName = `${Date.now()}.${fileExt}`;
+      const fileExt = uri.split('.').pop()?.toLowerCase() || 'jpg';
+      const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
       const filePath = `proposals/${fileName}`;
 
+      // Read local file as Base64 and decode to ArrayBuffer (cross-platform safe for Android Hermes & iOS)
+      const base64Data = await FileSystem.readAsStringAsync(uri, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+
+      const arrayBuffer = decode(base64Data);
+
       const { error } = await supabase.storage
-        .from('offer-images')
-        .upload(filePath, blob, {
-          contentType: `image/${fileExt === 'png' ? 'png' : 'jpeg'}`,
+        .from('images')
+        .upload(filePath, arrayBuffer, {
+          contentType: `image/${fileExt === 'png' ? 'png' : fileExt === 'webp' ? 'webp' : 'jpeg'}`,
+          upsert: true,
         });
 
       if (error) throw error;
 
       const { data: publicUrlData } = supabase.storage
-        .from('offer-images')
+        .from('images')
         .getPublicUrl(filePath);
 
       return publicUrlData.publicUrl;
@@ -3687,7 +3695,7 @@ const getCategoryLabel = (cat?: string) => {
                       onPress={async () => {
                         const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
                         if (status === 'granted') {
-                          const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, allowsEditing: true, aspect: [1, 1], quality: 0.8 });
+                          const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: true, aspect: [1, 1], quality: 0.8 });
                           if (!res.canceled && res.assets?.[0]?.uri) {
                             setNewRestoLogo(res.assets[0].uri);
                           }
@@ -3712,7 +3720,7 @@ const getCategoryLabel = (cat?: string) => {
                       onPress={async () => {
                         const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
                         if (status === 'granted') {
-                          const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, allowsEditing: true, aspect: [16, 9], quality: 0.8 });
+                          const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: true, aspect: [16, 9], quality: 0.8 });
                           if (!res.canceled && res.assets?.[0]?.uri) {
                             setNewRestoCover(res.assets[0].uri);
                           }
