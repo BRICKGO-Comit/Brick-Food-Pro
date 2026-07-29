@@ -375,6 +375,9 @@ const getCategoryLabel = (cat?: string) => {
   const [proPassword, setProPassword] = useState('');
 
   const [showAddRestoModal, setShowAddRestoModal] = useState(false);
+  const [agentProposals, setAgentProposals] = useState<any[]>([]);
+  const [showCreateProposalModal, setShowCreateProposalModal] = useState(false);
+  const [proposalStatusFilter, setProposalStatusFilter] = useState<'all' | 'en_attente' | 'validee' | 'refusee'>('all');
   const [newRestoName, setNewRestoName] = useState('');
   const [newRestoAddress, setNewRestoAddress] = useState('');
   const [newRestoPhone, setNewRestoPhone] = useState('');
@@ -580,7 +583,7 @@ const getCategoryLabel = (cat?: string) => {
     loadClientOrders();
   }, [isLoggedIn, role, user]);
 
-  // Charge les données de l'agent
+  // Charge les données de l'agent (restaurants, commandes et propositions)
   useEffect(() => {
     if (!isLoggedIn || role !== 'agent' || !user) return;
     const loadAgentData = async () => {
@@ -590,6 +593,13 @@ const getCategoryLabel = (cat?: string) => {
         .eq('agent_id', user.id)
         .order('name');
       setAgentRestaurants(restos ?? []);
+
+      const { data: propsData } = await supabase
+        .from('offers')
+        .select('*, restaurants(name, address, category)')
+        .eq('agent_id', user.id)
+        .order('created_at', { ascending: false });
+      setAgentProposals(propsData ?? []);
 
       const { data: orders } = await supabase
         .from('orders')
@@ -606,6 +616,18 @@ const getCategoryLabel = (cat?: string) => {
       }
     };
     loadAgentData();
+
+    // Realtime listener for live status updates from Admin validation
+    const channel = supabase
+      .channel('agent-live-proposals')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'offers', filter: `agent_id=eq.${user.id}` }, () => {
+        loadAgentData();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [isLoggedIn, role, user]);
 
   // Charge les commandes du restaurant
@@ -1407,7 +1429,15 @@ const getCategoryLabel = (cat?: string) => {
     });
     setAgentImageUri(null);
 
-    if (role === 'agent') {
+    setShowCreateProposalModal(false);
+
+    if (role === 'agent' && user) {
+      const { data: propsData } = await supabase
+        .from('offers')
+        .select('*, restaurants(name, address, category)')
+        .eq('agent_id', user.id)
+        .order('created_at', { ascending: false });
+      setAgentProposals(propsData ?? []);
       setAgentTab('proposals');
     } else if (role === 'restaurant') {
       setRestaurantTab('proposals');
@@ -3151,7 +3181,7 @@ const getCategoryLabel = (cat?: string) => {
 
               <TouchableOpacity 
                 style={{ flex: 1, backgroundColor: '#374151', borderRadius: 12, padding: 14, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 8 }}
-                onPress={() => setAgentTab('proposals')}
+                onPress={() => setShowCreateProposalModal(true)}
               >
                 <Ionicons name="flash-outline" size={20} color="white" />
                 <Text style={{ color: 'white', fontWeight: '800', fontSize: 13 }}>Créer Offre</Text>
@@ -3196,7 +3226,7 @@ const getCategoryLabel = (cat?: string) => {
                       style={{ backgroundColor: Colors.primary, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8 }}
                       onPress={() => {
                         setNewProp(prev => ({ ...prev, restaurant: resto.name, restaurantId: resto.id }));
-                        setAgentTab('proposals');
+                        setShowCreateProposalModal(true);
                       }}
                     >
                       <Text style={{ color: 'white', fontSize: 12, fontWeight: '800' }}>⚡ Offre</Text>
@@ -3238,7 +3268,7 @@ const getCategoryLabel = (cat?: string) => {
                     style={{ backgroundColor: Colors.primary, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 6 }} 
                     onPress={() => {
                       setNewProp(prev => ({ ...prev, restaurant: resto.name, restaurantId: resto.id }));
-                      setAgentTab('proposals');
+                      setShowCreateProposalModal(true);
                     }}
                   >
                     <Text style={{ color: 'white', fontSize: 11, fontWeight: '700' }}>⚡ Proposer</Text>
@@ -3250,176 +3280,161 @@ const getCategoryLabel = (cat?: string) => {
         )}
 
         {agentTab === 'proposals' && (
-          <ScrollView style={styles.scrollArea}>
-            <Text style={styles.sectionTitle}>Nouvelle Proposition d'Offre</Text>
-            
-            <View style={styles.tabSelector}>
-              <TouchableOpacity style={[styles.tabSelectorBtn, proposalType === 'flash' && styles.tabSelectorActive]} onPress={() => setProposalType('flash')}>
-                <Text style={[styles.tabSelectorText, proposalType === 'flash' && { color: 'white' }]}>⚡ Flash</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={[styles.tabSelectorBtn, proposalType === 'deal' && styles.tabSelectorActive]} onPress={() => setProposalType('deal')}>
-                <Text style={[styles.tabSelectorText, proposalType === 'deal' && { color: 'white' }]}>❤️ Deal</Text>
-              </TouchableOpacity>
-            </View>
-
-            <Text style={styles.inputLabel}>Sélectionner un restaurant</Text>
-            {agentRestaurants.length === 0 ? (
-              <Text style={{ color: Colors.textSecondary, fontSize: 12, marginBottom: 12 }}>Aucun restaurant disponible. Veuillez en inscrire un d'abord.</Text>
-            ) : (
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 16 }}>
-                {agentRestaurants.map((resto) => (
-                  <TouchableOpacity
-                    key={resto.id}
-                    style={[
-                      {
-                        paddingHorizontal: 12,
-                        paddingVertical: 8,
-                        borderRadius: 20,
-                        backgroundColor: '#F3F4F6',
-                        marginRight: 8,
-                        borderWidth: 1,
-                        borderColor: '#E5E7EB'
-                      },
-                      newProp.restaurantId === resto.id && {
-                        backgroundColor: Colors.primary,
-                        borderColor: Colors.primary
-                      }
-                    ]}
-                    onPress={() => setNewProp(prev => ({ ...prev, restaurant: resto.name, restaurantId: resto.id }))}
-                  >
-                    <Text style={[{ color: Colors.textPrimary, fontSize: 12, fontWeight: '600' }, newProp.restaurantId === resto.id && { color: 'white' }]}>
-                      {resto.name}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            )}
-
-            <Text style={styles.inputLabel}>Titre de l'offre</Text>
-            <TextInput style={styles.input} placeholder="ex: Menu Burger Duo" value={newProp.title} onChangeText={t => setNewProp({ ...newProp, title: t })} />
-
-            <Text style={styles.inputLabel}>Description</Text>
-            <TextInput style={[styles.input, { height: 80 }]} multiline placeholder="Détails de l'offre" value={newProp.description} onChangeText={t => setNewProp({ ...newProp, description: t })} />
-
-            <Text style={styles.inputLabel}>URL de l'image / photo de l'offre</Text>
-            <TextInput style={styles.input} placeholder="ex: https://images.unsplash.com/..." value={newProp.imageUrl} onChangeText={t => setNewProp({ ...newProp, imageUrl: t })} />
-
-            <Text style={styles.inputLabel}>Image de l'offre (Recommandé)</Text>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12 }}>
-              <TouchableOpacity style={[styles.headerActionBtn, { backgroundColor: '#4B5563', height: 40 }]} onPress={() => pickImage('agent')}>
-                <Text style={styles.headerActionBtnText}>🖼️ Choisir une photo</Text>
-              </TouchableOpacity>
-              {agentImageUri ? (
-                <View style={{ position: 'relative' }}>
-                  <Image source={{ uri: agentImageUri }} style={{ width: 60, height: 60, borderRadius: 8 }} />
-                  <TouchableOpacity onPress={() => setAgentImageUri(null)} style={{ position: 'absolute', top: -6, right: -6, backgroundColor: '#EF4444', borderRadius: 10, width: 20, height: 20, alignItems: 'center', justifyContent: 'center' }}>
-                    <Text style={{ color: 'white', fontSize: 10, fontWeight: '700' }}>✕</Text>
-                  </TouchableOpacity>
-                </View>
-              ) : (
-                <Text style={{ fontSize: 12, color: Colors.textSecondary }}>Aucune photo sélectionnée</Text>
-              )}
-            </View>
-
-            {proposalType === 'flash' ? (
-              <>
-                <Text style={styles.inputLabel}>Prix normal barré (FCFA)</Text>
-                <TextInput style={styles.input} keyboardType="numeric" placeholder="12000" value={newProp.price_normal} onChangeText={t => setNewProp({ ...newProp, price_normal: t })} />
-                
-                <Text style={styles.inputLabel}>Prix Brick Flash proposé (FCFA)</Text>
-                <TextInput style={styles.input} keyboardType="numeric" placeholder="7500" value={newProp.price_promo} onChangeText={t => setNewProp({ ...newProp, price_promo: t })} />
-
-                <Text style={styles.inputLabel}>Quantité disponible</Text>
-                <TextInput style={styles.input} keyboardType="numeric" placeholder="20" value={newProp.quantity} onChangeText={t => setNewProp({ ...newProp, quantity: t })} />
-              </>
-            ) : (
-              <>
-                <Text style={styles.inputLabel}>Type de Pack</Text>
-                <TextInput style={styles.input} placeholder="Couple, Famille, Business..." value={newProp.pack_type} onChangeText={t => setNewProp({ ...newProp, pack_type: t })} />
-                
-                <Text style={styles.inputLabel}>Nombre de personnes</Text>
-                <TextInput style={styles.input} keyboardType="numeric" placeholder="2" value={newProp.persons} onChangeText={t => setNewProp({ ...newProp, persons: t })} />
-
-                <Text style={styles.inputLabel}>Prix fixe du pack (FCFA)</Text>
-                <TextInput style={styles.input} keyboardType="numeric" placeholder="25000" value={newProp.price_promo} onChangeText={t => setNewProp({ ...newProp, price_promo: t })} />
-
-                <Text style={styles.inputLabel}>Prestations incluses</Text>
-              </>
-            )}
-
-            {/* Horaires & Dates de Début / Fin de l'offre */}
-            <View style={{ backgroundColor: '#F9FAFB', padding: 14, borderRadius: 14, borderWidth: 1, borderColor: '#E5E7EB', marginVertical: 12, gap: 12 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <Ionicons name="calendar-outline" size={18} color={Colors.primary} />
-                <Text style={{ fontSize: 13, fontWeight: '800', color: '#111827' }}>
-                  Dates & Horaires de l'offre
+          <ScrollView style={styles.scrollArea} showsVerticalScrollIndicator={false}>
+            {/* Header with Call to Action to open Creation Modal */}
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.sectionTitle}>Suivi & Évolution Offres ({agentProposals.length})</Text>
+                <Text style={{ fontSize: 12, color: Colors.textSecondary, marginTop: 2 }}>
+                  Statut en direct de vos propositions auprès de l'Admin
                 </Text>
               </View>
 
-              {/* Start Date & Time Row */}
-              <View style={{ gap: 4 }}>
-                <Text style={{ fontSize: 11, fontWeight: '800', color: Colors.primary }}>🟢 DÉBUT DE L'OFFRE</Text>
-                <View style={{ flexDirection: 'row', gap: 10 }}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ fontSize: 10, fontWeight: '700', color: Colors.textSecondary, marginBottom: 2 }}>
-                      Date Début (AAAA-MM-JJ)
-                    </Text>
-                    <TextInput
-                      style={[styles.input, { backgroundColor: 'white', marginBottom: 0 }]}
-                      placeholder={getTodayYMD()}
-                      value={newProp.startDate}
-                      onChangeText={t => setNewProp({ ...newProp, startDate: t })}
-                    />
-                  </View>
-
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ fontSize: 10, fontWeight: '700', color: Colors.textSecondary, marginBottom: 2 }}>
-                      Heure Début (18:00)
-                    </Text>
-                    <TextInput
-                      style={[styles.input, { backgroundColor: 'white', marginBottom: 0 }]}
-                      placeholder="18:00"
-                      value={newProp.startTime}
-                      onChangeText={t => setNewProp({ ...newProp, startTime: t })}
-                    />
-                  </View>
-                </View>
-              </View>
-
-              {/* End Date & Time Row */}
-              <View style={{ gap: 4, marginTop: 4 }}>
-                <Text style={{ fontSize: 11, fontWeight: '800', color: '#EF4444' }}>🔴 FIN DE L'OFFRE</Text>
-                <View style={{ flexDirection: 'row', gap: 10 }}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ fontSize: 10, fontWeight: '700', color: Colors.textSecondary, marginBottom: 2 }}>
-                      Date Fin (AAAA-MM-JJ)
-                    </Text>
-                    <TextInput
-                      style={[styles.input, { backgroundColor: 'white', marginBottom: 0 }]}
-                      placeholder={getTodayYMD()}
-                      value={newProp.endDate}
-                      onChangeText={t => setNewProp({ ...newProp, endDate: t })}
-                    />
-                  </View>
-
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ fontSize: 10, fontWeight: '700', color: Colors.textSecondary, marginBottom: 2 }}>
-                      Heure Fin (23:59)
-                    </Text>
-                    <TextInput
-                      style={[styles.input, { backgroundColor: 'white', marginBottom: 0 }]}
-                      placeholder="23:59"
-                      value={newProp.endTime}
-                      onChangeText={t => setNewProp({ ...newProp, endTime: t })}
-                    />
-                  </View>
-                </View>
-              </View>
+              <TouchableOpacity
+                style={{ backgroundColor: Colors.primary, paddingHorizontal: 14, paddingVertical: 10, borderRadius: 12, flexDirection: 'row', alignItems: 'center', gap: 6 }}
+                onPress={() => setShowCreateProposalModal(true)}
+              >
+                <Ionicons name="add-circle" size={18} color="white" />
+                <Text style={{ color: 'white', fontWeight: '800', fontSize: 13 }}>Nouvelle Offre</Text>
+              </TouchableOpacity>
             </View>
 
-            <TouchableOpacity style={styles.actionBtn} onPress={handleCreateProposal}>
-              <Text style={styles.actionBtnText}>Envoyer la proposition</Text>
-            </TouchableOpacity>
+            {/* Filter Pills */}
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 16 }} contentContainerStyle={{ gap: 8 }}>
+              {[
+                { id: 'all', label: `Toutes (${agentProposals.length})` },
+                { id: 'en_attente', label: `⏳ En Attente (${agentProposals.filter(p => p.status === 'en_attente').length})` },
+                { id: 'validee', label: `✅ Validées (${agentProposals.filter(p => p.status === 'validee').length})` },
+                { id: 'refusee', label: `❌ Refusées (${agentProposals.filter(p => p.status === 'refusee').length})` },
+              ].map((f) => (
+                <TouchableOpacity
+                  key={f.id}
+                  style={[
+                    { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, backgroundColor: '#F3F4F6', borderWidth: 1, borderColor: '#E5E7EB' },
+                    proposalStatusFilter === f.id && { backgroundColor: Colors.primary, borderColor: Colors.primary }
+                  ]}
+                  onPress={() => setProposalStatusFilter(f.id as any)}
+                >
+                  <Text style={[{ fontSize: 12, fontWeight: '700', color: Colors.textSecondary }, proposalStatusFilter === f.id && { color: 'white' }]}>
+                    {f.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+
+            {/* Proposals Tracking Cards List */}
+            {(() => {
+              const filtered = agentProposals.filter((p) => {
+                if (proposalStatusFilter === 'all') return true;
+                return p.status === proposalStatusFilter;
+              });
+
+              if (filtered.length === 0) {
+                return (
+                  <View style={{ backgroundColor: 'white', borderRadius: 16, padding: 32, alignItems: 'center', gap: 12, borderWidth: 1, borderColor: '#E5E7EB', marginVertical: 8 }}>
+                    <Ionicons name="document-text-outline" size={48} color={Colors.textSecondary} />
+                    <Text style={{ fontSize: 15, fontWeight: '800', color: Colors.textPrimary }}>Aucune proposition trouvée</Text>
+                    <Text style={{ fontSize: 12, color: Colors.textSecondary, textAlign: 'center' }}>
+                      Cliquez sur "Nouvelle Offre" ci-dessus pour soumettre une offre au comité de validation.
+                    </Text>
+                    <TouchableOpacity
+                      style={{ backgroundColor: Colors.primary, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 10, marginTop: 6 }}
+                      onPress={() => setShowCreateProposalModal(true)}
+                    >
+                      <Text style={{ color: 'white', fontWeight: '800', fontSize: 13 }}>➕ Proposer une offre</Text>
+                    </TouchableOpacity>
+                  </View>
+                );
+              }
+
+              return filtered.map((prop) => {
+                const restoName = prop.restaurants?.name || prop.restaurant || 'Établissement';
+                const displayPrice = prop.type === 'flash' ? prop.price_promo : prop.price;
+                const photoUrl = prop.photos?.[0] || 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=500';
+
+                return (
+                  <View key={prop.id} style={{ backgroundColor: 'white', borderRadius: 16, borderWidth: 1, borderColor: '#E5E7EB', padding: 14, marginBottom: 14, gap: 12 }}>
+                    <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center' }}>
+                      <Image source={{ uri: photoUrl }} style={{ width: 64, height: 64, borderRadius: 12, resizeMode: 'cover' }} />
+                      
+                      <View style={{ flex: 1 }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+                          <Text style={{ fontSize: 10, fontWeight: '900', color: prop.type === 'flash' ? Colors.primary : '#D97706', backgroundColor: prop.type === 'flash' ? '#FFF1F2' : '#FFFBEB', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 }}>
+                            {prop.type === 'flash' ? '⚡ FLASH' : '❤️ DEAL'}
+                          </Text>
+                          <Text style={{ fontSize: 11, color: Colors.textSecondary }} numberOfLines={1}>
+                            🏢 {restoName}
+                          </Text>
+                        </View>
+
+                        <Text style={{ fontSize: 15, fontWeight: '800', color: Colors.textPrimary }} numberOfLines={1}>
+                          {prop.title}
+                        </Text>
+
+                        <Text style={{ fontSize: 14, fontWeight: '900', color: Colors.primary, marginTop: 2 }}>
+                          {Number(displayPrice ?? 0).toLocaleString('fr-FR')} FCFA
+                          {prop.type === 'flash' && prop.price_normal && (
+                            <Text style={{ fontSize: 11, color: '#9CA3AF', textDecorationLine: 'line-through', fontWeight: '400' }}> {Number(prop.price_normal).toLocaleString()} F</Text>
+                          )}
+                        </Text>
+                      </View>
+                    </View>
+
+                    {/* Dynamic Status Evolution Badge */}
+                    <View style={[
+                      { padding: 12, borderRadius: 12, borderWidth: 1, gap: 4 },
+                      prop.status === 'validee' && { backgroundColor: '#ECFDF5', borderColor: '#A7F3D0' },
+                      prop.status === 'en_attente' && { backgroundColor: '#FFF7ED', borderColor: '#FED7AA' },
+                      prop.status === 'refusee' && { backgroundColor: '#FEF2F2', borderColor: '#FCA5A5' },
+                      prop.status === 'a_modifier' && { backgroundColor: '#EFF6FF', borderColor: '#BFDBFE' },
+                    ]}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                          <Ionicons
+                            name={
+                              prop.status === 'validee' ? 'checkmark-circle' :
+                              prop.status === 'en_attente' ? 'time' :
+                              prop.status === 'refusee' ? 'close-circle' : 'create'
+                            }
+                            size={16}
+                            color={
+                              prop.status === 'validee' ? '#047857' :
+                              prop.status === 'en_attente' ? '#C2410C' :
+                              prop.status === 'refusee' ? '#B91C1C' : '#1D4ED8'
+                            }
+                          />
+                          <Text style={{
+                            fontSize: 12,
+                            fontWeight: '900',
+                            color:
+                              prop.status === 'validee' ? '#047857' :
+                              prop.status === 'en_attente' ? '#C2410C' :
+                              prop.status === 'refusee' ? '#B91C1C' : '#1D4ED8'
+                          }}>
+                            {prop.status === 'validee' && '✅ VALIDÉE & EN LIGNE SUR L\'APP'}
+                            {prop.status === 'en_attente' && '⏳ EN ENCOURS DE MODÉRATION ADMIN'}
+                            {prop.status === 'refusee' && '❌ PROPOSITION REFUSÉE PAR L\'ADMIN'}
+                            {prop.status === 'a_modifier' && '✏️ MODIFICATION DEMANDÉE'}
+                          </Text>
+                        </View>
+
+                        <Text style={{ fontSize: 10, color: '#6B7280' }}>
+                          {new Date(prop.created_at).toLocaleDateString('fr-FR')}
+                        </Text>
+                      </View>
+
+                      <Text style={{ fontSize: 11, color: '#4B5563', marginTop: 2, lineHeight: 15 }}>
+                        {prop.status === 'validee' && '🎉 Votre offre a été approuvée ! Elle est actuellement visible et réservable par tous les clients sur l\'application.'}
+                        {prop.status === 'en_attente' && 'L\'administrateur examine votre proposition (visuel, prix et commission). Vous recevrez une alerte dès validation.'}
+                        {prop.status === 'refusee' && 'Cette offre ne correspondait pas aux normes de l\'application. Vous pouvez en soumettre une nouvelle.'}
+                        {prop.status === 'a_modifier' && 'L\'administrateur demande un ajustement des informations. Veuillez mettre à jour votre offre.'}
+                      </Text>
+                    </View>
+                  </View>
+                );
+              });
+            })()}
+
             <View style={{ height: 40 }} />
           </ScrollView>
         )}
@@ -3595,6 +3610,189 @@ const getCategoryLabel = (cat?: string) => {
             <Text style={[styles.navBtnText, agentTab === 'profile' && styles.activeNavText]}>Profil</Text>
           </TouchableOpacity>
         </View>
+
+        {/* CREATE PROPOSAL MODAL (Agent exclusive) */}
+        <Modal visible={showCreateProposalModal} animationType="slide">
+          <SafeAreaView style={{ flex: 1, backgroundColor: 'white', padding: 20 }}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Créer une Proposition d'Offre</Text>
+              <TouchableOpacity onPress={() => setShowCreateProposalModal(false)}>
+                <Text style={styles.closeBtn}>✕</Text>
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={{ flex: 1, marginTop: 10 }}>
+              <View style={styles.tabSelector}>
+                <TouchableOpacity style={[styles.tabSelectorBtn, proposalType === 'flash' && styles.tabSelectorActive]} onPress={() => setProposalType('flash')}>
+                  <Text style={[styles.tabSelectorText, proposalType === 'flash' && { color: 'white' }]}>⚡ Flash</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.tabSelectorBtn, proposalType === 'deal' && styles.tabSelectorActive]} onPress={() => setProposalType('deal')}>
+                  <Text style={[styles.tabSelectorText, proposalType === 'deal' && { color: 'white' }]}>❤️ Deal</Text>
+                </TouchableOpacity>
+              </View>
+
+              <Text style={styles.inputLabel}>Sélectionner un restaurant</Text>
+              {agentRestaurants.length === 0 ? (
+                <Text style={{ color: Colors.textSecondary, fontSize: 12, marginBottom: 12 }}>Aucun restaurant disponible. Veuillez en inscrire un d'abord.</Text>
+              ) : (
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 16 }}>
+                  {agentRestaurants.map((resto) => (
+                    <TouchableOpacity
+                      key={resto.id}
+                      style={[
+                        {
+                          paddingHorizontal: 12,
+                          paddingVertical: 8,
+                          borderRadius: 20,
+                          backgroundColor: '#F3F4F6',
+                          marginRight: 8,
+                          borderWidth: 1,
+                          borderColor: '#E5E7EB'
+                        },
+                        newProp.restaurantId === resto.id && {
+                          backgroundColor: Colors.primary,
+                          borderColor: Colors.primary
+                        }
+                      ]}
+                      onPress={() => setNewProp(prev => ({ ...prev, restaurant: resto.name, restaurantId: resto.id }))}
+                    >
+                      <Text style={[{ color: Colors.textPrimary, fontSize: 12, fontWeight: '600' }, newProp.restaurantId === resto.id && { color: 'white' }]}>
+                        {resto.name}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              )}
+
+              <Text style={styles.inputLabel}>Titre de l'offre</Text>
+              <TextInput style={styles.input} placeholder="ex: Menu Burger Duo" value={newProp.title} onChangeText={t => setNewProp({ ...newProp, title: t })} />
+
+              <Text style={styles.inputLabel}>Description</Text>
+              <TextInput style={[styles.input, { height: 80 }]} multiline placeholder="Détails de l'offre" value={newProp.description} onChangeText={t => setNewProp({ ...newProp, description: t })} />
+
+              <Text style={styles.inputLabel}>URL de l'image / photo de l'offre</Text>
+              <TextInput style={styles.input} placeholder="ex: https://images.unsplash.com/..." value={newProp.imageUrl} onChangeText={t => setNewProp({ ...newProp, imageUrl: t })} />
+
+              <Text style={styles.inputLabel}>Image de l'offre (Recommandé)</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+                <TouchableOpacity style={[styles.headerActionBtn, { backgroundColor: '#4B5563', height: 40 }]} onPress={() => pickImage('agent')}>
+                  <Text style={styles.headerActionBtnText}>🖼️ Choisir une photo</Text>
+                </TouchableOpacity>
+                {agentImageUri ? (
+                  <View style={{ position: 'relative' }}>
+                    <Image source={{ uri: agentImageUri }} style={{ width: 60, height: 60, borderRadius: 8 }} />
+                    <TouchableOpacity onPress={() => setAgentImageUri(null)} style={{ position: 'absolute', top: -6, right: -6, backgroundColor: '#EF4444', borderRadius: 10, width: 20, height: 20, alignItems: 'center', justifyContent: 'center' }}>
+                      <Text style={{ color: 'white', fontSize: 10, fontWeight: '700' }}>✕</Text>
+                    </TouchableOpacity>
+                  </View>
+                ) : (
+                  <Text style={{ fontSize: 12, color: Colors.textSecondary }}>Aucune photo sélectionnée</Text>
+                )}
+              </View>
+
+              {proposalType === 'flash' ? (
+                <>
+                  <Text style={styles.inputLabel}>Prix normal barré (FCFA)</Text>
+                  <TextInput style={styles.input} keyboardType="numeric" placeholder="12000" value={newProp.price_normal} onChangeText={t => setNewProp({ ...newProp, price_normal: t })} />
+                  
+                  <Text style={styles.inputLabel}>Prix Brick Flash proposé (FCFA)</Text>
+                  <TextInput style={styles.input} keyboardType="numeric" placeholder="7500" value={newProp.price_promo} onChangeText={t => setNewProp({ ...newProp, price_promo: t })} />
+
+                  <Text style={styles.inputLabel}>Quantité disponible</Text>
+                  <TextInput style={styles.input} keyboardType="numeric" placeholder="20" value={newProp.quantity} onChangeText={t => setNewProp({ ...newProp, quantity: t })} />
+                </>
+              ) : (
+                <>
+                  <Text style={styles.inputLabel}>Type de Pack</Text>
+                  <TextInput style={styles.input} placeholder="Couple, Famille, Business..." value={newProp.pack_type} onChangeText={t => setNewProp({ ...newProp, pack_type: t })} />
+                  
+                  <Text style={styles.inputLabel}>Nombre de personnes</Text>
+                  <TextInput style={styles.input} keyboardType="numeric" placeholder="2" value={newProp.persons} onChangeText={t => setNewProp({ ...newProp, persons: t })} />
+
+                  <Text style={styles.inputLabel}>Prix fixe du pack (FCFA)</Text>
+                  <TextInput style={styles.input} keyboardType="numeric" placeholder="25000" value={newProp.price_promo} onChangeText={t => setNewProp({ ...newProp, price_promo: t })} />
+
+                  <Text style={styles.inputLabel}>Prestations incluses</Text>
+                </>
+              )}
+
+              {/* Horaires & Dates de Début / Fin de l'offre */}
+              <View style={{ backgroundColor: '#F9FAFB', padding: 14, borderRadius: 14, borderWidth: 1, borderColor: '#E5E7EB', marginVertical: 12, gap: 12 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Ionicons name="calendar-outline" size={18} color={Colors.primary} />
+                  <Text style={{ fontSize: 13, fontWeight: '800', color: '#111827' }}>
+                    Dates & Horaires de l'offre
+                  </Text>
+                </View>
+
+                {/* Start Date & Time Row */}
+                <View style={{ gap: 4 }}>
+                  <Text style={{ fontSize: 11, fontWeight: '800', color: Colors.primary }}>🟢 DÉBUT DE L'OFFRE</Text>
+                  <View style={{ flexDirection: 'row', gap: 10 }}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 10, fontWeight: '700', color: Colors.textSecondary, marginBottom: 2 }}>
+                        Date Début (AAAA-MM-JJ)
+                      </Text>
+                      <TextInput
+                        style={[styles.input, { backgroundColor: 'white', marginBottom: 0 }]}
+                        placeholder={getTodayYMD()}
+                        value={newProp.startDate}
+                        onChangeText={t => setNewProp({ ...newProp, startDate: t })}
+                      />
+                    </View>
+
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 10, fontWeight: '700', color: Colors.textSecondary, marginBottom: 2 }}>
+                        Heure Début (18:00)
+                      </Text>
+                      <TextInput
+                        style={[styles.input, { backgroundColor: 'white', marginBottom: 0 }]}
+                        placeholder="18:00"
+                        value={newProp.startTime}
+                        onChangeText={t => setNewProp({ ...newProp, startTime: t })}
+                      />
+                    </View>
+                  </View>
+                </View>
+
+                {/* End Date & Time Row */}
+                <View style={{ gap: 4, marginTop: 4 }}>
+                  <Text style={{ fontSize: 11, fontWeight: '800', color: '#EF4444' }}>🔴 FIN DE L'OFFRE</Text>
+                  <View style={{ flexDirection: 'row', gap: 10 }}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 10, fontWeight: '700', color: Colors.textSecondary, marginBottom: 2 }}>
+                        Date Fin (AAAA-MM-JJ)
+                      </Text>
+                      <TextInput
+                        style={[styles.input, { backgroundColor: 'white', marginBottom: 0 }]}
+                        placeholder={getTodayYMD()}
+                        value={newProp.endDate}
+                        onChangeText={t => setNewProp({ ...newProp, endDate: t })}
+                      />
+                    </View>
+
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 10, fontWeight: '700', color: Colors.textSecondary, marginBottom: 2 }}>
+                        Heure Fin (23:59)
+                      </Text>
+                      <TextInput
+                        style={[styles.input, { backgroundColor: 'white', marginBottom: 0 }]}
+                        placeholder="23:59"
+                        value={newProp.endTime}
+                        onChangeText={t => setNewProp({ ...newProp, endTime: t })}
+                      />
+                    </View>
+                  </View>
+                </View>
+              </View>
+
+              <TouchableOpacity style={styles.actionBtn} onPress={handleCreateProposal}>
+                <Text style={styles.actionBtnText}>Envoyer la proposition</Text>
+              </TouchableOpacity>
+              <View style={{ height: 40 }} />
+            </ScrollView>
+          </SafeAreaView>
+        </Modal>
 
         {/* ADD RESTAURANT MODAL (Agent exclusive) */}
         <Modal visible={showAddRestoModal} animationType="slide">
