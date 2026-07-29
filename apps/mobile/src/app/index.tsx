@@ -1522,25 +1522,13 @@ export default function MobileApp() {
                         style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'white', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 10, borderWidth: 1, borderColor: Colors.primary }}
                         onPress={() => {
                           if (!isLoggedIn) {
-                            Alert.alert(
-                              'Connexion requise 🔐',
-                              'Veuillez vous connecter ou vous inscrire pour choisir votre date et réserver.',
-                              [
-                                { text: 'Annuler', style: 'cancel' },
-                                {
-                                  text: 'Se connecter / S\'inscrire',
-                                  onPress: () => {
-                                    setPendingOfferAfterAuth({
-                                      type: selectedFlash ? 'flash' : 'deal',
-                                      offer: selectedFlash || selectedDeal,
-                                      step: 1
-                                    });
-                                    setIsSignup(false);
-                                    setShowClientAuthModal(true);
-                                  }
-                                }
-                              ]
-                            );
+                            setPendingOfferAfterAuth({
+                              type: selectedFlash ? 'flash' : 'deal',
+                              offer: selectedFlash || selectedDeal,
+                              step: 1
+                            });
+                            setIsSignup(false);
+                            setShowClientAuthModal(true);
                           } else {
                             setBookingStep(1);
                           }
@@ -1590,25 +1578,13 @@ export default function MobileApp() {
                   style={{ backgroundColor: Colors.primary, paddingHorizontal: 24, height: 48, borderRadius: 24, flexDirection: 'row', alignItems: 'center', gap: 8, shadowColor: Colors.primary, shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.3, shadowRadius: 6, elevation: 4 }}
                   onPress={() => {
                     if (!isLoggedIn) {
-                      Alert.alert(
-                        'Connexion requise 🔐',
-                        'Veuillez vous connecter ou vous inscrire pour réserver cette offre et accéder au paiement sécurisé.',
-                        [
-                          { text: 'Annuler', style: 'cancel' },
-                          {
-                            text: 'Se connecter / S\'inscrire',
-                            onPress: () => {
-                              setPendingOfferAfterAuth({
-                                type: selectedFlash ? 'flash' : 'deal',
-                                offer: selectedFlash || selectedDeal,
-                                step: 1
-                              });
-                              setIsSignup(false);
-                              setShowClientAuthModal(true);
-                            }
-                          }
-                        ]
-                      );
+                      setPendingOfferAfterAuth({
+                        type: selectedFlash ? 'flash' : 'deal',
+                        offer: selectedFlash || selectedDeal,
+                        step: 1
+                      });
+                      setIsSignup(false);
+                      setShowClientAuthModal(true);
                     } else {
                       setBookingStep(1);
                     }
@@ -2684,6 +2660,20 @@ export default function MobileApp() {
             </View>
 
             <ScrollView contentContainerStyle={{ flex: 1, justifyContent: 'center', gap: 16 }}>
+              {pendingOfferAfterAuth && (
+                <View style={{ backgroundColor: '#FFF5F5', padding: 14, borderRadius: 16, borderWidth: 1, borderColor: '#FFEBEB', marginBottom: 4, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                  <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: Colors.primary, alignItems: 'center', justifyContent: 'center' }}>
+                    <Ionicons name="lock-closed" size={18} color="white" />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 13, fontWeight: '800', color: Colors.primary }}>Connexion requise pour réserver</Text>
+                    <Text style={{ fontSize: 11, color: '#4B5563', marginTop: 2, lineHeight: 15 }}>
+                      Connectez-vous ou créez un compte pour réserver "{pendingOfferAfterAuth.offer?.title || 'votre formule'}" et accéder au paiement.
+                    </Text>
+                  </View>
+                </View>
+              )}
+
               <View style={{ alignItems: 'center', marginBottom: 12 }}>
                 <Image source={require('../../assets/Icone.png')} style={{ width: 60, height: 60, borderRadius: 14, marginBottom: 8, resizeMode: 'cover' }} />
                 <Text style={{ fontSize: 20, fontWeight: '900' }}>BRICK<Text style={{ color: Colors.primary }}>DEAL</Text></Text>
