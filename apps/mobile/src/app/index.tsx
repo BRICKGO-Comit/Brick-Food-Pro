@@ -2085,6 +2085,66 @@ export default function MobileApp() {
               </View>
             </ScrollView>
           )}
+
+          {/* CLIENT AUTHENTICATION MODAL (Inside Offer Details View) */}
+          <Modal visible={showClientAuthModal} animationType="slide">
+            <SafeAreaView style={{ flex: 1, backgroundColor: 'white', padding: 20 }}>
+              <View style={[styles.modalHeader, { paddingBottom: 12 }]}>
+                <Text style={styles.modalTitle}>{isSignup ? 'Créer un compte Client' : 'Connexion Client'}</Text>
+                <TouchableOpacity onPress={() => setShowClientAuthModal(false)}>
+                  <Text style={styles.closeBtn}>✕</Text>
+                </TouchableOpacity>
+              </View>
+
+              <ScrollView contentContainerStyle={{ flex: 1, justifyContent: 'center', gap: 16 }}>
+                {pendingOfferAfterAuth && (
+                  <View style={{ backgroundColor: '#FFF5F5', padding: 14, borderRadius: 16, borderWidth: 1, borderColor: '#FFEBEB', marginBottom: 4, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                    <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: Colors.primary, alignItems: 'center', justifyContent: 'center' }}>
+                      <Ionicons name="lock-closed" size={18} color="white" />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 13, fontWeight: '800', color: Colors.primary }}>Connexion requise pour réserver</Text>
+                      <Text style={{ fontSize: 11, color: '#4B5563', marginTop: 2, lineHeight: 15 }}>
+                        Connectez-vous ou créez un compte pour réserver "{pendingOfferAfterAuth.offer?.title || 'votre formule'}" et accéder au paiement.
+                      </Text>
+                    </View>
+                  </View>
+                )}
+
+                <View style={{ alignItems: 'center', marginBottom: 12 }}>
+                  <Image source={require('../../assets/Icone.png')} style={{ width: 60, height: 60, borderRadius: 14, marginBottom: 8, resizeMode: 'cover' }} />
+                  <Text style={{ fontSize: 20, fontWeight: '900' }}>BRICK<Text style={{ color: Colors.primary }}>DEAL</Text></Text>
+                  <Text style={{ color: Colors.textSecondary, fontSize: 13 }}>{isSignup ? 'Inscrivez-vous pour valider votre commande' : 'Connectez-vous pour valider votre commande'}</Text>
+                </View>
+
+                {isSignup && (
+                  <>
+                    <Text style={styles.inputLabel}>Nom complet</Text>
+                    <TextInput style={styles.input} placeholder="ex: Eric Kouassi" value={clientName} onChangeText={setClientName} />
+                    
+                    <Text style={styles.inputLabel}>Numéro de téléphone</Text>
+                    <TextInput style={styles.input} placeholder="ex: +225 07 45 89 12 36" value={clientPhone} onChangeText={setClientPhone} keyboardType="phone-pad" />
+                  </>
+                )}
+
+                <Text style={styles.inputLabel}>Adresse Email</Text>
+                <TextInput style={styles.input} placeholder="client@email.com" value={clientEmail} onChangeText={setClientEmail} keyboardType="email-address" autoCapitalize="none" />
+
+                <Text style={styles.inputLabel}>Mot de passe</Text>
+                <TextInput style={styles.input} placeholder="Mot de passe" value={clientPassword} onChangeText={setClientPassword} secureTextEntry />
+
+                <TouchableOpacity style={[styles.actionBtn, { marginTop: 12 }]} onPress={handleClientAuth} disabled={authLoading}>
+                  <Text style={styles.actionBtnText}>{authLoading ? 'Veuillez patienter...' : isSignup ? 'Créer mon compte' : 'Se connecter'}</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity style={{ alignSelf: 'center', marginTop: 12 }} onPress={() => setIsSignup(!isSignup)}>
+                  <Text style={{ color: Colors.primary, fontWeight: '600' }}>
+                    {isSignup ? 'Déjà un compte ? Connectez-vous' : 'Nouveau sur BRICK DEAL ? Inscrivez-vous'}
+                  </Text>
+                </TouchableOpacity>
+              </ScrollView>
+            </SafeAreaView>
+          </Modal>
         </SafeAreaView>
       );
     }
