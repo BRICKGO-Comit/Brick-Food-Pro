@@ -1295,6 +1295,9 @@ const getCategoryLabel = (cat?: string) => {
     if (!targetRestoId && agentRestaurants && agentRestaurants.length > 0) {
       targetRestoId = agentRestaurants[0].id;
     }
+    if (!targetRestoId && restaurantsList && restaurantsList.length > 0) {
+      targetRestoId = restaurantsList[0].id;
+    }
 
     if (!user || !targetRestoId) {
       Alert.alert('Établissement Requis', 'Veuillez sélectionner un établissement rattaché.');

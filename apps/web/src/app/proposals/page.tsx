@@ -20,14 +20,41 @@ export default function ProposalsModerator() {
   }, [authLoading, user, router]);
 
   const fetchProposals = async () => {
-    const { data, error } = await supabase
+    const { data: offersData, error: offersErr } = await supabase
       .from('offers')
-      .select('*, profiles(full_name), restaurants(name, address, category)')
+      .select('*, restaurants(name, address, category)')
       .order('created_at', { ascending: false });
-    if (error) {
-      console.error('[FetchProposals] Error:', error.message);
+
+    if (offersErr) {
+      console.error('[FetchProposals] Error fetching offers:', offersErr.message);
+      return;
     }
-    setProposals((data ?? []) as unknown as OfferWithRelations[]);
+
+    if (!offersData || offersData.length === 0) {
+      setProposals([]);
+      return;
+    }
+
+    const agentIds = Array.from(new Set(offersData.map((o: any) => o.agent_id).filter(Boolean)));
+    let agentMap: Record<string, string> = {};
+
+    if (agentIds.length > 0) {
+      const { data: profilesData } = await supabase
+        .from('profiles')
+        .select('id, full_name')
+        .in('id', agentIds);
+
+      (profilesData ?? []).forEach((p: any) => {
+        agentMap[p.id] = p.full_name;
+      });
+    }
+
+    const enrichedProposals = offersData.map((o: any) => ({
+      ...o,
+      profiles: { full_name: agentMap[o.agent_id] || 'Agent Commercial' },
+    }));
+
+    setProposals(enrichedProposals as unknown as OfferWithRelations[]);
   };
 
   useEffect(() => {
