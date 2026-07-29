@@ -23,7 +23,7 @@ import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
-import * as FileSystem from 'expo-file-system/legacy';
+import { readAsStringAsync, EncodingType } from 'expo-file-system/legacy';
 import { decode } from 'base64-arraybuffer';
 import OnboardingScreen from '../components/OnboardingScreen';
 
@@ -199,12 +199,17 @@ export default function MobileApp() {
       const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
       const filePath = `proposals/${fileName}`;
 
-      // Read local file as Base64 and decode to ArrayBuffer (cross-platform safe for Android Hermes & iOS)
-      const base64Data = await FileSystem.readAsStringAsync(uri, {
-        encoding: FileSystem.EncodingType.Base64,
-      });
+      let arrayBuffer: ArrayBuffer;
 
-      const arrayBuffer = decode(base64Data);
+      try {
+        const base64Data = await readAsStringAsync(uri, {
+          encoding: EncodingType.Base64,
+        });
+        arrayBuffer = decode(base64Data);
+      } catch {
+        const response = await fetch(uri);
+        arrayBuffer = await response.arrayBuffer();
+      }
 
       const { error } = await supabase.storage
         .from('images')
