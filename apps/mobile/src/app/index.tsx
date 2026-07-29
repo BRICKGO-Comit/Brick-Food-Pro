@@ -1269,27 +1269,31 @@ const getCategoryLabel = (cat?: string) => {
 
   // Crée une proposition d'offre (agent)
   const handleCreateProposal = async () => {
-    if (!user || !newProp.restaurantId) {
-      Alert.alert('Erreur', 'Veuillez sélectionner un restaurant rattaché.');
+    let targetRestoId = newProp.restaurantId;
+    if (!targetRestoId && agentRestaurants && agentRestaurants.length > 0) {
+      targetRestoId = agentRestaurants[0].id;
+    }
+
+    if (!user || !targetRestoId) {
+      Alert.alert('Établissement Requis', 'Veuillez sélectionner un établissement rattaché.');
       return;
     }
 
     // --- FORM VALIDATION ---
-    if (!newProp.title.trim()) {
+    if (!newProp.title || !newProp.title.trim()) {
       Alert.alert('Champ requis', 'Veuillez saisir le titre de l\'offre (ex: Formule Grillade Duo).');
       return;
     }
 
-    const descText = proposalType === 'flash' ? newProp.description : newProp.prestations;
-    if (!descText.trim()) {
-      Alert.alert('Champ requis', 'Veuillez fournir une description ou la liste des prestations de l\'offre.');
+    const descText = (newProp.description || newProp.prestations || '').trim();
+    if (!descText) {
+      Alert.alert('Champ requis', 'Veuillez fournir une description des détails de l\'offre.');
       return;
     }
 
     if (proposalType === 'flash') {
       const priceNormalNum = Number(newProp.price_normal);
       const pricePromoNum = Number(newProp.price_promo);
-      const quantityNum = Number(newProp.quantity);
 
       if (!newProp.price_normal || isNaN(priceNormalNum) || priceNormalNum <= 0) {
         Alert.alert('Champ requis', 'Veuillez indiquer le prix normal (barré) de l\'offre (ex: 12000).');
@@ -1297,7 +1301,7 @@ const getCategoryLabel = (cat?: string) => {
       }
 
       if (!newProp.price_promo || isNaN(pricePromoNum) || pricePromoNum <= 0) {
-        Alert.alert('Champ requis', 'Veuillez indiquer le prix promo de l\'offre (ex: 6000).');
+        Alert.alert('Champ requis', 'Veuillez indiquer le prix promo de l\'offre (ex: 7500).');
         return;
       }
 
@@ -1305,25 +1309,20 @@ const getCategoryLabel = (cat?: string) => {
         Alert.alert('Prix invalide', 'Le prix promo doit être strictement inférieur au prix normal barré.');
         return;
       }
-
-      if (!newProp.quantity || isNaN(quantityNum) || quantityNum <= 0) {
-        Alert.alert('Champ requis', 'Veuillez indiquer une quantité d\'offres disponible valide (ex: 10).');
-        return;
-      }
     } else {
       const pricePromoNum = Number(newProp.price_promo);
       if (!newProp.price_promo || isNaN(pricePromoNum) || pricePromoNum <= 0) {
-        Alert.alert('Champ requis', 'Veuillez indiquer le prix du pack Deal (ex: 15000).');
+        Alert.alert('Champ requis', 'Veuillez indiquer le prix du pack Deal (ex: 25000).');
         return;
       }
     }
 
     const insertData: any = {
       agent_id: user.id,
-      restaurant_id: newProp.restaurantId,
+      restaurant_id: targetRestoId,
       type: proposalType,
       title: newProp.title.trim(),
-      description: descText.trim(),
+      description: descText,
       status: 'en_attente',
       is_confirmed: true,
     };
@@ -3713,6 +3712,13 @@ const getCategoryLabel = (cat?: string) => {
                   <TextInput style={styles.input} keyboardType="numeric" placeholder="25000" value={newProp.price_promo} onChangeText={t => setNewProp({ ...newProp, price_promo: t })} />
 
                   <Text style={styles.inputLabel}>Prestations incluses</Text>
+                  <TextInput
+                    style={[styles.input, { height: 80 }]}
+                    multiline
+                    placeholder="ex: 1 Bouteille + Grand plateau mixte grillades + Table VIP"
+                    value={newProp.prestations}
+                    onChangeText={t => setNewProp({ ...newProp, prestations: t })}
+                  />
                 </>
               )}
 
