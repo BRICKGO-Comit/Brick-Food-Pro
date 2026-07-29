@@ -52,7 +52,11 @@ export default function ProposalsModerator() {
   }, [user]);
 
   const handleAction = async (id: string, newStatus: OfferStatus) => {
-    const { error } = await supabase.from('offers').update({ status: newStatus }).eq('id', id);
+    const updatePayload: Record<string, unknown> = { status: newStatus };
+    if (newStatus === 'validee') {
+      updatePayload.is_confirmed = true;
+    }
+    const { error } = await supabase.from('offers').update(updatePayload).eq('id', id);
     if (error) {
       showNotification(`Erreur: ${error.message}`);
       return;

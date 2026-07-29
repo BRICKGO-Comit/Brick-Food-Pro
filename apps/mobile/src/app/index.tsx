@@ -469,7 +469,7 @@ const getCategoryLabel = (cat?: string) => {
       const { data } = await supabase
         .from('offers')
         .select('*, restaurants(*)')
-        .eq('is_published', true)
+        .eq('status', 'validee')
         .order('created_at', { ascending: false });
 
       const now = new Date();
@@ -1295,6 +1295,7 @@ const getCategoryLabel = (cat?: string) => {
       title: newProp.title.trim(),
       description: descText.trim(),
       status: 'en_attente',
+      is_confirmed: true,
     };
 
     // Gère l'upload de l'image si sélectionnée
