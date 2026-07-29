@@ -23,7 +23,7 @@ import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
-import { readAsStringAsync, EncodingType } from 'expo-file-system/legacy';
+import { File } from 'expo-file-system';
 import { decode } from 'base64-arraybuffer';
 import OnboardingScreen from '../components/OnboardingScreen';
 
@@ -199,14 +199,21 @@ export default function MobileApp() {
       const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
       const filePath = `proposals/${fileName}`;
 
-      let arrayBuffer: ArrayBuffer;
+      let arrayBuffer: ArrayBuffer | null = null;
 
+      // Method 1: New Expo SDK 54 File API (file.base64())
       try {
-        const base64Data = await readAsStringAsync(uri, {
-          encoding: EncodingType.Base64,
-        });
-        arrayBuffer = decode(base64Data);
-      } catch {
+        const fileObj = new File(uri);
+        const b64 = await fileObj.base64();
+        if (b64) {
+          arrayBuffer = decode(b64);
+        }
+      } catch (e1) {
+        console.log('[UploadImage] File.base64 fallback to fetch:', e1);
+      }
+
+      // Method 2: Fetch arrayBuffer fallback
+      if (!arrayBuffer) {
         const response = await fetch(uri);
         arrayBuffer = await response.arrayBuffer();
       }
