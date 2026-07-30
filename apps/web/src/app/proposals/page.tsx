@@ -76,8 +76,14 @@ export default function ProposalsModerator() {
       )
       .subscribe();
 
+    // Add polling backup every 4 seconds
+    const interval = setInterval(() => {
+      fetchProposals();
+    }, 4000);
+
     return () => {
       supabase.removeChannel(channel);
+      clearInterval(interval);
     };
   }, [user]);
 
@@ -185,6 +191,24 @@ export default function ProposalsModerator() {
               {f.label}
             </button>
           ))}
+          <button
+            onClick={() => fetchProposals()}
+            style={{
+              padding: '8px 14px',
+              borderRadius: '20px',
+              border: '1px solid var(--primary)',
+              backgroundColor: '#FFF1F2',
+              color: 'var(--primary)',
+              fontWeight: '800',
+              fontSize: '13px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px'
+            }}
+          >
+            🔄 Actualiser
+          </button>
         </div>
       </div>
 
