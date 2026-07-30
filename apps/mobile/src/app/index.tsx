@@ -428,7 +428,7 @@ const getCategoryLabel = (cat?: string) => {
   const [pickerMinute, setPickerMinute] = useState(0);
   const [bookingQty, setBookingQty] = useState<number>(1);
   const [deliveryMode, setDeliveryMode] = useState<'retrait' | 'livraison'>('retrait');
-  const [paymentMethod, setPaymentMethod] = useState<'wave' | 'orange' | 'mtn' | 'cb'>('wave');
+  const [paymentMethod, setPaymentMethod] = useState<'wave' | 'orange' | 'mtn' | 'moov' | 'cb'>('wave');
 
   // Real-time details state variables
   const [reservationId, setReservationId] = useState<string>('');
@@ -2296,7 +2296,7 @@ const getCategoryLabel = (cat?: string) => {
                 
                 <TouchableOpacity style={[styles.paymentRadioRow, paymentMethod === 'wave' && styles.paymentRadioActive]} onPress={() => setPaymentMethod('wave')}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                    <View style={[styles.paymentIconBox, { backgroundColor: '#3B82F6' }]}><Text style={{ color: 'white', fontWeight: '900', fontSize: 12 }}>W</Text></View>
+                    <Image source={{ uri: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSZaeFi3xAkC86Ui29AojMASpYfFMPLDzf-1hTcDVS-0Q&s=10' }} style={{ width: 40, height: 40, borderRadius: 10, resizeMode: 'contain' }} />
                     <Text style={styles.paymentRadioLabel}>Wave</Text>
                   </View>
                   <View style={styles.radioOutline}>
@@ -2306,7 +2306,7 @@ const getCategoryLabel = (cat?: string) => {
 
                 <TouchableOpacity style={[styles.paymentRadioRow, paymentMethod === 'orange' && styles.paymentRadioActive]} onPress={() => setPaymentMethod('orange')}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                    <View style={[styles.paymentIconBox, { backgroundColor: '#F97316' }]}><Text style={{ color: 'white', fontWeight: '900', fontSize: 12 }}>OM</Text></View>
+                    <Image source={{ uri: 'https://lookaside.fbsbx.com/lookaside/crawler/media/?media_id=100075829930034' }} style={{ width: 40, height: 40, borderRadius: 10, resizeMode: 'contain' }} />
                     <Text style={styles.paymentRadioLabel}>Orange Money</Text>
                   </View>
                   <View style={styles.radioOutline}>
@@ -2316,7 +2316,7 @@ const getCategoryLabel = (cat?: string) => {
 
                 <TouchableOpacity style={[styles.paymentRadioRow, paymentMethod === 'mtn' && styles.paymentRadioActive]} onPress={() => setPaymentMethod('mtn')}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                    <View style={[styles.paymentIconBox, { backgroundColor: '#EAB308' }]}><Text style={{ color: 'black', fontWeight: '900', fontSize: 12 }}>MoMo</Text></View>
+                    <Image source={{ uri: 'https://naabifinance.com/wp-content/uploads/2025/08/mtn-momo-mobile-money-uganda-logo-png_seeklogo-556395.png' }} style={{ width: 40, height: 40, borderRadius: 10, resizeMode: 'contain' }} />
                     <Text style={styles.paymentRadioLabel}>MTN Mobile Money</Text>
                   </View>
                   <View style={styles.radioOutline}>
@@ -2324,9 +2324,19 @@ const getCategoryLabel = (cat?: string) => {
                   </View>
                 </TouchableOpacity>
 
+                <TouchableOpacity style={[styles.paymentRadioRow, paymentMethod === 'moov' && styles.paymentRadioActive]} onPress={() => setPaymentMethod('moov')}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                    <Image source={{ uri: 'https://play-lh.googleusercontent.com/SNbhaGrpDOyRFXa_A2emZ7kxTsZIAxGL67pN7Xn0l5OHk11qXE3ZvNg-a5hHrAl1xPhnZhsTUV-NORunc-ez' }} style={{ width: 40, height: 40, borderRadius: 10, resizeMode: 'contain' }} />
+                    <Text style={styles.paymentRadioLabel}>Moov Money</Text>
+                  </View>
+                  <View style={styles.radioOutline}>
+                    {paymentMethod === 'moov' && <View style={styles.radioDot} />}
+                  </View>
+                </TouchableOpacity>
+
                 <TouchableOpacity style={[styles.paymentRadioRow, paymentMethod === 'cb' && styles.paymentRadioActive]} onPress={() => setPaymentMethod('cb')}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                    <View style={[styles.paymentIconBox, { backgroundColor: '#6B7280' }]}><Ionicons name="card-outline" size={16} color="white" /></View>
+                    <Image source={{ uri: 'https://www.eleane.com/wp-content/uploads/2017/07/Logo_CB.png' }} style={{ width: 40, height: 40, borderRadius: 10, resizeMode: 'contain' }} />
                     <Text style={styles.paymentRadioLabel}>Carte bancaire  <Text style={{ fontSize: 10, color: Colors.textSecondary }}>VISA / MC</Text></Text>
                   </View>
                   <View style={styles.radioOutline}>
