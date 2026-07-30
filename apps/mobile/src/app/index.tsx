@@ -2334,7 +2334,7 @@ const getCategoryLabel = (cat?: string) => {
                   </View>
                 </TouchableOpacity>
 
-                <TouchableOpacity style={[styles.actionBtn, { marginTop: 32 }]} onPress={() => setBookingStep(4)}>
+                <TouchableOpacity style={[styles.actionBtn, { marginTop: 32 }]} onPress={() => handleCreateOrder()}>
                   <Text style={styles.actionBtnText}>Payer maintenant</Text>
                 </TouchableOpacity>
 
