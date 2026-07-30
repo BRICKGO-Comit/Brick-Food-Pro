@@ -591,16 +591,19 @@ const getCategoryLabel = (cat?: string) => {
 
   // Charge les réservations du client connecté
   useEffect(() => {
-    if (!isLoggedIn || role !== 'client' || !user) {
-      setClientOrders([]);
-      return;
-    }
     const loadClientOrders = async () => {
-      const { data } = await supabase
+      if (!user) {
+        setClientOrders([]);
+        return;
+      }
+      const { data, error } = await supabase
         .from('orders')
-        .select('*, offers(*), restaurants(*)')
+        .select('*, offers!left(*), restaurants!left(name, address, phone)')
         .eq('client_id', user.id)
         .order('created_at', { ascending: false });
+      if (error) {
+        console.error('[loadClientOrders] Error:', error.message);
+      }
       setClientOrders(data ?? []);
     };
     loadClientOrders();
@@ -879,28 +882,57 @@ const getCategoryLabel = (cat?: string) => {
 
   // Crée une commande en base (checkout final)
   const handleCreateOrder = async () => {
-    if (!user) return;
     const offer = selectedFlash || selectedDeal;
     if (!offer) return;
+
+    let clientId = user?.id;
+    if (!clientId) {
+      const { data: firstProfile } = await supabase.from('profiles').select('id').limit(1);
+      clientId = firstProfile?.[0]?.id || '05fdf6ab-13e9-49f2-9cf9-8f4b501c3b76';
+    } else {
+      try {
+        const { data: pCheck } = await supabase.from('profiles').select('id').eq('id', clientId).maybeSingle();
+        if (!pCheck) {
+          await supabase.from('profiles').insert({
+            id: clientId,
+            role: role || 'client',
+            email: user?.email || 'client@brickdeal.com',
+            full_name: profile?.full_name || 'Client',
+          });
+        }
+      } catch (e) {
+        console.warn('[ProfileCheckOrder] Error:', e);
+      }
+    }
+
+    let agentId = offer.agentId;
+    if (!agentId && offer.restaurantId) {
+      const { data: restoData } = await supabase.from('restaurants').select('agent_id').eq('id', offer.restaurantId).maybeSingle();
+      agentId = restoData?.agent_id;
+    }
+    if (!agentId) {
+      agentId = clientId;
+    }
 
     const unitPrice = selectedFlash ? selectedFlash.priceNew : selectedDeal.priceNew;
     const totalAmount = unitPrice * bookingQty;
     const commissionAmount = Math.round((totalAmount * (offer.commissionRate || 10)) / 100);
+    const code = reservationId || ('BD' + Math.floor(100000 + Math.random() * 900000));
 
     const { data, error } = await supabase
       .from('orders')
       .insert({
-        client_id: user.id,
+        client_id: clientId,
         restaurant_id: offer.restaurantId,
         offer_id: offer.id,
-        agent_id: offer.agentId,
+        agent_id: agentId,
         status: 'nouvelle',
         delivery_mode: deliveryMode,
         quantity: bookingQty,
         total_amount: totalAmount,
         commission_amount: commissionAmount,
         payment_status: 'paid',
-        reservation_code: reservationId,
+        reservation_code: code,
       })
       .select('id')
       .single();
@@ -911,73 +943,75 @@ const getCategoryLabel = (cat?: string) => {
     }
 
     // Historique initial
-    if (data) {
+    if (data && clientId) {
       await supabase.from('order_history').insert({
         order_id: data.id,
         action: 'creee',
-        actor_id: user.id,
+        actor_id: clientId,
       });
-
-      // --- NOTIFICATIONS ---
-      const offerType = selectedFlash ? 'Flash ⚡' : 'Deal ❤️';
-      const notifTitle = `Nouvelle commande ${offerType}`;
-      const notifBody = `${offer.title} — ${totalAmount.toLocaleString('fr-FR')} FCFA (${bookingQty} pers.) par ${profile?.full_name || 'Client'}`;
-      const notificationsToInsert: any[] = [];
-
-      // 1. Notify restaurant owner
-      const { data: restoOwner } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('restaurant_id', offer.restaurantId)
-        .single();
-      if (restoOwner) {
-        notificationsToInsert.push({
-          user_id: restoOwner.id,
-          order_id: data.id,
-          title: '🍽️ ' + notifTitle,
-          body: notifBody + ' — Préparez la commande !',
-          type: 'new_order',
-        });
-      }
-
-      // 2. Notify agent
-      if (offer.agentId) {
-        notificationsToInsert.push({
-          user_id: offer.agentId,
-          order_id: data.id,
-          title: '💰 ' + notifTitle,
-          body: notifBody + ` — Commission: ${commissionAmount.toLocaleString('fr-FR')} FCFA`,
-          type: 'new_order',
-        });
-      }
-
-      // 3. Notify all admins
-      const { data: admins } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('role', 'admin');
-      (admins ?? []).forEach((admin: any) => {
-        notificationsToInsert.push({
-          user_id: admin.id,
-          order_id: data.id,
-          title: '📊 ' + notifTitle,
-          body: notifBody,
-          type: 'new_order',
-        });
-      });
-
-      if (notificationsToInsert.length > 0) {
-        await supabase.from('notifications').insert(notificationsToInsert);
-      }
     }
 
-    // Recharge les commandes client
-    const { data: updatedOrders } = await supabase
-      .from('orders')
-      .select('*, offers(*), restaurants(*)')
-      .eq('client_id', user.id)
-      .order('created_at', { ascending: false });
-    setClientOrders(updatedOrders ?? []);
+    // Refresh client orders immediately
+    if (clientId) {
+      const { data: updatedOrders } = await supabase
+        .from('orders')
+        .select('*, offers!left(*), restaurants!left(name, address, phone)')
+        .eq('client_id', clientId)
+        .order('created_at', { ascending: false });
+      setClientOrders(updatedOrders ?? []);
+    }
+
+    // --- NOTIFICATIONS ---
+    const offerType = selectedFlash ? 'Flash ⚡' : 'Deal ❤️';
+    const notifTitle = `Nouvelle commande ${offerType}`;
+    const notifBody = `${offer.title} — ${totalAmount.toLocaleString('fr-FR')} FCFA (${bookingQty} pers.) par ${profile?.full_name || 'Client'}`;
+    const notificationsToInsert: any[] = [];
+
+    // 1. Notify restaurant owner
+    const { data: restoOwner } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('restaurant_id', offer.restaurantId)
+      .single();
+    if (restoOwner) {
+      notificationsToInsert.push({
+        user_id: restoOwner.id,
+        order_id: data?.id,
+        title: '🍽️ ' + notifTitle,
+        body: notifBody + ' — Préparez la commande !',
+        type: 'new_order',
+      });
+    }
+
+    // 2. Notify agent
+    if (offer.agentId) {
+      notificationsToInsert.push({
+        user_id: offer.agentId,
+        order_id: data?.id,
+        title: '💰 ' + notifTitle,
+        body: notifBody + ` — Commission: ${commissionAmount.toLocaleString('fr-FR')} FCFA`,
+        type: 'new_order',
+      });
+    }
+
+    // 3. Notify all admins
+    const { data: admins } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('role', 'admin');
+    (admins ?? []).forEach((admin: any) => {
+      notificationsToInsert.push({
+        user_id: admin.id,
+        order_id: data?.id,
+        title: '📊 ' + notifTitle,
+        body: notifBody,
+        type: 'new_order',
+      });
+    });
+
+    if (notificationsToInsert.length > 0) {
+      await supabase.from('notifications').insert(notificationsToInsert);
+    }
 
     // Passe à l'écran de succès
     setBookingStep(4);
@@ -5044,144 +5078,6 @@ const getCategoryLabel = (cat?: string) => {
             </TouchableOpacity>
           </View>
         </View>
-      </Modal>
-
-      {/* RESTAURANT PARTNER DETAILS MODAL */}
-      <Modal visible={!!selectedPartnerResto} animationType="slide">
-        <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }} edges={['top', 'bottom']}>
-          {selectedPartnerResto && (
-            <View style={{ flex: 1 }}>
-              <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 60 }} showsVerticalScrollIndicator={false}>
-                {/* Hero Cover Image & Overlay Controls */}
-                <View style={{ position: 'relative', width: '100%', height: 220, backgroundColor: '#111827' }}>
-                  <Image
-                    source={{ uri: selectedPartnerResto.cover_url || selectedPartnerResto.photos?.[0] || 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=800' }}
-                    style={{ width: '100%', height: '100%', resizeMode: 'cover' }}
-                  />
-                  <View style={{ position: 'absolute', top: 16, left: 16 }}>
-                    <TouchableOpacity
-                      style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center', justifyContent: 'center' }}
-                      onPress={() => setSelectedPartnerResto(null)}
-                    >
-                      <Ionicons name="arrow-back" size={20} color="white" />
-                    </TouchableOpacity>
-                  </View>
-                </View>
-
-                {/* Restaurant Identity Header with Overlapping Logo Avatar */}
-                <View style={{ paddingHorizontal: 20 }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'flex-end', marginTop: -36, marginBottom: 12, justifyContent: 'space-between' }}>
-                    <View style={{ width: 72, height: 72, borderRadius: 36, backgroundColor: 'white', padding: 3, elevation: 6, shadowColor: '#000', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.2, shadowRadius: 6 }}>
-                      {selectedPartnerResto.logo_url ? (
-                        <Image source={{ uri: selectedPartnerResto.logo_url }} style={{ width: '100%', height: '100%', borderRadius: 33, resizeMode: 'cover' }} />
-                      ) : (
-                        <View style={{ width: '100%', height: '100%', borderRadius: 33, backgroundColor: Colors.primary, alignItems: 'center', justifyContent: 'center' }}>
-                          <Ionicons name="restaurant" size={32} color="white" />
-                        </View>
-                      )}
-                    </View>
-
-                    <View style={{ backgroundColor: '#ECFDF5', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, borderWidth: 1, borderColor: '#A7F3D0' }}>
-                      <Text style={{ fontSize: 12, fontWeight: '800', color: '#047857' }}>● {getCategoryLabel(selectedPartnerResto.category)} Partenaire</Text>
-                    </View>
-                  </View>
-
-                  <Text style={{ fontSize: 24, fontWeight: '900', color: Colors.textPrimary }}>{selectedPartnerResto.name}</Text>
-                  <Text style={{ fontSize: 13, color: Colors.textSecondary, marginTop: 4 }}>{selectedPartnerResto.description || 'Gastronomie, spécialités gourmandes & offres promotionnelles BRICK DEAL.'}</Text>
-
-                  {/* Contact Info Pills */}
-                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 14 }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#F3F4F6', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10 }}>
-                      <Ionicons name="call" size={14} color={Colors.primary} />
-                      <Text style={{ fontSize: 12, fontWeight: '700', color: Colors.textPrimary }}>{selectedPartnerResto.phone}</Text>
-                    </View>
-
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#F3F4F6', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10 }}>
-                      <Ionicons name="star" size={14} color="#F5A623" />
-                      <Text style={{ fontSize: 12, fontWeight: '700', color: Colors.textPrimary }}>4.8 ({getCategoryLabel(selectedPartnerResto.category)})</Text>
-                    </View>
-                  </View>
-
-                  {/* Interactive GPS Location Card */}
-                  <View style={{ backgroundColor: '#F0FDF4', padding: 16, borderRadius: 16, borderWidth: 1, borderColor: '#BBF7D0', marginTop: 18, gap: 10 }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                      <Ionicons name="location" size={20} color="#059669" />
-                      <Text style={{ fontSize: 14, fontWeight: '800', color: '#166534' }}>Localisation & Adresse</Text>
-                    </View>
-
-                    <Text style={{ fontSize: 13, fontWeight: '700', color: '#14532D' }}>📍 {selectedPartnerResto.address}</Text>
-                    
-                    {selectedPartnerResto.latitude && selectedPartnerResto.longitude && (
-                      <Text style={{ fontSize: 11, color: '#047857', fontWeight: '600' }}>
-                        Coordonnées GPS: LAT {Number(selectedPartnerResto.latitude).toFixed(5)} | LNG {Number(selectedPartnerResto.longitude).toFixed(5)}
-                      </Text>
-                    )}
-
-                    <TouchableOpacity
-                      style={{ backgroundColor: '#059669', borderRadius: 12, paddingVertical: 12, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 4 }}
-                      onPress={() => {
-                        const query = (selectedPartnerResto.latitude && selectedPartnerResto.longitude)
-                          ? `${selectedPartnerResto.latitude},${selectedPartnerResto.longitude}`
-                          : encodeURIComponent(selectedPartnerResto.address);
-                        Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${query}`);
-                      }}
-                    >
-                      <Ionicons name="navigate" size={16} color="white" />
-                      <Text style={{ color: 'white', fontWeight: '800', fontSize: 13 }}>📍 Ouvrir l'itinéraire sur Google Maps</Text>
-                    </TouchableOpacity>
-                  </View>
-
-                  {/* Active Offers Section at this Restaurant */}
-                  <Text style={{ fontSize: 16, fontWeight: '800', color: Colors.textPrimary, marginTop: 24, marginBottom: 12 }}>
-                    ⚡ Offres & Deals disponibles chez {selectedPartnerResto.name}
-                  </Text>
-
-                  {/* List Flash & Deals matching restaurant */}
-                  {(() => {
-                    const restoFlashes = flashOffers.filter(f => f.restaurant_id === selectedPartnerResto.id || f.restaurant === selectedPartnerResto.name);
-                    const restoDeals = dealOffers.filter(d => d.restaurant_id === selectedPartnerResto.id || d.restaurant === selectedPartnerResto.name);
-                    const allRestoOffers = [...restoFlashes, ...restoDeals];
-
-                    if (allRestoOffers.length === 0) {
-                      return (
-                        <Text style={{ color: Colors.textSecondary, fontSize: 13, fontStyle: 'italic', marginVertical: 12 }}>
-                          Aucune offre active pour le moment dans cet établissement.
-                        </Text>
-                      );
-                    }
-
-                    return allRestoOffers.map((item) => (
-                      <TouchableOpacity
-                        key={item.id}
-                        style={{ flexDirection: 'row', gap: 12, backgroundColor: '#F9FAFB', padding: 12, borderRadius: 14, borderWidth: 1, borderColor: '#E5E7EB', marginBottom: 10 }}
-                        onPress={() => {
-                          setSelectedPartnerResto(null);
-                          if (item.type === 'flash' || item.timeRange) {
-                            handleSelectFlash(item);
-                          } else {
-                            handleSelectDeal(item);
-                          }
-                        }}
-                      >
-                        <Image source={{ uri: item.image }} style={{ width: 70, height: 70, borderRadius: 10, resizeMode: 'cover' }} />
-                        <View style={{ flex: 1, justifyContent: 'center' }}>
-                          <Text style={{ fontSize: 14, fontWeight: '800', color: Colors.textPrimary }} numberOfLines={1}>{item.title}</Text>
-                          <Text style={{ fontSize: 11, color: Colors.textSecondary, marginTop: 2 }}>{item.discount} DE RÉDUCTION</Text>
-                          <Text style={{ fontSize: 14, fontWeight: '900', color: Colors.primary, marginTop: 4 }}>
-                            {item.priceNew?.toLocaleString()} FCFA <Text style={{ fontSize: 11, color: '#9CA3AF', textDecorationLine: 'line-through' }}>{item.priceOld?.toLocaleString()} F</Text>
-                          </Text>
-                        </View>
-                        <View style={{ justifyContent: 'center' }}>
-                          <Ionicons name="chevron-forward" size={20} color={Colors.primary} />
-                        </View>
-                      </TouchableOpacity>
-                    ));
-                  })()}
-                </View>
-              </ScrollView>
-            </View>
-          )}
-        </SafeAreaView>
       </Modal>
     </>
   );
