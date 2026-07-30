@@ -118,10 +118,16 @@ export default function ProposalsModerator() {
     setTimeout(() => setNotification(null), 4500);
   };
 
-  const handleDeleteProposal = async (id: string, title: string) => {
-    if (!window.confirm(`Êtes-vous sûr de vouloir supprimer définitivement l'offre "${title}" ?`)) {
-      return;
-    }
+  const [deleteConfirmProp, setDeleteConfirmProp] = useState<{ id: string; title: string } | null>(null);
+
+  const handleDeleteProposal = (id: string, title: string) => {
+    setDeleteConfirmProp({ id, title });
+  };
+
+  const confirmDeleteProposal = async () => {
+    if (!deleteConfirmProp) return;
+    const { id, title } = deleteConfirmProp;
+    setDeleteConfirmProp(null);
 
     const { error } = await supabase.from('offers').delete().eq('id', id);
     if (error) {
@@ -641,6 +647,114 @@ export default function ProposalsModerator() {
                   <button type="button" className="btn btn-outline" style={{ flex: '1', padding: '12px', borderRadius: '12px', fontWeight: '700' }} onClick={() => setEditingProp(null)}>Annuler</button>
                 </div>
               </form>
+            </div>
+          </div>
+        )}
+
+        {/* Custom Ultra-Modern Delete Confirmation Modal */}
+        {deleteConfirmProp && (
+          <div style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(15, 23, 42, 0.75)',
+            backdropFilter: 'blur(10px)',
+            WebkitBackdropFilter: 'blur(10px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1100,
+            padding: '20px',
+            animation: 'fadeIn 0.2s ease-out'
+          }} onClick={() => setDeleteConfirmProp(null)}>
+            <div style={{
+              width: '100%',
+              maxWidth: '440px',
+              backgroundColor: '#FFFFFF',
+              borderRadius: '24px',
+              overflow: 'hidden',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.35)',
+              border: '1px solid #E5E7EB',
+              padding: '28px',
+              textAlign: 'center',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center'
+            }} onClick={(e) => e.stopPropagation()}>
+              
+              {/* Warning Icon Badge */}
+              <div style={{
+                width: '64px',
+                height: '64px',
+                borderRadius: '32px',
+                backgroundColor: '#FEF2F2',
+                border: '1px solid #FCA5A5',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '28px',
+                marginBottom: '16px'
+              }}>
+                🗑️
+              </div>
+
+              <h3 style={{ fontSize: '20px', fontWeight: '900', color: '#111827', margin: '0 0 8px 0' }}>
+                Supprimer cette offre ?
+              </h3>
+              
+              <p style={{ fontSize: '14px', color: '#6B7280', margin: '0 0 16px 0', lineHeight: '1.5' }}>
+                Êtes-vous sûr de vouloir supprimer définitivement l'offre :
+              </p>
+
+              <div style={{
+                width: '100%',
+                backgroundColor: '#F9FAFB',
+                border: '1px solid #E5E7EB',
+                borderRadius: '12px',
+                padding: '12px 16px',
+                fontWeight: '800',
+                color: '#E11D48',
+                fontSize: '14px',
+                marginBottom: '24px',
+                wordBreak: 'break-word'
+              }}>
+                "{deleteConfirmProp.title}"
+              </div>
+
+              <div style={{ display: 'flex', gap: '12px', width: '100%' }}>
+                <button
+                  className="btn btn-outline"
+                  style={{
+                    flex: 1,
+                    padding: '12px',
+                    borderRadius: '12px',
+                    fontWeight: '700',
+                    fontSize: '14px',
+                    borderColor: '#D1D5DB',
+                    color: '#374151'
+                  }}
+                  onClick={() => setDeleteConfirmProp(null)}
+                >
+                  Annuler
+                </button>
+
+                <button
+                  className="btn btn-secondary"
+                  style={{
+                    flex: 1,
+                    padding: '12px',
+                    borderRadius: '12px',
+                    fontWeight: '800',
+                    fontSize: '14px',
+                    backgroundColor: '#DC2626',
+                    borderColor: '#DC2626',
+                    color: '#FFFFFF',
+                    boxShadow: '0 4px 12px rgba(220, 38, 38, 0.3)'
+                  }}
+                  onClick={confirmDeleteProposal}
+                >
+                  Oui, Supprimer
+                </button>
+              </div>
             </div>
           </div>
         )}
