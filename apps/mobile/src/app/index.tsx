@@ -11,7 +11,8 @@ import {
   TextInput,
   Modal,
   Alert,
-  Linking
+  Linking,
+  ActivityIndicator
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -139,6 +140,7 @@ export default function MobileApp() {
   const [pendingOfferAfterAuth, setPendingOfferAfterAuth] = useState<{ type: 'flash' | 'deal'; offer: any; step: number } | null>(null);
   const [newRestoLogo, setNewRestoLogo] = useState<string>('');
   const [newRestoCover, setNewRestoCover] = useState<string>('');
+  const [isCreatingResto, setIsCreatingResto] = useState<boolean>(false);
   const [showCalendarFilterModal, setShowCalendarFilterModal] = useState<boolean>(false);
   const [calendarDateFilter, setCalendarDateFilter] = useState<string | null>(null);
   const [agentStats, setAgentStats] = useState({ commission: 0, ordersCount: 0 });
@@ -1602,66 +1604,110 @@ const getCategoryLabel = (cat?: string) => {
   };
 
   const handleAddRestaurant = async () => {
-    if (!user) return;
+    const agentUserId = user?.id || (await supabase.auth.getUser()).data.user?.id;
+    if (!agentUserId) {
+      Alert.alert('Session requise', 'Veuillez vous connecter à votre compte agent.');
+      return;
+    }
 
     if (!newRestoName.trim()) {
-      Alert.alert('Champ requis', 'Veuillez saisir le nom de l\'établissement.');
+      Alert.alert('Nom requis', 'Veuillez saisir le nom de l\'établissement.');
       return;
     }
     if (!newRestoAddress.trim()) {
-      Alert.alert('Champ requis', 'Veuillez saisir l\'adresse de l\'établissement.');
+      Alert.alert('Adresse requise', 'Veuillez saisir l\'adresse de l\'établissement.');
       return;
     }
     if (!newRestoPhone.trim()) {
-      Alert.alert('Champ requis', 'Veuillez saisir le numéro de téléphone de contact.');
+      Alert.alert('Téléphone requis', 'Veuillez saisir le numéro de téléphone de contact.');
       return;
     }
     if (!newRestoOwnerEmail.trim()) {
-      Alert.alert('Champ requis', 'Veuillez saisir l\'email de connexion du propriétaire.');
+      Alert.alert('Email requis', 'Veuillez saisir l\'email de connexion du propriétaire.');
       return;
     }
     if (!newRestoOwnerPassword || newRestoOwnerPassword.length < 6) {
       Alert.alert('Mot de passe requis', 'Veuillez définir un mot de passe d\'au moins 6 caractères pour le propriétaire.');
       return;
     }
-    const { data: restoData, error } = await supabase.from('restaurants').insert({
-      name: newRestoName,
-      address: newRestoAddress,
-      phone: newRestoPhone,
-      description: newRestoDesc,
-      category: newRestoCategory || 'restaurant',
-      logo_url: newRestoLogo || null,
-      cover_url: newRestoCover || null,
-      latitude: newRestoLat ? parseFloat(newRestoLat) : null,
-      longitude: newRestoLng ? parseFloat(newRestoLng) : null,
-      agent_id: user.id,
-    }).select('id').single();
-    if (error) {
-      Alert.alert('Erreur', error.message);
-      return;
-    }
-    const restaurantId = restoData?.id;
 
-    // Crée le compte propriétaire avec restaurant_id dans les metadata
-    if (newRestoOwnerEmail && newRestoOwnerPassword && restaurantId) {
-      await supabaseSignUpClient.auth.signUp({
-        email: newRestoOwnerEmail.trim(),
-        password: newRestoOwnerPassword,
-        options: { data: { full_name: newRestoName, role: 'restaurant', restaurant_id: restaurantId } },
-      });
+    setIsCreatingResto(true);
+
+    try {
+      let insertPayload: any = {
+        name: newRestoName.trim(),
+        address: newRestoAddress.trim(),
+        phone: newRestoPhone.trim(),
+        description: newRestoDesc.trim(),
+        category: newRestoCategory || 'restaurant',
+        logo_url: newRestoLogo || null,
+        cover_url: newRestoCover || null,
+        latitude: newRestoLat ? parseFloat(newRestoLat) : null,
+        longitude: newRestoLng ? parseFloat(newRestoLng) : null,
+        agent_id: agentUserId,
+      };
+
+      let { data: restoData, error } = await supabase
+        .from('restaurants')
+        .insert(insertPayload)
+        .select('id')
+        .single();
+
+      // Fallback si la colonne category n'existe pas encore en DB
+      if (error && (error.message?.includes('category') || error.code === '42703')) {
+        delete insertPayload.category;
+        const retry = await supabase.from('restaurants').insert(insertPayload).select('id').single();
+        restoData = retry.data;
+        error = retry.error;
+      }
+
+      if (error) {
+        Alert.alert('Erreur lors de la création', error.message);
+        setIsCreatingResto(false);
+        return;
+      }
+
+      const restaurantId = restoData?.id;
+
+      // Crée le compte propriétaire avec restaurant_id dans les metadata et profil
+      if (newRestoOwnerEmail && newRestoOwnerPassword && restaurantId) {
+        const { data: ownerAuth } = await supabaseSignUpClient.auth.signUp({
+          email: newRestoOwnerEmail.trim(),
+          password: newRestoOwnerPassword,
+          options: { data: { full_name: newRestoName.trim(), role: 'restaurant', restaurant_id: restaurantId } },
+        });
+
+        if (ownerAuth?.user?.id) {
+          await supabase.from('profiles').upsert({
+            id: ownerAuth.user.id,
+            full_name: newRestoName.trim(),
+            email: newRestoOwnerEmail.trim(),
+            phone: newRestoPhone.trim(),
+            role: 'restaurant',
+            restaurant_id: restaurantId,
+          });
+        }
+      }
+
+      Alert.alert(
+        '🎉 Établissement enregistré !',
+        `L'établissement "${newRestoName.trim()}" a été créé avec succès.\n\nVeuillez transmettre ces coordonnées au propriétaire pour se connecter sur l'app :\n\nEmail : ${newRestoOwnerEmail.trim()}\nMot de passe : ${newRestoOwnerPassword}`
+      );
+
+      setShowAddRestoModal(false);
+      setNewRestoName(''); setNewRestoAddress(''); setNewRestoPhone(''); setNewRestoDesc('');
+      setNewRestoOwnerEmail(''); setNewRestoOwnerPassword('');
+      setNewRestoLat(''); setNewRestoLng('');
+      setNewRestoLogo(''); setNewRestoCover(''); setNewRestoCategory('restaurant');
+
+      // Recharge la liste des établissements de l'agent
+      const { data: restos } = await supabase.from('restaurants').select('*').eq('agent_id', agentUserId).order('name');
+      setAgentRestaurants(restos ?? []);
+    } catch (e: any) {
+      Alert.alert('Erreur', e?.message || 'Une erreur inattendue est survenue.');
+    } finally {
+      setIsCreatingResto(false);
     }
-    Alert.alert(
-      'Établissement enregistré !',
-      `L'établissement "${newRestoName}" a été créé.\n\nVeuillez transmettre ces coordonnées au propriétaire pour se connecter sur l'app :\n\nEmail : ${newRestoOwnerEmail}\nMot de passe : ${newRestoOwnerPassword}`
-    );
-    setShowAddRestoModal(false);
-    setNewRestoName(''); setNewRestoAddress(''); setNewRestoPhone(''); setNewRestoDesc('');
-    setNewRestoOwnerEmail(''); setNewRestoOwnerPassword('');
-    setNewRestoLat(''); setNewRestoLng('');
-    setNewRestoLogo(''); setNewRestoCover(''); setNewRestoCategory('restaurant');
-    // Recharge
-    const { data: restos } = await supabase.from('restaurants').select('*').eq('agent_id', user.id).order('name');
-    setAgentRestaurants(restos ?? []);
   };
 
   // Met à jour le profil de l'utilisateur (client, agent ou restaurateur)
@@ -4125,8 +4171,16 @@ const getCategoryLabel = (cat?: string) => {
                 <TextInput style={styles.input} placeholder="Définir un mot de passe" value={newRestoOwnerPassword} onChangeText={setNewRestoOwnerPassword} secureTextEntry />
               </View>
 
-              <TouchableOpacity style={[styles.actionBtn, { marginTop: 10 }]} onPress={handleAddRestaurant}>
-                <Text style={styles.actionBtnText}>Créer le compte et le restaurant</Text>
+              <TouchableOpacity 
+                style={[styles.actionBtn, { marginTop: 10 }, isCreatingResto && { opacity: 0.7 }]} 
+                onPress={handleAddRestaurant}
+                disabled={isCreatingResto}
+              >
+                {isCreatingResto ? (
+                  <ActivityIndicator color="white" size="small" />
+                ) : (
+                  <Text style={styles.actionBtnText}>Créer le compte et le restaurant</Text>
+                )}
               </TouchableOpacity>
             </ScrollView>
           </SafeAreaView>
