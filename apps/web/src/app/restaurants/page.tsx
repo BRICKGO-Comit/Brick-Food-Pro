@@ -25,6 +25,7 @@ export default function RestaurantsManagement() {
     name: '',
     address: '',
     phone: '',
+    category: 'restaurant',
     agentId: '',
     description: '',
   });
@@ -84,6 +85,7 @@ export default function RestaurantsManagement() {
       name: newResto.name,
       address: newResto.address,
       phone: newResto.phone,
+      category: newResto.category || 'restaurant',
       description: newResto.description,
       agent_id: newResto.agentId || null,
     });
@@ -92,7 +94,7 @@ export default function RestaurantsManagement() {
       return;
     }
     showNotification(`Restaurant "${newResto.name}" ajouté avec succès !`);
-    setNewResto({ name: '', address: '', phone: '', agentId: agents[0]?.id ?? '', description: '' });
+    setNewResto({ name: '', address: '', phone: '', category: 'restaurant', agentId: agents[0]?.id ?? '', description: '' });
     setShowAddModal(false);
     fetchRestaurants();
   };
@@ -263,6 +265,19 @@ export default function RestaurantsManagement() {
               <div className="form-group">
                 <label className="form-label">Téléphone</label>
                 <input type="text" className="form-input" placeholder="ex: 07 58 45 12 36" value={newResto.phone} onChange={(e) => setNewResto({ ...newResto, phone: e.target.value })} required />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Catégorie d'établissement</label>
+                <select className="form-input" value={newResto.category} onChange={(e) => setNewResto({ ...newResto, category: e.target.value })} required>
+                  <option value="restaurant">🍽️ Restaurant Gastronomique</option>
+                  <option value="fast_food">🍔 Fast Food / Snack</option>
+                  <option value="maquis">🔥 Maquis & Grillades</option>
+                  <option value="lounge">🍸 Lounge & Bar</option>
+                  <option value="patisserie">🍰 Pâtisserie & Salon de thé</option>
+                  <option value="rooftop">🏙️ Rooftop & Cocktails</option>
+                  <option value="glacerie">🍦 Glacerie & Desserts</option>
+                  <option value="buffet">🍲 Buffet & Traiteur</option>
+                </select>
               </div>
               <div className="form-group">
                 <label className="form-label">Description</label>

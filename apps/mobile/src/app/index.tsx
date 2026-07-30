@@ -501,6 +501,8 @@ const getCategoryLabel = (cat?: string) => {
 
       (data ?? []).forEach((o: any) => {
         const restoName = o.restaurants?.name ?? 'Restaurant';
+        const restoAddress = o.restaurants?.address ?? '';
+        const restoCategory = o.restaurants?.category ?? '';
         if (o.type === 'flash') {
           // Calcule le countdown depuis end_timestamp
           const end = o.end_timestamp ? new Date(o.end_timestamp) : null;
@@ -515,6 +517,8 @@ const getCategoryLabel = (cat?: string) => {
             id: o.id,
             title: o.title,
             restaurant: restoName,
+            address: restoAddress,
+            category: restoCategory,
             restaurantId: o.restaurant_id,
             agentId: o.agent_id,
             rating: '4.5',
@@ -541,6 +545,8 @@ const getCategoryLabel = (cat?: string) => {
             id: o.id,
             title: o.title,
             restaurant: restoName,
+            address: restoAddress,
+            category: restoCategory,
             restaurantId: o.restaurant_id,
             agentId: o.agent_id,
             rating: '4.8',
@@ -1871,23 +1877,14 @@ const getCategoryLabel = (cat?: string) => {
                       </View>
 
                       <TouchableOpacity 
-                        style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'white', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 10, borderWidth: 1, borderColor: Colors.primary }}
+                        style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: Colors.primaryLight, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, borderWidth: 1, borderColor: Colors.primary }}
                         onPress={() => {
-                          if (!isLoggedIn) {
-                            setPendingOfferAfterAuth({
-                              type: selectedFlash ? 'flash' : 'deal',
-                              offer: selectedFlash || selectedDeal,
-                              step: 1
-                            });
-                            setIsSignup(false);
-                            setShowClientAuthModal(true);
-                          } else {
-                            setBookingStep(1);
-                          }
+                          setBookingDate('Demain ' + getFrenchDate(1));
+                          setBookingStep(1);
                         }}
                       >
                         <Ionicons name="calendar-outline" size={14} color={Colors.primary} />
-                        <Text style={{ fontSize: 11, fontWeight: '700', color: Colors.primary }}>
+                        <Text style={{ fontSize: 11, fontWeight: '800', color: Colors.primary }}>
                           Aujourd'hui & Demain 📅
                         </Text>
                       </TouchableOpacity>
@@ -2524,6 +2521,8 @@ const getCategoryLabel = (cat?: string) => {
       return (
         (item.title && item.title.toLowerCase().includes(searchLow)) ||
         (item.restaurant && item.restaurant.toLowerCase().includes(searchLow)) ||
+        (item.address && item.address.toLowerCase().includes(searchLow)) ||
+        (item.category && item.category.toLowerCase().includes(searchLow)) ||
         (item.description && item.description.toLowerCase().includes(searchLow)) ||
         'flash'.includes(searchLow)
       );
@@ -2534,6 +2533,8 @@ const getCategoryLabel = (cat?: string) => {
       return (
         (item.title && item.title.toLowerCase().includes(searchLow)) ||
         (item.restaurant && item.restaurant.toLowerCase().includes(searchLow)) ||
+        (item.address && item.address.toLowerCase().includes(searchLow)) ||
+        (item.category && item.category.toLowerCase().includes(searchLow)) ||
         (item.description && item.description.toLowerCase().includes(searchLow)) ||
         (item.inclusions && item.inclusions.some((inc: string) => inc.toLowerCase().includes(searchLow))) ||
         'deal'.includes(searchLow)
@@ -2545,6 +2546,7 @@ const getCategoryLabel = (cat?: string) => {
       return (
         (resto.name && resto.name.toLowerCase().includes(searchLow)) ||
         (resto.address && resto.address.toLowerCase().includes(searchLow)) ||
+        (resto.category && resto.category.toLowerCase().includes(searchLow)) ||
         (resto.description && resto.description.toLowerCase().includes(searchLow))
       );
     });
