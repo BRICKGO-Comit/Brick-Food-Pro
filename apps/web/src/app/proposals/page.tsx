@@ -22,7 +22,7 @@ export default function ProposalsModerator() {
   const fetchProposals = async () => {
     const { data: offersData, error: offersErr } = await supabase
       .from('offers')
-      .select('*, restaurants!left(name, address, category)')
+      .select('*, restaurants!left(name, address, phone)')
       .order('created_at', { ascending: false });
 
     if (offersErr) {

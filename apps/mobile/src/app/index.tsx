@@ -618,7 +618,7 @@ const getCategoryLabel = (cat?: string) => {
 
       const { data: propsData } = await supabase
         .from('offers')
-        .select('*, restaurants!left(name, address, category)')
+        .select('*, restaurants!left(name, address, phone)')
         .order('created_at', { ascending: false });
       setAgentProposals(propsData ?? []);
 
@@ -1474,7 +1474,7 @@ const getCategoryLabel = (cat?: string) => {
     if (role === 'agent' && user) {
       const { data: propsData } = await supabase
         .from('offers')
-        .select('*, restaurants!left(name, address, category)')
+        .select('*, restaurants!left(name, address, phone)')
         .order('created_at', { ascending: false });
       setAgentProposals(propsData ?? []);
       setAgentTab('proposals');
