@@ -118,6 +118,23 @@ export default function ProposalsModerator() {
     setTimeout(() => setNotification(null), 4500);
   };
 
+  const handleDeleteProposal = async (id: string, title: string) => {
+    if (!window.confirm(`Êtes-vous sûr de vouloir supprimer définitivement l'offre "${title}" ?`)) {
+      return;
+    }
+
+    const { error } = await supabase.from('offers').delete().eq('id', id);
+    if (error) {
+      showNotification(`Erreur lors de la suppression: ${error.message}`);
+      return;
+    }
+
+    showNotification(`🗑️ Offre "${title}" supprimée avec succès.`);
+    if (previewProp?.id === id) setPreviewProp(null);
+    if (editingProp?.id === id) setEditingProp(null);
+    fetchProposals();
+  };
+
   const startEdit = (prop: OfferWithRelations) => {
     setEditingProp({ ...prop });
     setPreviewProp(null);
@@ -307,6 +324,20 @@ export default function ProposalsModerator() {
                           >
                             👁️ Aperçu
                           </button>
+                          <button
+                            className="btn btn-outline"
+                            style={{ padding: '6px 10px', fontSize: '12px', borderColor: '#2563EB', color: '#2563EB' }}
+                            onClick={() => startEdit(prop)}
+                          >
+                            ✏️ Éditer
+                          </button>
+                          <button
+                            className="btn btn-outline"
+                            style={{ padding: '6px 10px', fontSize: '12px', borderColor: '#DC2626', color: '#DC2626' }}
+                            onClick={() => handleDeleteProposal(prop.id, prop.title)}
+                          >
+                            🗑️ Supprimer
+                          </button>
                           {prop.status === 'en_attente' && (
                             <>
                               <button
@@ -424,6 +455,13 @@ export default function ProposalsModerator() {
                   </button>
                 )}
               </div>
+              <button
+                className="btn btn-outline"
+                style={{ width: '100%', padding: '10px', fontSize: '13px', borderColor: '#DC2626', color: '#DC2626', marginTop: '8px' }}
+                onClick={() => handleDeleteProposal(previewProp.id, previewProp.title)}
+              >
+                🗑️ Supprimer définitivement l'offre
+              </button>
             </div>
           </div>
         )}

@@ -436,6 +436,7 @@ const getCategoryLabel = (cat?: string) => {
 
   // Agent proposal state
   const [proposalType, setProposalType] = useState<'flash' | 'deal'>('flash');
+  const [editingOfferId, setEditingOfferId] = useState<string | null>(null);
   const [newProp, setNewProp] = useState({
     restaurant: '',
     restaurantId: '',
@@ -1288,7 +1289,67 @@ const getCategoryLabel = (cat?: string) => {
     setRestaurantProposals(data ?? []);
   };
 
-  // Crée une proposition d'offre (agent)
+  const startEditOffer = (offer: any) => {
+    setEditingOfferId(offer.id);
+    setProposalType(offer.type || 'flash');
+    setNewProp({
+      restaurant: offer.restaurants?.name || offer.restaurant || '',
+      restaurantId: offer.restaurant_id || '',
+      title: offer.title || '',
+      description: offer.description || '',
+      price_normal: offer.price_normal ? String(offer.price_normal) : '',
+      price_promo: offer.price_promo ? String(offer.price_promo) : (offer.price ? String(offer.price) : ''),
+      quantity: offer.quantity_initial ? String(offer.quantity_initial) : '10',
+      pack_type: offer.pack_type || 'couple',
+      persons: offer.capacity_persons ? String(offer.capacity_persons) : '2',
+      prestations: offer.description || '',
+      imageUrl: offer.photos?.[0] || '',
+      startDate: offer.start_timestamp ? offer.start_timestamp.split('T')[0] : getTodayYMD(),
+      endDate: offer.end_timestamp ? offer.end_timestamp.split('T')[0] : getTodayYMD(),
+      startTime: offer.start_timestamp ? offer.start_timestamp.split('T')[1]?.substring(0, 5) : '18:00',
+      endTime: offer.end_timestamp ? offer.end_timestamp.split('T')[1]?.substring(0, 5) : '23:59',
+    });
+    setAgentImageUri(null);
+    setShowCreateProposalModal(true);
+  };
+
+  const handleDeleteProposal = async (id: string, title: string) => {
+    Alert.alert(
+      '🗑️ Supprimer l\'offre',
+      `Êtes-vous sûr de vouloir supprimer définitivement l'offre "${title}" ?`,
+      [
+        { text: 'Annuler', style: 'cancel' },
+        {
+          text: 'Supprimer',
+          style: 'destructive',
+          onPress: async () => {
+            const { error } = await supabase.from('offers').delete().eq('id', id);
+            if (error) {
+              Alert.alert('Erreur', `Impossible de supprimer : ${error.message}`);
+              return;
+            }
+            Alert.alert('Succès', `L'offre "${title}" a été supprimée avec succès.`);
+            if (role === 'agent' && user) {
+              const { data: propsData } = await supabase
+                .from('offers')
+                .select('*, restaurants!left(name, address, phone)')
+                .order('created_at', { ascending: false });
+              setAgentProposals(propsData ?? []);
+            } else if (role === 'restaurant' && profile?.restaurant_id) {
+              const { data: propsData } = await supabase
+                .from('offers')
+                .select('*')
+                .eq('restaurant_id', profile.restaurant_id)
+                .order('created_at', { ascending: false });
+              setRestaurantProposals(propsData ?? []);
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  // Crée ou Modifie une proposition d'offre
   const handleCreateProposal = async () => {
     let targetRestoId = newProp.restaurantId;
     if (!targetRestoId && agentRestaurants && agentRestaurants.length > 0) {
@@ -1413,10 +1474,19 @@ const getCategoryLabel = (cat?: string) => {
       insertData.capacity_persons = Number(newProp.persons) || null;
     }
 
-    const { error } = await supabase.from('offers').insert(insertData);
-    if (error) {
-      Alert.alert('Erreur', error.message);
-      return;
+    if (editingOfferId) {
+      const { error } = await supabase.from('offers').update(insertData).eq('id', editingOfferId);
+      if (error) {
+        Alert.alert('Erreur', error.message);
+        return;
+      }
+      setEditingOfferId(null);
+    } else {
+      const { error } = await supabase.from('offers').insert(insertData);
+      if (error) {
+        Alert.alert('Erreur', error.message);
+        return;
+      }
     }
 
     // Send notification to Admin Dashboard
@@ -3468,6 +3538,25 @@ const getCategoryLabel = (cat?: string) => {
                         {prop.status === 'refusee' && 'Cette offre ne correspondait pas aux normes de l\'application. Vous pouvez en soumettre une nouvelle.'}
                         {prop.status === 'a_modifier' && 'L\'administrateur demande un ajustement des informations. Veuillez mettre à jour votre offre.'}
                       </Text>
+
+                      {/* Action buttons row for Agent */}
+                      <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 8, marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: '#F3F4F6' }}>
+                        <TouchableOpacity
+                          style={{ backgroundColor: '#EFF6FF', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, flexDirection: 'row', alignItems: 'center', gap: 4, borderWidth: 1, borderColor: '#BFDBFE' }}
+                          onPress={() => startEditOffer(prop)}
+                        >
+                          <Ionicons name="pencil" size={14} color="#1D4ED8" />
+                          <Text style={{ fontSize: 11, fontWeight: '800', color: '#1D4ED8' }}>Modifier</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                          style={{ backgroundColor: '#FEF2F2', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, flexDirection: 'row', alignItems: 'center', gap: 4, borderWidth: 1, borderColor: '#FCA5A5' }}
+                          onPress={() => handleDeleteProposal(prop.id, prop.title)}
+                        >
+                          <Ionicons name="trash-outline" size={14} color="#DC2626" />
+                          <Text style={{ fontSize: 11, fontWeight: '800', color: '#DC2626' }}>Supprimer</Text>
+                        </TouchableOpacity>
+                      </View>
                     </View>
                   </View>
                 );
@@ -4280,6 +4369,25 @@ const getCategoryLabel = (cat?: string) => {
                       💡 Note Admin: {prop.observation}
                     </Text>
                   )}
+
+                  {/* Action buttons row for Restaurant */}
+                  <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 8, marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: '#F3F4F6' }}>
+                    <TouchableOpacity
+                      style={{ backgroundColor: '#EFF6FF', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, flexDirection: 'row', alignItems: 'center', gap: 4, borderWidth: 1, borderColor: '#BFDBFE' }}
+                      onPress={() => startEditOffer(prop)}
+                    >
+                      <Ionicons name="pencil" size={14} color="#1D4ED8" />
+                      <Text style={{ fontSize: 11, fontWeight: '800', color: '#1D4ED8' }}>Modifier</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={{ backgroundColor: '#FEF2F2', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, flexDirection: 'row', alignItems: 'center', gap: 4, borderWidth: 1, borderColor: '#FCA5A5' }}
+                      onPress={() => handleDeleteProposal(prop.id, prop.title)}
+                    >
+                      <Ionicons name="trash-outline" size={14} color="#DC2626" />
+                      <Text style={{ fontSize: 11, fontWeight: '800', color: '#DC2626' }}>Supprimer</Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
               ))
             )}
