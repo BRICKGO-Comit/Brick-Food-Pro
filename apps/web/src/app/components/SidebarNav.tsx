@@ -13,6 +13,7 @@ export default function SidebarNav() {
     { href: '/agents', label: 'Agents', icon: '👤' },
     { href: '/orders', label: 'Commandes', icon: '🛍️' },
     { href: '/statistics', label: 'Statistiques', icon: '📊' },
+    { href: '/settings', label: 'Paramètres', icon: '⚙️' },
   ];
 
   return (
