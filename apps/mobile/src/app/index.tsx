@@ -3348,8 +3348,10 @@ const getCategoryLabel = (cat?: string) => {
       <SafeAreaView style={styles.mainContainer} edges={['top', 'bottom']}>
         <View style={styles.header}>
           <View>
-            <Text style={styles.greetingText}>Espace Agent Commercial</Text>
-            <Text style={styles.locationText}>{profile?.full_name ?? 'Eric Agent'} (Responsable {agentRestaurants.length} Restos)</Text>
+            <Text style={styles.greetingText}>
+              Bonjour <Text style={{ fontWeight: '800', color: Colors.primary }}>{profile?.full_name || 'Agent 👋'}</Text>
+            </Text>
+            <Text style={styles.locationText}>💼 {agentRestaurants.length} Établissement(s) géré(s)</Text>
           </View>
         </View>
 
@@ -3811,7 +3813,7 @@ const getCategoryLabel = (cat?: string) => {
 
             <View style={styles.profileCard}>
               <Text style={{ fontSize: 11, fontWeight: '700', color: Colors.primary }}>NOM DE L'AGENT</Text>
-              <Text style={styles.profileName}>{profile?.full_name ?? 'Eric Agent'}</Text>
+              <Text style={styles.profileName}>{profile?.full_name || 'Agent Commercial'}</Text>
               
               <Text style={{ fontSize: 11, fontWeight: '700', color: Colors.primary, marginTop: 12 }}>EMAIL</Text>
               <Text style={styles.profileEmail}>{profile?.email ?? ''}</Text>
@@ -4357,8 +4359,8 @@ const getCategoryLabel = (cat?: string) => {
       <SafeAreaView style={styles.mainContainer} edges={['top', 'bottom']}>
         <View style={styles.header}>
           <View>
-            <Text style={styles.greetingText}>Restaurant Partenaire</Text>
-            <Text style={styles.locationText}>{restaurantDetail?.name ?? 'Chargement...'}</Text>
+            <Text style={styles.greetingText}>{restaurantDetail?.name || 'Mon Établissement'}</Text>
+            <Text style={styles.locationText}>🏢 Espace Gérant Établissement</Text>
           </View>
         </View>
 
