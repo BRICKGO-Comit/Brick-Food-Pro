@@ -1647,18 +1647,42 @@ const getCategoryLabel = (cat?: string) => {
         agent_id: agentUserId,
       };
 
-      let { data: restoData, error } = await supabase
-        .from('restaurants')
-        .insert(insertPayload)
-        .select('id')
-        .single();
+      let restoData: any = null;
+      let error: any = null;
 
-      // Fallback si la colonne category n'existe pas encore en DB
-      if (error && (error.message?.includes('category') || error.code === '42703')) {
-        delete insertPayload.category;
-        const retry = await supabase.from('restaurants').insert(insertPayload).select('id').single();
-        restoData = retry.data;
-        error = retry.error;
+      // Boucle auto-correctrice d'insertion : retire automatiquement les colonnes absentes en DB
+      for (let attempt = 0; attempt < 5; attempt++) {
+        const result = await supabase
+          .from('restaurants')
+          .insert(insertPayload)
+          .select('id')
+          .single();
+
+        restoData = result.data;
+        error = result.error;
+
+        if (!error) break; // Succès !
+
+        const errMsg = (error.message || '').toLowerCase();
+        if (error.code === '42703' || errMsg.includes('column')) {
+          let stripped = false;
+          ['cover_url', 'logo_url', 'category', 'latitude', 'longitude'].forEach((col) => {
+            if (errMsg.includes(col.toLowerCase()) && col in insertPayload) {
+              delete insertPayload[col];
+              stripped = true;
+            }
+          });
+
+          if (!stripped) {
+            if ('cover_url' in insertPayload) delete insertPayload.cover_url;
+            else if ('logo_url' in insertPayload) delete insertPayload.logo_url;
+            else if ('category' in insertPayload) delete insertPayload.category;
+            else if ('latitude' in insertPayload) { delete insertPayload.latitude; delete insertPayload.longitude; }
+            else break;
+          }
+        } else {
+          break;
+        }
       }
 
       if (error) {
