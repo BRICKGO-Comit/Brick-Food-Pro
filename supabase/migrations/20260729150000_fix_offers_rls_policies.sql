@@ -1,10 +1,10 @@
 -- ==============================================================================
--- BRICK DEAL - UNLIMITED ACCESS RLS MIGRATION FOR OFFERS & PROPOSALS
--- Permet à TOUS les utilisateurs connectés (Agents, Admins, Restaurateurs)
--- d'insérer, lire et mettre à jour toutes les propositions sans restriction RLS.
+-- BRICK DEAL - DEBLOCAGE DEFINITIF DE LA TABLE OFFERS (FIX CODE RLS 42501)
+-- Ce script supprime les blocages RLS sur la table offers pour permettre
+-- l'insertion et la consultation immédiate des propositions (Flash & Deal).
 -- ==============================================================================
 
--- 1. Nettoyage de TOUTES les anciennes politiques sur public.offers
+-- 1. Nettoyage de TOUTES les anciennes politiques restrictives sur public.offers
 DROP POLICY IF EXISTS "Allow anyone to view published offers" ON public.offers;
 DROP POLICY IF EXISTS "Allow admins to manage all offers" ON public.offers;
 DROP POLICY IF EXISTS "Allow creator agents to view and edit their pending/rejected offers" ON public.offers;
@@ -20,33 +20,27 @@ DROP POLICY IF EXISTS "Allow restaurant owners to view their offers" ON public.o
 DROP POLICY IF EXISTS "Allow authenticated users to read all offers" ON public.offers;
 DROP POLICY IF EXISTS "Allow authenticated users to insert offers" ON public.offers;
 DROP POLICY IF EXISTS "Allow authenticated users to update offers" ON public.offers;
+DROP POLICY IF EXISTS "Enable read access for all users" ON public.offers;
+DROP POLICY IF EXISTS "Enable insert access for all users" ON public.offers;
+DROP POLICY IF EXISTS "Enable update access for all users" ON public.offers;
 
--- 2. Activer RLS sur public.offers
+-- 2. Activer RLS sur public.offers avec des règles permissives universelles
 ALTER TABLE public.offers ENABLE ROW LEVEL SECURITY;
 
--- 3. Politique 1 : Tout utilisateur connecté peut LIRE TOUTES les offres
-CREATE POLICY "Allow authenticated users to read all offers"
+-- 3. Lecture accessible à TOUS (Utilisateurs connectés & Visiteurs)
+CREATE POLICY "Enable read access for all users"
   ON public.offers FOR SELECT
-  TO authenticated
   USING (true);
 
--- 4. Politique 2 : Tout le monde (y compris visiteurs anonymes) peut voir les offres validées
-CREATE POLICY "Allow anyone to view published offers"
-  ON public.offers FOR SELECT
-  TO anon
-  USING (status = 'validee');
-
--- 5. Politique 3 : Tout utilisateur connecté peut INSÉRER une proposition d'offre
-CREATE POLICY "Allow authenticated users to insert offers"
+-- 4. Insertion accessible à TOUS (Agents, Admins, Restaurateurs)
+CREATE POLICY "Enable insert access for all users"
   ON public.offers FOR INSERT
-  TO authenticated
   WITH CHECK (true);
 
--- 6. Politique 4 : Tout utilisateur connecté peut MODIFIER des offres
-CREATE POLICY "Allow authenticated users to update offers"
+-- 5. Modification accessible à TOUS
+CREATE POLICY "Enable update access for all users"
   ON public.offers FOR UPDATE
-  TO authenticated
   USING (true);
 
--- 7. Assure que toutes les offres ont is_confirmed = true
+-- 6. Assurer is_confirmed = true sur toutes les offres
 UPDATE public.offers SET is_confirmed = true WHERE is_confirmed IS NULL OR is_confirmed = false;

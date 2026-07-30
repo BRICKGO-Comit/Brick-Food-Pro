@@ -1341,6 +1341,23 @@ const getCategoryLabel = (cat?: string) => {
       }
     }
 
+    // Ensure agent profile exists in public.profiles table to prevent FK constraint failures
+    if (user) {
+      try {
+        const { data: pCheck } = await supabase.from('profiles').select('id').eq('id', user.id).maybeSingle();
+        if (!pCheck) {
+          await supabase.from('profiles').insert({
+            id: user.id,
+            role: role || 'agent',
+            email: user.email || 'agent@brickdeal.com',
+            full_name: profile?.full_name || 'Agent Commercial',
+          });
+        }
+      } catch (e) {
+        console.warn('[ProfileCheck] Error:', e);
+      }
+    }
+
     const insertData: any = {
       agent_id: user.id,
       restaurant_id: targetRestoId,
