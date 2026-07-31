@@ -144,6 +144,56 @@ export default function MobileApp() {
   const [showDatePickerModal, setShowDatePickerModal] = useState<boolean>(false);
   const [datePickerTarget, setDatePickerTarget] = useState<'agent_start' | 'agent_end' | 'resto_start' | 'resto_end' | 'booking_date' | 'client_filter' | null>(null);
   const [calendarCurrentDate, setCalendarCurrentDate] = useState<Date>(new Date());
+  const [showQRValidatorModal, setShowQRValidatorModal] = useState<boolean>(false);
+  const [qrScanCodeInput, setQrScanCodeInput] = useState<string>('');
+
+  const handleValidateQRCode = async (codeToVerify?: string) => {
+    const code = (codeToVerify || qrScanCodeInput).trim().toUpperCase();
+    if (!code) {
+      Alert.alert('Code requis', 'Veuillez saisir ou scanner un Pass QR de réservation.');
+      return;
+    }
+
+    const targetOrder = restaurantOrders.find(o => 
+      (o.reservation_code && o.reservation_code.toUpperCase() === code) ||
+      (o.id && o.id.toUpperCase().startsWith(code))
+    );
+
+    if (!targetOrder) {
+      const { data: dbOrder } = await supabase
+        .from('orders')
+        .select('*, profiles!left(full_name, phone), offers!left(title)')
+        .or(`reservation_code.eq.${code},id.ilike.${code}%`)
+        .single();
+
+      if (!dbOrder) {
+        Alert.alert('❌ Pass QR Invalide', `Aucune réservation trouvée pour le code "${code}". Veuillez vérifier l'authenticité du pass client.`);
+        return;
+      }
+
+      if (dbOrder.status === 'terminee' || dbOrder.status === 'livree') {
+        Alert.alert('⚠️ Pass Déjà Utilisé', `Cette réservation (${dbOrder.reservation_code}) a DÉJÀ été consommée et validée.`);
+        return;
+      }
+
+      await handleUpdateOrderStatus(dbOrder.id, 'terminee');
+      Alert.alert('🎉 PASS QR VALIDÉ !', `La réservation "${dbOrder.offers?.title || 'Offre'}" de ${dbOrder.profiles?.full_name || 'Client'} a été validée avec succès !`);
+      setShowQRValidatorModal(false);
+      setQrScanCodeInput('');
+      return;
+    }
+
+    if (targetOrder.status === 'terminee' || targetOrder.status === 'livree') {
+      Alert.alert('⚠️ Pass Déjà Utilisé', `La réservation "${targetOrder.offers?.title || 'Offre'}" (Réf: ${targetOrder.reservation_code}) a DÉJÀ été consommée.`);
+      return;
+    }
+
+    await handleUpdateOrderStatus(targetOrder.id, 'terminee');
+    Alert.alert('🎉 PASS QR VALIDÉ !', `Réservation pour "${targetOrder.offers?.title || 'Offre'}" (${targetOrder.profiles?.full_name || 'Client'}) validée avec succès !`);
+    setShowQRValidatorModal(false);
+    setQrScanCodeInput('');
+  };
+
   const [showCalendarFilterModal, setShowCalendarFilterModal] = useState<boolean>(false);
   const [calendarDateFilter, setCalendarDateFilter] = useState<string | null>(null);
 
@@ -4458,6 +4508,23 @@ const getCategoryLabel = (cat?: string) => {
               </Text>
             </View>
 
+            {/* QR Code Pass Quick Validator Button */}
+            <TouchableOpacity 
+              style={{ backgroundColor: '#111827', borderRadius: 16, padding: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, marginTop: -6, boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+              onPress={() => setShowQRValidatorModal(true)}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: Colors.primary, alignItems: 'center', justifyContent: 'center' }}>
+                  <Ionicons name="qr-code" size={22} color="white" />
+                </View>
+                <View>
+                  <Text style={{ color: 'white', fontSize: 15, fontWeight: '800' }}>Scanner / Valider un Pass QR</Text>
+                  <Text style={{ color: '#9CA3AF', fontSize: 11, marginTop: 2 }}>Vérifier et consommer la réservation d'un client</Text>
+                </View>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color="white" />
+            </TouchableOpacity>
+
             <Text style={styles.sectionTitle}>📦 Commandes à traiter</Text>
             {restaurantOrders.filter(o => o.status === 'nouvelle' || o.status === 'en_preparation' || o.status === 'prete').length === 0 ? (
               <Text style={{ color: Colors.textSecondary, fontSize: 14, textAlign: 'center', marginTop: 40 }}>Aucune commande à traiter.</Text>
@@ -5191,6 +5258,96 @@ const getCategoryLabel = (cat?: string) => {
             </View>
           )}
         </SafeAreaView>
+      </Modal>
+
+      {/* QR CODE PASS VALIDATOR MODAL */}
+      <Modal visible={showQRValidatorModal} transparent animationType="fade">
+        <View style={{ flex: 1, backgroundColor: 'rgba(15, 23, 42, 0.8)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+          <View style={{ width: '100%', maxWidth: 400, backgroundColor: 'white', borderRadius: 24, padding: 24, boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.35)' }}>
+            
+            {/* Header */}
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                <View style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: Colors.primaryLight, alignItems: 'center', justifyContent: 'center' }}>
+                  <Ionicons name="qr-code-outline" size={22} color={Colors.primary} />
+                </View>
+                <View>
+                  <Text style={{ fontSize: 16, fontWeight: '900', color: '#111827' }}>Valider un Pass QR</Text>
+                  <Text style={{ fontSize: 11, color: '#6B7280' }}>Vérification de la réservation</Text>
+                </View>
+              </View>
+
+              <TouchableOpacity onPress={() => setShowQRValidatorModal(false)} style={{ padding: 4 }}>
+                <Ionicons name="close-circle" size={24} color="#9CA3AF" />
+              </TouchableOpacity>
+            </View>
+
+            {/* Simulated Scanner / Input Box */}
+            <View style={{ backgroundColor: '#F8FAFC', padding: 16, borderRadius: 18, borderWidth: 1.5, borderColor: Colors.primary, marginBottom: 18, gap: 12 }}>
+              <Text style={{ fontSize: 12, fontWeight: '800', color: '#1E293B' }}>
+                Entrez la référence ou scannez le code QR du client :
+              </Text>
+
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                <TextInput
+                  style={[styles.input, { flex: 1, backgroundColor: 'white', marginBottom: 0, fontSize: 14, fontWeight: '800', letterSpacing: 1, textTransform: 'uppercase' }]}
+                  placeholder="ex: BRK-892401 ou ID"
+                  placeholderTextColor="#9CA3AF"
+                  value={qrScanCodeInput}
+                  onChangeText={setQrScanCodeInput}
+                  autoCapitalize="characters"
+                />
+                <TouchableOpacity
+                  style={{ backgroundColor: Colors.primary, borderRadius: 12, paddingHorizontal: 16, justifyContent: 'center', alignItems: 'center' }}
+                  onPress={() => handleValidateQRCode()}
+                >
+                  <Text style={{ color: 'white', fontWeight: '900', fontSize: 13 }}>Valider</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* Quick List of Pending Orders for Instant 1-Tap Validation */}
+            <Text style={{ fontSize: 12, fontWeight: '800', color: '#64748B', marginBottom: 10 }}>
+              Commandes prêtes / en attente de consommation :
+            </Text>
+
+            <ScrollView style={{ maxHeight: 220 }} showsVerticalScrollIndicator={false}>
+              {restaurantOrders.filter(o => o.status !== 'terminee' && o.status !== 'livree').length === 0 ? (
+                <Text style={{ color: '#9CA3AF', fontSize: 12, fontStyle: 'italic', textAlign: 'center', marginVertical: 14 }}>
+                  Aucune commande en attente à consommer.
+                </Text>
+              ) : (
+                restaurantOrders.filter(o => o.status !== 'terminee' && o.status !== 'livree').map(order => (
+                  <View key={order.id} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#F9FAFB', padding: 12, borderRadius: 14, borderWidth: 1, borderColor: '#E5E7EB', marginBottom: 8 }}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 13, fontWeight: '800', color: '#111827' }}>
+                        {order.offers?.title || 'Offre'}
+                      </Text>
+                      <Text style={{ fontSize: 11, color: Colors.primary, fontWeight: '700', marginTop: 2 }}>
+                        Pass: {order.reservation_code || order.id?.slice(0, 8)} • {order.profiles?.full_name || 'Client'}
+                      </Text>
+                    </View>
+
+                    <TouchableOpacity
+                      style={{ backgroundColor: '#059669', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10 }}
+                      onPress={() => handleValidateQRCode(order.reservation_code || order.id)}
+                    >
+                      <Text style={{ color: 'white', fontSize: 11, fontWeight: '800' }}>✓ Consommer</Text>
+                    </TouchableOpacity>
+                  </View>
+                ))
+              )}
+            </ScrollView>
+
+            <TouchableOpacity
+              style={{ backgroundColor: '#F1F5F9', borderRadius: 14, paddingVertical: 12, alignItems: 'center', marginTop: 14 }}
+              onPress={() => setShowQRValidatorModal(false)}
+            >
+              <Text style={{ color: '#475569', fontWeight: '800', fontSize: 13 }}>Fermer</Text>
+            </TouchableOpacity>
+
+          </View>
+        </View>
       </Modal>
 
       {/* CALENDAR FILTER MODAL */}
