@@ -708,7 +708,12 @@ const getCategoryLabel = (cat?: string) => {
         address: r.address,
         phone: r.phone,
         description: r.description ?? '',
-        ownerEmail: '',
+        category: r.category ?? 'restaurant',
+        logo_url: r.logo_url ?? null,
+        cover_url: r.cover_url ?? null,
+        latitude: r.latitude ?? null,
+        longitude: r.longitude ?? null,
+        ownerEmail: r.owner_email ?? '',
       })));
     };
     loadRestaurants();
@@ -2982,31 +2987,40 @@ const getCategoryLabel = (cat?: string) => {
             </View>
 
             <View style={styles.partnersContainer}>
-              {restaurantsList.map((resto) => (
-                <TouchableOpacity key={resto.id} style={styles.partnerCard} onPress={() => setSelectedPartnerResto(resto)}>
-                  <View style={styles.partnerLeft}>
-                    <View style={[styles.partnerLogoContainer, { overflow: 'hidden' }]}>
-                      {resto.logo_url ? (
-                        <Image source={{ uri: resto.logo_url }} style={{ width: '100%', height: '100%', borderRadius: 20, resizeMode: 'cover' }} />
-                      ) : (
-                        <Ionicons name="restaurant" size={18} color="white" />
-                      )}
-                    </View>
-                    <View style={styles.partnerInfo}>
-                      <Text style={styles.partnerCardName}>{resto.name}</Text>
-                      <Text style={styles.partnerCardDesc} numberOfLines={1}>{resto.description || 'Spécialités culinaires.'}</Text>
-                      <Text style={styles.partnerCardSub}>📍 {resto.address}</Text>
-                    </View>
-                  </View>
-                  <View style={styles.partnerRight}>
-                    <View style={styles.ratingBadge}>
-                      <Ionicons name="star" size={10} color="#F5A623" />
-                      <Text style={styles.ratingText}>4.8</Text>
-                    </View>
-                    <Text style={styles.partnerCardPhone}>{resto.phone}</Text>
-                  </View>
-                </TouchableOpacity>
-              ))}
+              {filteredRestaurants.length === 0 ? (
+                <View style={{ padding: 20, alignItems: 'center' }}>
+                  <Text style={{ color: Colors.textSecondary, fontSize: 13 }}>Aucun établissement ne correspond à la recherche.</Text>
+                </View>
+              ) : (
+                filteredRestaurants.map((resto) => {
+                  const restoImg = resto.logo_url || resto.cover_url;
+                  return (
+                    <TouchableOpacity key={resto.id} style={styles.partnerCard} onPress={() => setSelectedPartnerResto(resto)}>
+                      <View style={styles.partnerLeft}>
+                        <View style={[styles.partnerLogoContainer, { overflow: 'hidden', backgroundColor: Colors.primaryLight }]}>
+                          {restoImg ? (
+                            <Image source={{ uri: restoImg }} style={{ width: '100%', height: '100%', borderRadius: 20, resizeMode: 'cover' }} />
+                          ) : (
+                            <Ionicons name="restaurant" size={20} color={Colors.primary} />
+                          )}
+                        </View>
+                        <View style={styles.partnerInfo}>
+                          <Text style={styles.partnerCardName}>{resto.name}</Text>
+                          <Text style={styles.partnerCardDesc} numberOfLines={1}>{resto.description || 'Spécialités culinaires & formules.'}</Text>
+                          <Text style={styles.partnerCardSub}>📍 {resto.address}</Text>
+                        </View>
+                      </View>
+                      <View style={styles.partnerRight}>
+                        <View style={styles.ratingBadge}>
+                          <Ionicons name="star" size={10} color="#F5A623" />
+                          <Text style={styles.ratingText}>4.8</Text>
+                        </View>
+                        <Text style={styles.partnerCardPhone}>{resto.phone}</Text>
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })
+              )}
             </View>
             <View style={{ height: 32 }} />
           </ScrollView>
