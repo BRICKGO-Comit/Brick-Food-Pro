@@ -141,6 +141,37 @@ export default function ProposalsModerator() {
     fetchProposals();
   };
 
+  const [showImageEditPrompt, setShowImageEditPrompt] = useState<boolean>(false);
+  const [newImageInputUrl, setNewImageInputUrl] = useState<string>('');
+
+  const handleOpenImageEdit = () => {
+    if (previewProp) {
+      setNewImageInputUrl(previewProp.photos?.[0] || '');
+      setShowImageEditPrompt(true);
+    }
+  };
+
+  const handleSaveInspectionImage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!previewProp) return;
+
+    const updatedPhotos = [newImageInputUrl.trim()];
+    const { error } = await supabase
+      .from('offers')
+      .update({ photos: updatedPhotos })
+      .eq('id', previewProp.id);
+
+    if (error) {
+      showNotification(`Erreur lors de la mise à jour de l'image: ${error.message}`);
+      return;
+    }
+
+    showNotification(`📸 Photo de l'offre "${previewProp.title}" mise à jour avec succès !`);
+    setPreviewProp({ ...previewProp, photos: updatedPhotos });
+    setShowImageEditPrompt(false);
+    fetchProposals();
+  };
+
   const startEdit = (prop: OfferWithRelations) => {
     setEditingProp({ ...prop });
     setPreviewProp(null);
@@ -154,6 +185,7 @@ export default function ProposalsModerator() {
       title: editingProp.title,
       description: editingProp.description,
       commission_rate: editingProp.commission_rate,
+      photos: editingProp.photos || [],
     };
 
     if (editingProp.type === 'flash') {
@@ -444,6 +476,31 @@ export default function ProposalsModerator() {
                   <div style={{ position: 'absolute', top: '12px', left: '12px', backgroundColor: 'rgba(17, 24, 39, 0.85)', backdropFilter: 'blur(4px)', color: 'white', padding: '6px 14px', borderRadius: '20px', fontSize: '11px', fontWeight: '900', letterSpacing: '0.5px' }}>
                     {previewProp.type === 'flash' ? '⚡ OFFRE FLASH' : '❤️ BRICK DEAL'}
                   </div>
+
+                  <button
+                    type="button"
+                    style={{
+                      position: 'absolute',
+                      top: '12px',
+                      right: '12px',
+                      backgroundColor: '#FFFFFF',
+                      color: '#1E293B',
+                      border: '1px solid #CBD5E1',
+                      padding: '6px 14px',
+                      borderRadius: '20px',
+                      fontSize: '11px',
+                      fontWeight: '800',
+                      cursor: 'pointer',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px'
+                    }}
+                    onClick={handleOpenImageEdit}
+                  >
+                    📷 Modifier l'image
+                  </button>
+
                   <div style={{ position: 'absolute', bottom: '12px', right: '12px', backgroundColor: 'rgba(255, 255, 255, 0.95)', color: '#111827', padding: '4px 12px', borderRadius: '12px', fontSize: '12px', fontWeight: '800' }}>
                     {(previewProp as any).restaurants?.category ? `🏷️ ${(previewProp as any).restaurants.category.toUpperCase()}` : '🍽️ ÉTABLISSEMENT'}
                   </div>
@@ -611,6 +668,11 @@ export default function ProposalsModerator() {
                 </div>
 
                 <div className="form-group">
+                  <label className="form-label" style={{ fontWeight: '700', color: '#374151' }}>Photo de l'offre (URL Image)</label>
+                  <input type="text" className="form-input" placeholder="https://..." style={{ borderRadius: '10px', padding: '10px 14px' }} value={editingProp.photos?.[0] || ''} onChange={(e) => setEditingProp({ ...editingProp, photos: [e.target.value] })} />
+                </div>
+
+                <div className="form-group">
                   <label className="form-label" style={{ fontWeight: '700', color: '#374151' }}>Description</label>
                   <textarea className="form-input" style={{ minHeight: '90px', borderRadius: '10px', padding: '10px 14px', fontFamily: 'inherit' }} value={editingProp.description} onChange={(e) => setEditingProp({ ...editingProp, description: e.target.value })} required />
                 </div>
@@ -755,6 +817,135 @@ export default function ProposalsModerator() {
                   Oui, Supprimer
                 </button>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Image Edit Modal Prompt (Inspection View) */}
+        {showImageEditPrompt && previewProp && (
+          <div style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(15, 23, 42, 0.75)',
+            backdropFilter: 'blur(10px)',
+            WebkitBackdropFilter: 'blur(10px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1200,
+            padding: '20px',
+            animation: 'fadeIn 0.2s ease-out'
+          }} onClick={() => setShowImageEditPrompt(false)}>
+            <div style={{
+              width: '100%',
+              maxWidth: '480px',
+              backgroundColor: '#FFFFFF',
+              borderRadius: '24px',
+              overflow: 'hidden',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.35)',
+              border: '1px solid #E5E7EB',
+              display: 'flex',
+              flexDirection: 'column'
+            }} onClick={(e) => e.stopPropagation()}>
+              
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                padding: '16px 24px',
+                borderBottom: '1px solid #F3F4F6',
+                backgroundColor: '#F9FAFB'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <span style={{ fontSize: '20px' }}>📷</span>
+                  <span style={{ fontWeight: '800', fontSize: '16px', color: '#111827' }}>Modifier l'image de l'offre</span>
+                </div>
+                <button
+                  style={{
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '16px',
+                    border: '1px solid #E5E7EB',
+                    backgroundColor: '#FFFFFF',
+                    cursor: 'pointer',
+                    fontSize: '16px',
+                    color: '#6B7280',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
+                  onClick={() => setShowImageEditPrompt(false)}
+                >
+                  ✕
+                </button>
+              </div>
+
+              <form onSubmit={handleSaveInspectionImage} style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                {/* Live Image Preview */}
+                <div style={{ position: 'relative', width: '100%', height: '180px', borderRadius: '14px', overflow: 'hidden', backgroundColor: '#111827', border: '1px solid #E5E7EB' }}>
+                  <img
+                    src={newImageInputUrl.trim() || 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=800'}
+                    alt="Aperçu"
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=800';
+                    }}
+                  />
+                  <div style={{ position: 'absolute', bottom: '8px', left: '8px', backgroundColor: 'rgba(0,0,0,0.7)', color: 'white', padding: '4px 10px', borderRadius: '10px', fontSize: '11px', fontWeight: '700' }}>
+                    Aperçu en direct
+                  </div>
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label" style={{ fontWeight: '700', color: '#374151' }}>Saisir ou coller l'URL de l'image</label>
+                  <input
+                    type="url"
+                    className="form-input"
+                    placeholder="https://images.unsplash.com/photo-..."
+                    style={{ borderRadius: '10px', padding: '12px 14px', fontSize: '13px' }}
+                    value={newImageInputUrl}
+                    onChange={(e) => setNewImageInputUrl(e.target.value)}
+                    required
+                  />
+                </div>
+
+                {/* Quick Presets */}
+                <div>
+                  <div style={{ fontSize: '12px', fontWeight: '700', color: '#6B7280', marginBottom: '8px' }}>Exemples d'images haute définition :</div>
+                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                    <button
+                      type="button"
+                      style={{ padding: '6px 10px', fontSize: '11px', borderRadius: '8px', border: '1px solid #CBD5E1', backgroundColor: '#F8FAFC', cursor: 'pointer', fontWeight: '700' }}
+                      onClick={() => setNewImageInputUrl('https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=800')}
+                    >
+                      🍔 Burger Gourmet
+                    </button>
+                    <button
+                      type="button"
+                      style={{ padding: '6px 10px', fontSize: '11px', borderRadius: '8px', border: '1px solid #CBD5E1', backgroundColor: '#F8FAFC', cursor: 'pointer', fontWeight: '700' }}
+                      onClick={() => setNewImageInputUrl('https://images.unsplash.com/photo-1544025162-d76694265947?w=800')}
+                    >
+                      🍖 Grillades & Viande
+                    </button>
+                    <button
+                      type="button"
+                      style={{ padding: '6px 10px', fontSize: '11px', borderRadius: '8px', border: '1px solid #CBD5E1', backgroundColor: '#F8FAFC', cursor: 'pointer', fontWeight: '700' }}
+                      onClick={() => setNewImageInputUrl('https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=800')}
+                    >
+                      🥂 Resto & Lounge
+                    </button>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
+                  <button type="submit" className="btn btn-primary" style={{ flex: 1, padding: '12px', borderRadius: '12px', fontWeight: '800', fontSize: '14px', backgroundColor: '#059669', borderColor: '#059669' }}>
+                    💾 Enregistrer la photo
+                  </button>
+                  <button type="button" className="btn btn-outline" style={{ flex: 1, padding: '12px', borderRadius: '12px', fontWeight: '700' }} onClick={() => setShowImageEditPrompt(false)}>
+                    Annuler
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         )}
