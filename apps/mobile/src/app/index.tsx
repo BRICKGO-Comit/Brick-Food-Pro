@@ -141,8 +141,71 @@ export default function MobileApp() {
   const [newRestoLogo, setNewRestoLogo] = useState<string>('');
   const [newRestoCover, setNewRestoCover] = useState<string>('');
   const [isCreatingResto, setIsCreatingResto] = useState<boolean>(false);
+  const [showDatePickerModal, setShowDatePickerModal] = useState<boolean>(false);
+  const [datePickerTarget, setDatePickerTarget] = useState<'agent_start' | 'agent_end' | 'resto_start' | 'resto_end' | null>(null);
+  const [calendarCurrentDate, setCalendarCurrentDate] = useState<Date>(new Date());
   const [showCalendarFilterModal, setShowCalendarFilterModal] = useState<boolean>(false);
   const [calendarDateFilter, setCalendarDateFilter] = useState<string | null>(null);
+
+  const formatYMDToFrench = (ymdStr: string) => {
+    if (!ymdStr) return '';
+    const parts = ymdStr.split('-');
+    if (parts.length !== 3) return ymdStr;
+    const year = parseInt(parts[0], 10);
+    const month = parseInt(parts[1], 10) - 1;
+    const day = parseInt(parts[2], 10);
+    const date = new Date(year, month, day);
+    const dayNames = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
+    const monthNames = ['Janv.', 'Fév.', 'Mars', 'Avr.', 'Mai', 'Juin', 'Juil.', 'Août', 'Sept.', 'Oct.', 'Nov.', 'Déc.'];
+    return `${dayNames[date.getDay()]}. ${day} ${monthNames[month]} ${year}`;
+  };
+
+  const getCalendarDays = (year: number, month: number) => {
+    const firstDayOfMonth = new Date(year, month, 1);
+    const days = [];
+    
+    let startDay = firstDayOfMonth.getDay() - 1;
+    if (startDay === -1) startDay = 6;
+
+    for (let i = 0; i < startDay; i++) {
+      days.push(null);
+    }
+
+    const tempDate = new Date(year, month, 1);
+    while (tempDate.getMonth() === month) {
+      const y = tempDate.getFullYear();
+      const m = String(tempDate.getMonth() + 1).padStart(2, '0');
+      const d = String(tempDate.getDate()).padStart(2, '0');
+      days.push({
+        dateObj: new Date(tempDate),
+        dayNum: tempDate.getDate(),
+        ymd: `${y}-${m}-${d}`,
+      });
+      tempDate.setDate(tempDate.getDate() + 1);
+    }
+    return days;
+  };
+
+  const handleSelectCalendarDay = (ymdStr: string) => {
+    if (datePickerTarget === 'agent_start') {
+      setNewProp(prev => ({
+        ...prev,
+        startDate: ymdStr,
+        endDate: prev.endDate < ymdStr ? ymdStr : prev.endDate,
+      }));
+    } else if (datePickerTarget === 'agent_end') {
+      setNewProp(prev => ({ ...prev, endDate: ymdStr }));
+    } else if (datePickerTarget === 'resto_start') {
+      setNewRestoProp(prev => ({
+        ...prev,
+        startDate: ymdStr,
+        endDate: prev.endDate < ymdStr ? ymdStr : prev.endDate,
+      }));
+    } else if (datePickerTarget === 'resto_end') {
+      setNewRestoProp(prev => ({ ...prev, endDate: ymdStr }));
+    }
+    setShowDatePickerModal(false);
+  };
   const [agentStats, setAgentStats] = useState({ commission: 0, ordersCount: 0 });
   const [restaurantOrders, setRestaurantOrders] = useState<any[]>([]);
   const [restaurantProposals, setRestaurantProposals] = useState<any[]>([]);
@@ -3984,14 +4047,20 @@ const getCategoryLabel = (cat?: string) => {
                   <View style={{ flexDirection: 'row', gap: 10 }}>
                     <View style={{ flex: 1 }}>
                       <Text style={{ fontSize: 10, fontWeight: '700', color: Colors.textSecondary, marginBottom: 2 }}>
-                        Date Début (AAAA-MM-JJ)
+                        Date Début
                       </Text>
-                      <TextInput
-                        style={[styles.input, { backgroundColor: 'white', marginBottom: 0 }]}
-                        placeholder={getTodayYMD()}
-                        value={newProp.startDate}
-                        onChangeText={t => setNewProp({ ...newProp, startDate: t })}
-                      />
+                      <TouchableOpacity
+                        style={[styles.input, { backgroundColor: 'white', marginBottom: 0, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 10, borderColor: Colors.primary }]}
+                        onPress={() => {
+                          setDatePickerTarget('agent_start');
+                          setShowDatePickerModal(true);
+                        }}
+                      >
+                        <Text style={{ fontSize: 12, fontWeight: '700', color: '#1E293B' }}>
+                          📅 {formatYMDToFrench(newProp.startDate || getTodayYMD())}
+                        </Text>
+                        <Ionicons name="chevron-down" size={14} color={Colors.primary} />
+                      </TouchableOpacity>
                     </View>
 
                     <View style={{ flex: 1 }}>
@@ -4014,14 +4083,20 @@ const getCategoryLabel = (cat?: string) => {
                   <View style={{ flexDirection: 'row', gap: 10 }}>
                     <View style={{ flex: 1 }}>
                       <Text style={{ fontSize: 10, fontWeight: '700', color: Colors.textSecondary, marginBottom: 2 }}>
-                        Date Fin (AAAA-MM-JJ)
+                        Date Fin
                       </Text>
-                      <TextInput
-                        style={[styles.input, { backgroundColor: 'white', marginBottom: 0 }]}
-                        placeholder={getTodayYMD()}
-                        value={newProp.endDate}
-                        onChangeText={t => setNewProp({ ...newProp, endDate: t })}
-                      />
+                      <TouchableOpacity
+                        style={[styles.input, { backgroundColor: 'white', marginBottom: 0, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 10, borderColor: '#EF4444' }]}
+                        onPress={() => {
+                          setDatePickerTarget('agent_end');
+                          setShowDatePickerModal(true);
+                        }}
+                      >
+                        <Text style={{ fontSize: 12, fontWeight: '700', color: '#1E293B' }}>
+                          📅 {formatYMDToFrench(newProp.endDate || newProp.startDate || getTodayYMD())}
+                        </Text>
+                        <Ionicons name="chevron-down" size={14} color="#EF4444" />
+                      </TouchableOpacity>
                     </View>
 
                     <View style={{ flex: 1 }}>
@@ -4763,14 +4838,20 @@ const getCategoryLabel = (cat?: string) => {
                   <View style={{ flexDirection: 'row', gap: 10 }}>
                     <View style={{ flex: 1 }}>
                       <Text style={{ fontSize: 10, fontWeight: '700', color: Colors.textSecondary, marginBottom: 2 }}>
-                        Date Début (AAAA-MM-JJ)
+                        Date Début
                       </Text>
-                      <TextInput
-                        style={[styles.input, { backgroundColor: 'white', marginBottom: 0 }]}
-                        placeholder={getTodayYMD()}
-                        value={newRestoProp.startDate}
-                        onChangeText={t => setNewRestoProp({ ...newRestoProp, startDate: t })}
-                      />
+                      <TouchableOpacity
+                        style={[styles.input, { backgroundColor: 'white', marginBottom: 0, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 10, borderColor: Colors.primary }]}
+                        onPress={() => {
+                          setDatePickerTarget('resto_start');
+                          setShowDatePickerModal(true);
+                        }}
+                      >
+                        <Text style={{ fontSize: 12, fontWeight: '700', color: '#1E293B' }}>
+                          📅 {formatYMDToFrench(newRestoProp.startDate || getTodayYMD())}
+                        </Text>
+                        <Ionicons name="chevron-down" size={14} color={Colors.primary} />
+                      </TouchableOpacity>
                     </View>
 
                     <View style={{ flex: 1 }}>
@@ -4793,14 +4874,20 @@ const getCategoryLabel = (cat?: string) => {
                   <View style={{ flexDirection: 'row', gap: 10 }}>
                     <View style={{ flex: 1 }}>
                       <Text style={{ fontSize: 10, fontWeight: '700', color: Colors.textSecondary, marginBottom: 2 }}>
-                        Date Fin (AAAA-MM-JJ)
+                        Date Fin
                       </Text>
-                      <TextInput
-                        style={[styles.input, { backgroundColor: 'white', marginBottom: 0 }]}
-                        placeholder={getTodayYMD()}
-                        value={newRestoProp.endDate}
-                        onChangeText={t => setNewRestoProp({ ...newRestoProp, endDate: t })}
-                      />
+                      <TouchableOpacity
+                        style={[styles.input, { backgroundColor: 'white', marginBottom: 0, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 10, borderColor: '#EF4444' }]}
+                        onPress={() => {
+                          setDatePickerTarget('resto_end');
+                          setShowDatePickerModal(true);
+                        }}
+                      >
+                        <Text style={{ fontSize: 12, fontWeight: '700', color: '#1E293B' }}>
+                          📅 {formatYMDToFrench(newRestoProp.endDate || newRestoProp.startDate || getTodayYMD())}
+                        </Text>
+                        <Ionicons name="chevron-down" size={14} color="#EF4444" />
+                      </TouchableOpacity>
                     </View>
 
                     <View style={{ flex: 1 }}>
@@ -5168,6 +5255,161 @@ const getCategoryLabel = (cat?: string) => {
             >
               <Text style={{ color: 'white', fontWeight: '800', fontSize: 14 }}>Fermer</Text>
             </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* INTERACTIVE CALENDAR PICKER MODAL */}
+      <Modal visible={showDatePickerModal} transparent animationType="fade">
+        <View style={{ flex: 1, backgroundColor: 'rgba(15, 23, 42, 0.75)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+          <View style={{ width: '100%', maxWidth: 360, backgroundColor: 'white', borderRadius: 24, padding: 20, boxShadow: '0 20px 25px -5px rgba(0,0,0,0.3)' }}>
+            
+            {/* Header */}
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+              <View>
+                <Text style={{ fontSize: 16, fontWeight: '900', color: '#111827' }}>🗓️ Sélectionner une Date</Text>
+                <Text style={{ fontSize: 11, fontWeight: '700', color: Colors.primary, marginTop: 2 }}>
+                  {datePickerTarget?.includes('start') ? '🟢 Date de Début' : '🔴 Date de Fin'}
+                </Text>
+              </View>
+              <TouchableOpacity onPress={() => setShowDatePickerModal(false)} style={{ padding: 4 }}>
+                <Ionicons name="close-circle" size={24} color="#9CA3AF" />
+              </TouchableOpacity>
+            </View>
+
+            {/* Month & Year Navigation Header */}
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#F8FAFC', paddingVertical: 10, paddingHorizontal: 16, borderRadius: 14, marginBottom: 14, borderWidth: 1, borderColor: '#E2E8F0' }}>
+              <TouchableOpacity
+                onPress={() => {
+                  const newD = new Date(calendarCurrentDate);
+                  newD.setMonth(newD.getMonth() - 1);
+                  setCalendarCurrentDate(newD);
+                }}
+                style={{ padding: 4 }}
+              >
+                <Ionicons name="chevron-back" size={20} color="#1E293B" />
+              </TouchableOpacity>
+
+              <Text style={{ fontSize: 14, fontWeight: '800', color: '#1E293B' }}>
+                {['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'][calendarCurrentDate.getMonth()]} {calendarCurrentDate.getFullYear()}
+              </Text>
+
+              <TouchableOpacity
+                onPress={() => {
+                  const newD = new Date(calendarCurrentDate);
+                  newD.setMonth(newD.getMonth() + 1);
+                  setCalendarCurrentDate(newD);
+                }}
+                style={{ padding: 4 }}
+              >
+                <Ionicons name="chevron-forward" size={20} color="#1E293B" />
+              </TouchableOpacity>
+            </View>
+
+            {/* Days of Week Header */}
+            <View style={{ flexDirection: 'row', marginBottom: 8 }}>
+              {['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'].map((dayName, idx) => (
+                <View key={idx} style={{ flex: 1, alignItems: 'center' }}>
+                  <Text style={{ fontSize: 11, fontWeight: '800', color: idx >= 5 ? Colors.primary : '#64748B' }}>{dayName}</Text>
+                </View>
+              ))}
+            </View>
+
+            {/* Days Grid */}
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: 16 }}>
+              {getCalendarDays(calendarCurrentDate.getFullYear(), calendarCurrentDate.getMonth()).map((dayItem, idx) => {
+                if (!dayItem) {
+                  return <View key={idx} style={{ width: '14.28%', height: 38 }} />;
+                }
+
+                const todayYMD = getTodayYMD();
+                const isToday = dayItem.ymd === todayYMD;
+
+                // Active target date value
+                let selectedTargetYMD = '';
+                if (datePickerTarget === 'agent_start') selectedTargetYMD = newProp.startDate;
+                else if (datePickerTarget === 'agent_end') selectedTargetYMD = newProp.endDate;
+                else if (datePickerTarget === 'resto_start') selectedTargetYMD = newRestoProp.startDate;
+                else if (datePickerTarget === 'resto_end') selectedTargetYMD = newRestoProp.endDate;
+
+                const isSelected = dayItem.ymd === selectedTargetYMD;
+
+                return (
+                  <TouchableOpacity
+                    key={idx}
+                    style={{
+                      width: '14.28%',
+                      height: 38,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      borderRadius: 12,
+                      backgroundColor: isSelected ? Colors.primary : 'transparent',
+                      borderWidth: isToday && !isSelected ? 1.5 : 0,
+                      borderColor: isToday && !isSelected ? Colors.primary : 'transparent',
+                    }}
+                    onPress={() => handleSelectCalendarDay(dayItem.ymd)}
+                  >
+                    <Text
+                      style={{
+                        fontSize: 13,
+                        fontWeight: isSelected || isToday ? '800' : '600',
+                        color: isSelected ? 'white' : isToday ? Colors.primary : '#1E293B',
+                      }}
+                    >
+                      {dayItem.dayNum}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            {/* Quick Date Shortcuts */}
+            <Text style={{ fontSize: 11, fontWeight: '800', color: '#64748B', marginBottom: 8 }}>Raccourcis rapides :</Text>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 14 }}>
+              <TouchableOpacity
+                style={{ paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, backgroundColor: '#F1F5F9', borderWidth: 1, borderColor: '#CBD5E1' }}
+                onPress={() => handleSelectCalendarDay(getTodayYMD())}
+              >
+                <Text style={{ fontSize: 11, fontWeight: '700', color: '#1E293B' }}>Aujourd'hui 📍</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={{ paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, backgroundColor: '#F1F5F9', borderWidth: 1, borderColor: '#CBD5E1' }}
+                onPress={() => {
+                  const d = new Date();
+                  d.setDate(d.getDate() + 1);
+                  const y = d.getFullYear();
+                  const m = String(d.getMonth() + 1).padStart(2, '0');
+                  const day = String(d.getDate()).padStart(2, '0');
+                  handleSelectCalendarDay(`${y}-${m}-${day}`);
+                }}
+              >
+                <Text style={{ fontSize: 11, fontWeight: '700', color: '#1E293B' }}>Demain ☀️</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={{ paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, backgroundColor: '#F1F5F9', borderWidth: 1, borderColor: '#CBD5E1' }}
+                onPress={() => {
+                  const d = new Date();
+                  d.setDate(d.getDate() + 7);
+                  const y = d.getFullYear();
+                  const m = String(d.getMonth() + 1).padStart(2, '0');
+                  const day = String(d.getDate()).padStart(2, '0');
+                  handleSelectCalendarDay(`${y}-${m}-${day}`);
+                }}
+              >
+                <Text style={{ fontSize: 11, fontWeight: '700', color: '#1E293B' }}>+7 Jours ⏳</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Cancel Button */}
+            <TouchableOpacity
+              style={{ backgroundColor: '#F1F5F9', borderRadius: 12, paddingVertical: 12, alignItems: 'center' }}
+              onPress={() => setShowDatePickerModal(false)}
+            >
+              <Text style={{ color: '#475569', fontWeight: '800', fontSize: 13 }}>Fermer</Text>
+            </TouchableOpacity>
+
           </View>
         </View>
       </Modal>
