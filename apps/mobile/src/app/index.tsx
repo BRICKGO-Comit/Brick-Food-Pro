@@ -197,6 +197,85 @@ export default function MobileApp() {
   const [showCalendarFilterModal, setShowCalendarFilterModal] = useState<boolean>(false);
   const [calendarDateFilter, setCalendarDateFilter] = useState<string | null>(null);
 
+  const [showEditRestoModal, setShowEditRestoModal] = useState<boolean>(false);
+  const [editingResto, setEditingResto] = useState<any>(null);
+  const [isSavingResto, setIsSavingResto] = useState<boolean>(false);
+
+  const handleOpenEditResto = (resto: any) => {
+    setEditingResto({
+      id: resto.id,
+      name: resto.name || '',
+      address: resto.address || '',
+      phone: resto.phone || '',
+      description: resto.description || '',
+      category: resto.category || 'restaurant',
+      logo_url: resto.logo_url || '',
+      cover_url: resto.cover_url || '',
+    });
+    setShowEditRestoModal(true);
+  };
+
+  const handleSaveEditRestaurant = async () => {
+    if (!editingResto?.id) return;
+    if (!editingResto.name.trim()) {
+      Alert.alert('Nom requis', 'Veuillez saisir le nom de l\'établissement.');
+      return;
+    }
+
+    setIsSavingResto(true);
+    try {
+      const updatePayload: any = {
+        name: editingResto.name.trim(),
+        address: editingResto.address.trim(),
+        phone: editingResto.phone.trim(),
+        description: editingResto.description.trim(),
+        category: editingResto.category || 'restaurant',
+        logo_url: editingResto.logo_url || null,
+        cover_url: editingResto.cover_url || null,
+      };
+
+      const { error } = await supabase
+        .from('restaurants')
+        .update(updatePayload)
+        .eq('id', editingResto.id);
+
+      if (error) {
+        if (error.code === '42703' || (error.message || '').includes('column')) {
+          delete updatePayload.logo_url;
+          delete updatePayload.cover_url;
+          delete updatePayload.category;
+          await supabase.from('restaurants').update(updatePayload).eq('id', editingResto.id);
+        } else {
+          throw error;
+        }
+      }
+
+      const { data: refreshed } = await supabase.from('restaurants').select('*').order('name');
+      if (refreshed) {
+        setRestaurantsList(refreshed.map((r: any) => ({
+          id: r.id,
+          name: r.name,
+          address: r.address,
+          phone: r.phone,
+          description: r.description ?? '',
+          category: r.category ?? 'restaurant',
+          logo_url: r.logo_url ?? null,
+          cover_url: r.cover_url ?? null,
+          latitude: r.latitude ?? null,
+          longitude: r.longitude ?? null,
+          ownerEmail: r.owner_email ?? '',
+        })));
+      }
+
+      Alert.alert('✅ Établissement mis à jour !', `L'établissement "${editingResto.name}" et ses visuels ont été mis à jour avec succès.`);
+      setShowEditRestoModal(false);
+    } catch (err: any) {
+      Alert.alert('Erreur', err.message || 'Impossible de mettre à jour l\'établissement.');
+    } finally {
+      setIsSavingResto(false);
+    }
+  };
+
   const formatYMDToFrench = (ymdStr: string) => {
     if (!ymdStr) return '';
     const parts = ymdStr.split('-');
@@ -4367,13 +4446,27 @@ const getCategoryLabel = (cat?: string) => {
                       source={{ uri: selectedPartnerResto.cover_url || selectedPartnerResto.photos?.[0] || 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=800' }}
                       style={{ width: '100%', height: '100%', resizeMode: 'cover' }}
                     />
-                    <View style={{ position: 'absolute', top: 16, left: 16 }}>
+                    <View style={{ position: 'absolute', top: 16, left: 16, right: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                       <TouchableOpacity
                         style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center', justifyContent: 'center' }}
                         onPress={() => setSelectedPartnerResto(null)}
                       >
                         <Ionicons name="arrow-back" size={20} color="white" />
                       </TouchableOpacity>
+
+                      {(role === 'agent' || role === 'restaurant' || role === 'admin') && (
+                        <TouchableOpacity
+                          style={{ backgroundColor: Colors.primary, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20, flexDirection: 'row', alignItems: 'center', gap: 6, elevation: 4 }}
+                          onPress={() => {
+                            const restoToEdit = selectedPartnerResto;
+                            setSelectedPartnerResto(null);
+                            handleOpenEditResto(restoToEdit);
+                          }}
+                        >
+                          <Ionicons name="camera" size={14} color="white" />
+                          <Text style={{ color: 'white', fontWeight: '800', fontSize: 12 }}>Modifier logo / visuels</Text>
+                        </TouchableOpacity>
+                      )}
                     </View>
                   </View>
 
@@ -5270,6 +5363,176 @@ const getCategoryLabel = (cat?: string) => {
                 </View>
               </ScrollView>
             </View>
+          )}
+        </SafeAreaView>
+      </Modal>
+
+      {/* EDIT RESTAURANT AND VISUALS MODAL */}
+      <Modal visible={showEditRestoModal} animationType="slide">
+        <SafeAreaView style={{ flex: 1, backgroundColor: 'white', padding: 20 }}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Modifier l'Établissement & Visuels</Text>
+            <TouchableOpacity onPress={() => setShowEditRestoModal(false)}>
+              <Text style={styles.closeBtn}>✕</Text>
+            </TouchableOpacity>
+          </View>
+
+          {editingResto && (
+            <ScrollView style={{ flex: 1, marginTop: 10 }} showsVerticalScrollIndicator={false}>
+              <Text style={styles.inputLabel}>Nom de l'établissement</Text>
+              <TextInput
+                style={styles.input}
+                value={editingResto.name}
+                onChangeText={t => setEditingResto({ ...editingResto, name: t })}
+              />
+
+              <Text style={styles.inputLabel}>Catégorie</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }} contentContainerStyle={{ gap: 8 }}>
+                {[
+                  { id: 'restaurant', label: '🍽️ Restaurant' },
+                  { id: 'hotel', label: '🏨 Hôtel' },
+                  { id: 'maquis', label: '🍺 Maquis' },
+                  { id: 'lounge_bar', label: '🍸 Lounge & Bar' },
+                  { id: 'fast_food', label: '🍔 Fast Food' },
+                  { id: 'patisserie', label: '🍰 Pâtisserie' },
+                ].map((cat) => (
+                  <TouchableOpacity
+                    key={cat.id}
+                    style={[
+                      { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 12, backgroundColor: '#F3F4F6', borderWidth: 1, borderColor: '#E5E7EB' },
+                      editingResto.category === cat.id && { backgroundColor: Colors.primary, borderColor: Colors.primary }
+                    ]}
+                    onPress={() => setEditingResto({ ...editingResto, category: cat.id })}
+                  >
+                    <Text style={[{ fontSize: 13, fontWeight: '700', color: Colors.textPrimary }, editingResto.category === cat.id && { color: 'white' }]}>
+                      {cat.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+
+              <Text style={styles.inputLabel}>Adresse complète</Text>
+              <TextInput
+                style={styles.input}
+                value={editingResto.address}
+                onChangeText={t => setEditingResto({ ...editingResto, address: t })}
+              />
+
+              <Text style={styles.inputLabel}>Téléphone de contact</Text>
+              <TextInput
+                style={styles.input}
+                value={editingResto.phone}
+                onChangeText={t => setEditingResto({ ...editingResto, phone: t })}
+                keyboardType="phone-pad"
+              />
+
+              <Text style={styles.inputLabel}>Description / Spécialités</Text>
+              <TextInput
+                style={styles.input}
+                value={editingResto.description}
+                onChangeText={t => setEditingResto({ ...editingResto, description: t })}
+                multiline
+              />
+
+              {/* Visuels Section */}
+              <View style={{ backgroundColor: '#F8FAFC', padding: 14, borderRadius: 16, borderWidth: 1, borderColor: '#E2E8F0', marginVertical: 12, gap: 14 }}>
+                <Text style={{ fontSize: 13, fontWeight: '800', color: '#1E293B' }}>🖼️ Logo et Image de Couverture</Text>
+
+                {/* Logo Field */}
+                <View>
+                  <Text style={styles.inputLabel}>Logo (URL ou Photo Galerie)</Text>
+                  <View style={{ flexDirection: 'row', gap: 8 }}>
+                    <TextInput
+                      style={[styles.input, { flex: 1, marginBottom: 0 }]}
+                      placeholder="https://... ou choisir photo"
+                      value={editingResto.logo_url}
+                      onChangeText={t => setEditingResto({ ...editingResto, logo_url: t })}
+                    />
+                    <TouchableOpacity
+                      style={{ backgroundColor: Colors.primary, paddingHorizontal: 12, borderRadius: 10, justifyContent: 'center', alignItems: 'center' }}
+                      onPress={async () => {
+                        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+                        if (status === 'granted') {
+                          const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: true, aspect: [1, 1], quality: 0.8 });
+                          if (!res.canceled && res.assets?.[0]?.uri) {
+                            setEditingResto({ ...editingResto, logo_url: res.assets[0].uri });
+                          }
+                        }
+                      }}
+                    >
+                      <Ionicons name="camera" size={18} color="white" />
+                    </TouchableOpacity>
+                  </View>
+                  {editingResto.logo_url ? (
+                    <Image source={{ uri: editingResto.logo_url }} style={{ width: 50, height: 50, borderRadius: 25, marginTop: 8 }} />
+                  ) : null}
+                </View>
+
+                {/* Cover Field */}
+                <View>
+                  <Text style={styles.inputLabel}>Image de Couverture / Façade</Text>
+                  <View style={{ flexDirection: 'row', gap: 8 }}>
+                    <TextInput
+                      style={[styles.input, { flex: 1, marginBottom: 0 }]}
+                      placeholder="https://... ou choisir photo"
+                      value={editingResto.cover_url}
+                      onChangeText={t => setEditingResto({ ...editingResto, cover_url: t })}
+                    />
+                    <TouchableOpacity
+                      style={{ backgroundColor: '#111827', paddingHorizontal: 12, borderRadius: 10, justifyContent: 'center', alignItems: 'center' }}
+                      onPress={async () => {
+                        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+                        if (status === 'granted') {
+                          const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: true, aspect: [16, 9], quality: 0.8 });
+                          if (!res.canceled && res.assets?.[0]?.uri) {
+                            setEditingResto({ ...editingResto, cover_url: res.assets[0].uri });
+                          }
+                        }
+                      }}
+                    >
+                      <Ionicons name="image" size={18} color="white" />
+                    </TouchableOpacity>
+                  </View>
+                  {editingResto.cover_url ? (
+                    <Image source={{ uri: editingResto.cover_url }} style={{ width: '100%', height: 90, borderRadius: 10, marginTop: 8, resizeMode: 'cover' }} />
+                  ) : null}
+                </View>
+
+                {/* Preset HD Images Quick Select */}
+                <Text style={{ fontSize: 11, fontWeight: '700', color: '#64748B', marginTop: 4 }}>Ou choisir un modèle d'image HD en 1 clic :</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+                  {[
+                    { label: 'Poulet Braisé', logo: 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=500', cover: 'https://images.unsplash.com/photo-1544025162-d76694265947?w=1200' },
+                    { label: 'Grillades BBQ', logo: 'https://images.unsplash.com/photo-1544025162-d76694265947?w=500', cover: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=1200' },
+                    { label: 'Restaurant Resto', logo: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=500', cover: 'https://images.unsplash.com/photo-1552566626-52f8b828add9?w=1200' },
+                    { label: 'Fast Food Burger', logo: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=500', cover: 'https://images.unsplash.com/photo-1586190848861-99aa4a171e90?w=1200' },
+                    { label: 'Lounge Bar', logo: 'https://images.unsplash.com/photo-1572116469696-31de0f17cc34?w=500', cover: 'https://images.unsplash.com/photo-1514933651103-005eec06c04b?w=1200' },
+                  ].map((preset, pIdx) => (
+                    <TouchableOpacity
+                      key={pIdx}
+                      style={{ backgroundColor: 'white', padding: 8, borderRadius: 10, borderWidth: 1, borderColor: '#CBD5E1', alignItems: 'center' }}
+                      onPress={() => setEditingResto({ ...editingResto, logo_url: preset.logo, cover_url: preset.cover })}
+                    >
+                      <Image source={{ uri: preset.cover }} style={{ width: 60, height: 40, borderRadius: 6, marginBottom: 4 }} />
+                      <Text style={{ fontSize: 10, fontWeight: '700', color: Colors.primary }}>{preset.label}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+
+              <TouchableOpacity
+                style={[styles.actionBtn, { marginTop: 10 }, isSavingResto && { opacity: 0.7 }]}
+                onPress={handleSaveEditRestaurant}
+                disabled={isSavingResto}
+              >
+                {isSavingResto ? (
+                  <ActivityIndicator color="white" size="small" />
+                ) : (
+                  <Text style={styles.actionBtnText}>💾 Enregistrer les modifications</Text>
+                )}
+              </TouchableOpacity>
+              <View style={{ height: 40 }} />
+            </ScrollView>
           )}
         </SafeAreaView>
       </Modal>
