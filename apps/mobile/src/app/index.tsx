@@ -142,7 +142,7 @@ export default function MobileApp() {
   const [newRestoCover, setNewRestoCover] = useState<string>('');
   const [isCreatingResto, setIsCreatingResto] = useState<boolean>(false);
   const [showDatePickerModal, setShowDatePickerModal] = useState<boolean>(false);
-  const [datePickerTarget, setDatePickerTarget] = useState<'agent_start' | 'agent_end' | 'resto_start' | 'resto_end' | null>(null);
+  const [datePickerTarget, setDatePickerTarget] = useState<'agent_start' | 'agent_end' | 'resto_start' | 'resto_end' | 'booking_date' | 'client_filter' | null>(null);
   const [calendarCurrentDate, setCalendarCurrentDate] = useState<Date>(new Date());
   const [showCalendarFilterModal, setShowCalendarFilterModal] = useState<boolean>(false);
   const [calendarDateFilter, setCalendarDateFilter] = useState<string | null>(null);
@@ -203,6 +203,10 @@ export default function MobileApp() {
       }));
     } else if (datePickerTarget === 'resto_end') {
       setNewRestoProp(prev => ({ ...prev, endDate: ymdStr }));
+    } else if (datePickerTarget === 'booking_date') {
+      setBookingDate(formatYMDToFrench(ymdStr));
+    } else if (datePickerTarget === 'client_filter') {
+      setCalendarDateFilter(ymdStr);
     }
     setShowDatePickerModal(false);
   };
@@ -2012,13 +2016,13 @@ const getCategoryLabel = (cat?: string) => {
                       <TouchableOpacity 
                         style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: Colors.primaryLight, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, borderWidth: 1, borderColor: Colors.primary }}
                         onPress={() => {
-                          setBookingDate('Demain ' + getFrenchDate(1));
-                          setBookingStep(1);
+                          setDatePickerTarget('booking_date');
+                          setShowDatePickerModal(true);
                         }}
                       >
-                        <Ionicons name="calendar-outline" size={14} color={Colors.primary} />
+                        <Ionicons name="calendar" size={14} color={Colors.primary} />
                         <Text style={{ fontSize: 11, fontWeight: '800', color: Colors.primary }}>
-                          Aujourd'hui & Demain 📅
+                          {bookingDate ? bookingDate : 'Choisir une date 📅'}
                         </Text>
                       </TouchableOpacity>
                     </View>
@@ -2113,22 +2117,22 @@ const getCategoryLabel = (cat?: string) => {
                   })}
                 </ScrollView>
 
-                {/* Manual input for custom date selection */}
-                <View style={styles.customDateInputContainer}>
-                  <Ionicons name="calendar-outline" size={18} color={Colors.textSecondary} style={{ marginRight: 8 }} />
-                  <TextInput
-                    style={styles.customDateInput}
-                    placeholder="Saisir manuellement (ex: 20 Décembre)..."
-                    placeholderTextColor="#9CA3AF"
-                    value={bookingDate}
-                    onChangeText={(text) => setBookingDate(text)}
-                  />
-                  {bookingDate.length > 0 && (
-                    <TouchableOpacity onPress={() => setBookingDate('')}>
-                      <Ionicons name="close-circle" size={18} color="#9CA3AF" />
-                    </TouchableOpacity>
-                  )}
-                </View>
+                {/* Interactive Calendar Selection Button */}
+                <TouchableOpacity 
+                  style={[styles.customDateInputContainer, { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 14, backgroundColor: '#F8FAFC', borderColor: Colors.primary, height: 46 }]}
+                  onPress={() => {
+                    setDatePickerTarget('booking_date');
+                    setShowDatePickerModal(true);
+                  }}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <Ionicons name="calendar" size={18} color={Colors.primary} />
+                    <Text style={{ fontSize: 13, fontWeight: '700', color: bookingDate ? '#111827' : '#9CA3AF' }}>
+                      {bookingDate ? `📅 ${bookingDate}` : 'Ouvrir le calendrier complet...'}
+                    </Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={16} color={Colors.primary} />
+                </TouchableOpacity>
 
                 <Text style={styles.formTitle}>2. Choisissez l'heure</Text>
                 <TouchableOpacity
@@ -5246,6 +5250,20 @@ const getCategoryLabel = (cat?: string) => {
                   🥳 Ce Week-End (Vendredi au Dimanche)
                 </Text>
                 {calendarDateFilter === 'weekend' && <Ionicons name="checkmark" size={18} color="white" />}
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={{ padding: 14, borderRadius: 14, backgroundColor: Colors.primaryLight, borderWidth: 1, borderColor: Colors.primary, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}
+                onPress={() => {
+                  setShowCalendarFilterModal(false);
+                  setDatePickerTarget('client_filter');
+                  setShowDatePickerModal(true);
+                }}
+              >
+                <Text style={{ fontSize: 14, fontWeight: '800', color: Colors.primary }}>
+                  🗓️ Choisir une date exacte sur le calendrier...
+                </Text>
+                <Ionicons name="chevron-forward" size={18} color={Colors.primary} />
               </TouchableOpacity>
             </View>
 
