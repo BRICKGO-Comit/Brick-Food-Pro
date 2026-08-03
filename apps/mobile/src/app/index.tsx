@@ -2361,11 +2361,10 @@ const getCategoryLabel = (cat?: string) => {
   // --- VIEW 1: AUTH LOGIN GATEWAY REMOVED ---
   // Guest Client is shown by default at startup
 
-  // --- VIEW 2: CLIENT PORTAL ---
-  if (role === 'client') {
-    if (selectedFlash || selectedDeal) {
-      return (
-        <SafeAreaView style={styles.modalContainer} edges={['top', 'bottom']}>
+  // --- GLOBAL OFFER DETAIL OVERLAY (ACCESSIBLE TO ALL ROLES: CLIENT, AGENT, RESTAURANT) ---
+  if (selectedFlash || selectedDeal) {
+    return (
+      <SafeAreaView style={styles.modalContainer} edges={['top', 'bottom']}>
           {/* STEP 0: DETAILS VIEW (REDESIGNED ULTRA PREMIUM) */}
           {bookingStep === 0 && (
             <View style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
@@ -2381,7 +2380,13 @@ const getCategoryLabel = (cat?: string) => {
                   <View style={{ position: 'absolute', top: 16, left: 16, right: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                     <TouchableOpacity
                       style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center' }}
-                      onPress={() => { setSelectedDeal(null); setSelectedFlash(null); }}
+                      onPress={() => {
+                        setSelectedDeal(null);
+                        setSelectedFlash(null);
+                        if (role === 'agent' && agentOrderForm.restaurantId) {
+                          setShowAgentOrderModal(true);
+                        }
+                      }}
                     >
                       <Ionicons name="arrow-back" size={22} color="white" />
                     </TouchableOpacity>
@@ -3139,6 +3144,9 @@ const getCategoryLabel = (cat?: string) => {
         </SafeAreaView>
       );
     }
+
+    // --- VIEW 2: CLIENT PORTAL ---
+    if (role === 'client') {
 
     // Dynamic metrics calculation for client
     const totalReservationsCount = clientOrders.length;
@@ -4973,6 +4981,7 @@ const getCategoryLabel = (cat?: string) => {
                         <TouchableOpacity
                           style={{ backgroundColor: '#F1F5F9', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, borderWidth: 1, borderColor: '#CBD5E1' }}
                           onPress={() => {
+                            setShowAgentOrderModal(false);
                             const fullItem = {
                               ...off,
                               image: img,
