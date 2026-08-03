@@ -4246,7 +4246,7 @@ const getCategoryLabel = (cat?: string) => {
               agentRestaurants.map((resto) => {
                 const restoImg = getRestaurantDefaultImage(resto);
                 return (
-                  <View key={resto.id} style={[styles.partnerCard, { marginBottom: 12, padding: 14 }]}>
+                  <TouchableOpacity key={resto.id} style={[styles.partnerCard, { marginBottom: 12, padding: 14 }]} onPress={() => setSelectedPartnerResto(resto)}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
                       <View style={{ width: 50, height: 50, borderRadius: 12, overflow: 'hidden', backgroundColor: '#F1F5F9', borderWidth: 1, borderColor: '#E2E8F0' }}>
                         <Image source={{ uri: restoImg }} style={{ width: '100%', height: '100%', resizeMode: 'cover' }} />
@@ -4258,15 +4258,12 @@ const getCategoryLabel = (cat?: string) => {
                       </View>
                       <TouchableOpacity 
                         style={{ backgroundColor: Colors.primary, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8 }}
-                        onPress={() => {
-                          setNewProp(prev => ({ ...prev, restaurant: resto.name, restaurantId: resto.id }));
-                          setShowCreateProposalModal(true);
-                        }}
+                        onPress={() => setSelectedPartnerResto(resto)}
                       >
-                        <Text style={{ color: 'white', fontSize: 12, fontWeight: '800' }}>⚡ Offre</Text>
+                        <Text style={{ color: 'white', fontSize: 12, fontWeight: '800' }}>Voir Offres ➔</Text>
                       </TouchableOpacity>
                     </View>
-                  </View>
+                  </TouchableOpacity>
                 );
               })
             )}
@@ -4475,6 +4472,37 @@ const getCategoryLabel = (cat?: string) => {
 
                       {/* Action buttons row for Agent */}
                       <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 8, marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: '#F3F4F6' }}>
+                        <TouchableOpacity
+                          style={{ backgroundColor: '#ECFDF5', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, flexDirection: 'row', alignItems: 'center', gap: 4, borderWidth: 1, borderColor: '#A7F3D0' }}
+                          onPress={() => {
+                            const img = (prop.photos && Array.isArray(prop.photos) && prop.photos[0]) ||
+                                        (typeof prop.photos === 'string' && prop.photos) ||
+                                        prop.image || prop.photo_url || prop.image_url ||
+                                        'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=500';
+                            const pNew = Number(prop.price_promo || prop.priceNew || prop.price || 5000);
+                            const pOld = Number(prop.price_normal || prop.priceOld || Math.round(pNew * 1.25));
+                            const discountStr = prop.discount || (pOld > pNew ? `-${Math.round((1 - (pNew / pOld)) * 100)}%` : '-20%');
+
+                            const fullItem = {
+                              ...prop,
+                              image: img,
+                              priceNew: pNew,
+                              priceOld: pOld,
+                              discount: discountStr,
+                              restaurant: prop.restaurants?.name || prop.restaurant,
+                              restaurant_id: prop.restaurant_id
+                            };
+                            if (prop.type === 'flash' || prop.proposal_type === 'flash' || prop.timeRange) {
+                              handleSelectFlash(fullItem);
+                            } else {
+                              handleSelectDeal(fullItem);
+                            }
+                          }}
+                        >
+                          <Ionicons name="eye-outline" size={14} color="#047857" />
+                          <Text style={{ fontSize: 11, fontWeight: '800', color: '#047857' }}>Aperçu Détails</Text>
+                        </TouchableOpacity>
+
                         <TouchableOpacity
                           style={{ backgroundColor: '#EFF6FF', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, flexDirection: 'row', alignItems: 'center', gap: 4, borderWidth: 1, borderColor: '#BFDBFE' }}
                           onPress={() => startEditOffer(prop)}
