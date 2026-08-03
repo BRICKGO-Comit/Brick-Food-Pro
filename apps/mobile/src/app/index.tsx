@@ -3878,32 +3878,74 @@ const getCategoryLabel = (cat?: string) => {
                         );
                       }
 
-                      return allRestoOffers.map((item) => (
-                        <TouchableOpacity
-                          key={item.id}
-                          style={{ flexDirection: 'row', gap: 12, backgroundColor: '#F9FAFB', padding: 12, borderRadius: 14, borderWidth: 1, borderColor: '#E5E7EB', marginBottom: 10 }}
-                          onPress={() => {
-                            setSelectedPartnerResto(null);
-                            if (item.type === 'flash' || item.timeRange) {
-                              handleSelectFlash(item);
-                            } else {
-                              handleSelectDeal(item);
-                            }
-                          }}
-                        >
-                          <Image source={{ uri: item.image }} style={{ width: 70, height: 70, borderRadius: 10, resizeMode: 'cover' }} />
-                          <View style={{ flex: 1, justifyContent: 'center' }}>
-                            <Text style={{ fontSize: 14, fontWeight: '800', color: Colors.textPrimary }} numberOfLines={1}>{item.title}</Text>
-                            <Text style={{ fontSize: 11, color: Colors.textSecondary, marginTop: 2 }}>{item.discount} DE RÉDUCTION</Text>
-                            <Text style={{ fontSize: 14, fontWeight: '900', color: Colors.primary, marginTop: 4 }}>
-                              {item.priceNew?.toLocaleString()} FCFA <Text style={{ fontSize: 11, color: '#9CA3AF', textDecorationLine: 'line-through' }}>{item.priceOld?.toLocaleString()} F</Text>
-                            </Text>
-                          </View>
-                          <View style={{ justifyContent: 'center' }}>
-                            <Ionicons name="chevron-forward" size={20} color={Colors.primary} />
-                          </View>
-                        </TouchableOpacity>
-                      ));
+                      return allRestoOffers.map((item) => {
+                        const img = (item.photos && Array.isArray(item.photos) && item.photos[0]) ||
+                                    (typeof item.photos === 'string' && item.photos) ||
+                                    item.image || item.photo_url || item.image_url ||
+                                    getRestaurantDefaultImage(selectedPartnerResto);
+
+                        const pNew = Number(item.price_promo || item.priceNew || item.price || 5000);
+                        const pOld = Number(item.price_normal || item.priceOld || Math.round(pNew * 1.25));
+                        const discountStr = item.discount || (pOld > pNew ? `-${Math.round((1 - (pNew / pOld)) * 100)}%` : '-20%');
+                        const typeStr = (item.type === 'deal' || item.proposal_type === 'deal') ? '❤️ DEAL' : '⚡ FLASH';
+                        const descStr = item.description || item.details || 'Offre promotionnelle exclusive BRICK DEAL.';
+
+                        const fullItem = {
+                          ...item,
+                          image: img,
+                          priceNew: pNew,
+                          priceOld: pOld,
+                          discount: discountStr,
+                          restaurant: selectedPartnerResto?.name || item.restaurant,
+                          restaurant_id: selectedPartnerResto?.id || item.restaurant_id
+                        };
+
+                        return (
+                          <TouchableOpacity
+                            key={item.id}
+                            style={{ flexDirection: 'row', gap: 12, backgroundColor: '#FFFFFF', padding: 12, borderRadius: 16, borderWidth: 1, borderColor: '#E2E8F0', marginBottom: 10, elevation: 2 }}
+                            onPress={() => {
+                              setSelectedPartnerResto(null);
+                              if (item.type === 'flash' || item.proposal_type === 'flash' || item.timeRange) {
+                                handleSelectFlash(fullItem);
+                              } else {
+                                handleSelectDeal(fullItem);
+                              }
+                            }}
+                          >
+                            <View style={{ width: 75, height: 75, borderRadius: 12, overflow: 'hidden', backgroundColor: '#F1F5F9' }}>
+                              <Image source={{ uri: img }} style={{ width: '100%', height: '100%', resizeMode: 'cover' }} />
+                            </View>
+
+                            <View style={{ flex: 1, justifyContent: 'center' }}>
+                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+                                <Text style={{ fontSize: 10, fontWeight: '900', color: typeStr.includes('FLASH') ? Colors.primary : '#D97706', backgroundColor: typeStr.includes('FLASH') ? '#FFF1F2' : '#FFFBEB', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 }}>
+                                  {typeStr}
+                                </Text>
+                                <Text style={{ fontSize: 10, fontWeight: '800', color: '#10B981' }}>
+                                  {discountStr}
+                                </Text>
+                              </View>
+
+                              <Text style={{ fontSize: 14, fontWeight: '800', color: Colors.textPrimary }} numberOfLines={1}>
+                                {item.title}
+                              </Text>
+
+                              <Text style={{ fontSize: 11, color: Colors.textSecondary, marginTop: 1 }} numberOfLines={1}>
+                                {descStr}
+                              </Text>
+
+                              <Text style={{ fontSize: 14, fontWeight: '900', color: Colors.primary, marginTop: 3 }}>
+                                {pNew.toLocaleString('fr-FR')} FCFA <Text style={{ fontSize: 11, color: '#9CA3AF', textDecorationLine: 'line-through', fontWeight: '400' }}>{pOld.toLocaleString('fr-FR')} F</Text>
+                              </Text>
+                            </View>
+
+                            <View style={{ justifyContent: 'center' }}>
+                              <Ionicons name="chevron-forward" size={20} color={Colors.primary} />
+                            </View>
+                          </TouchableOpacity>
+                        );
+                      });
                     })()}
                   </View>
                 </ScrollView>
@@ -5530,32 +5572,74 @@ const getCategoryLabel = (cat?: string) => {
                         );
                       }
 
-                      return allRestoOffers.map((item) => (
-                        <TouchableOpacity
-                          key={item.id}
-                          style={{ flexDirection: 'row', gap: 12, backgroundColor: '#F9FAFB', padding: 12, borderRadius: 14, borderWidth: 1, borderColor: '#E5E7EB', marginBottom: 10 }}
-                          onPress={() => {
-                            setSelectedPartnerResto(null);
-                            if (item.type === 'flash' || item.timeRange) {
-                              handleSelectFlash(item);
-                            } else {
-                              handleSelectDeal(item);
-                            }
-                          }}
-                        >
-                          <Image source={{ uri: item.image }} style={{ width: 70, height: 70, borderRadius: 10, resizeMode: 'cover' }} />
-                          <View style={{ flex: 1, justifyContent: 'center' }}>
-                            <Text style={{ fontSize: 14, fontWeight: '800', color: Colors.textPrimary }} numberOfLines={1}>{item.title}</Text>
-                            <Text style={{ fontSize: 11, color: Colors.textSecondary, marginTop: 2 }}>{item.discount} DE RÉDUCTION</Text>
-                            <Text style={{ fontSize: 14, fontWeight: '900', color: Colors.primary, marginTop: 4 }}>
-                              {item.priceNew?.toLocaleString()} FCFA <Text style={{ fontSize: 11, color: '#9CA3AF', textDecorationLine: 'line-through' }}>{item.priceOld?.toLocaleString()} F</Text>
-                            </Text>
-                          </View>
-                          <View style={{ justifyContent: 'center' }}>
-                            <Ionicons name="chevron-forward" size={20} color={Colors.primary} />
-                          </View>
-                        </TouchableOpacity>
-                      ));
+                      return allRestoOffers.map((item) => {
+                        const img = (item.photos && Array.isArray(item.photos) && item.photos[0]) ||
+                                    (typeof item.photos === 'string' && item.photos) ||
+                                    item.image || item.photo_url || item.image_url ||
+                                    getRestaurantDefaultImage(selectedPartnerResto);
+
+                        const pNew = Number(item.price_promo || item.priceNew || item.price || 5000);
+                        const pOld = Number(item.price_normal || item.priceOld || Math.round(pNew * 1.25));
+                        const discountStr = item.discount || (pOld > pNew ? `-${Math.round((1 - (pNew / pOld)) * 100)}%` : '-20%');
+                        const typeStr = (item.type === 'deal' || item.proposal_type === 'deal') ? '❤️ DEAL' : '⚡ FLASH';
+                        const descStr = item.description || item.details || 'Offre promotionnelle exclusive BRICK DEAL.';
+
+                        const fullItem = {
+                          ...item,
+                          image: img,
+                          priceNew: pNew,
+                          priceOld: pOld,
+                          discount: discountStr,
+                          restaurant: selectedPartnerResto?.name || item.restaurant,
+                          restaurant_id: selectedPartnerResto?.id || item.restaurant_id
+                        };
+
+                        return (
+                          <TouchableOpacity
+                            key={item.id}
+                            style={{ flexDirection: 'row', gap: 12, backgroundColor: '#FFFFFF', padding: 12, borderRadius: 16, borderWidth: 1, borderColor: '#E2E8F0', marginBottom: 10, elevation: 2 }}
+                            onPress={() => {
+                              setSelectedPartnerResto(null);
+                              if (item.type === 'flash' || item.proposal_type === 'flash' || item.timeRange) {
+                                handleSelectFlash(fullItem);
+                              } else {
+                                handleSelectDeal(fullItem);
+                              }
+                            }}
+                          >
+                            <View style={{ width: 75, height: 75, borderRadius: 12, overflow: 'hidden', backgroundColor: '#F1F5F9' }}>
+                              <Image source={{ uri: img }} style={{ width: '100%', height: '100%', resizeMode: 'cover' }} />
+                            </View>
+
+                            <View style={{ flex: 1, justifyContent: 'center' }}>
+                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+                                <Text style={{ fontSize: 10, fontWeight: '900', color: typeStr.includes('FLASH') ? Colors.primary : '#D97706', backgroundColor: typeStr.includes('FLASH') ? '#FFF1F2' : '#FFFBEB', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 }}>
+                                  {typeStr}
+                                </Text>
+                                <Text style={{ fontSize: 10, fontWeight: '800', color: '#10B981' }}>
+                                  {discountStr}
+                                </Text>
+                              </View>
+
+                              <Text style={{ fontSize: 14, fontWeight: '800', color: Colors.textPrimary }} numberOfLines={1}>
+                                {item.title}
+                              </Text>
+
+                              <Text style={{ fontSize: 11, color: Colors.textSecondary, marginTop: 1 }} numberOfLines={1}>
+                                {descStr}
+                              </Text>
+
+                              <Text style={{ fontSize: 14, fontWeight: '900', color: Colors.primary, marginTop: 3 }}>
+                                {pNew.toLocaleString('fr-FR')} FCFA <Text style={{ fontSize: 11, color: '#9CA3AF', textDecorationLine: 'line-through', fontWeight: '400' }}>{pOld.toLocaleString('fr-FR')} F</Text>
+                              </Text>
+                            </View>
+
+                            <View style={{ justifyContent: 'center' }}>
+                              <Ionicons name="chevron-forward" size={20} color={Colors.primary} />
+                            </View>
+                          </TouchableOpacity>
+                        );
+                      });
                     })()}
                   </View>
                 </ScrollView>
