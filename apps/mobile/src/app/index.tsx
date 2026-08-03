@@ -4926,9 +4926,91 @@ const getCategoryLabel = (cat?: string) => {
               </TouchableOpacity>
             </View>
 
-            <ScrollView style={{ flex: 1, padding: 18 }} contentContainerStyle={{ paddingBottom: 110 }} showsVerticalScrollIndicator={false}>
-              {/* Step 1: Restaurant Selection */}
-              <Text style={{ fontSize: 13, fontWeight: '800', color: '#1E293B', marginBottom: 8 }}>1. Choisir l'Établissement Partner</Text>
+            <ScrollView style={{ flex: 1, padding: 18 }} contentContainerStyle={{ paddingBottom: 110 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+              {/* Selected Offer Top Banner */}
+              {agentOrderForm.offerTitle ? (
+                <View style={{ backgroundColor: Colors.primaryLight, padding: 12, borderRadius: 14, borderWidth: 1, borderColor: Colors.primary, marginBottom: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 10, fontWeight: '900', color: Colors.primary }}>OFFRE SÉLECTIONNÉE POUR LA VENTE</Text>
+                    <Text style={{ fontSize: 14, fontWeight: '900', color: '#0F172A', marginTop: 2 }} numberOfLines={1}>{agentOrderForm.offerTitle}</Text>
+                    <Text style={{ fontSize: 12, color: Colors.textSecondary, marginTop: 1 }}>
+                      🏢 {agentOrderForm.restaurantName || 'Établissement'} • {agentOrderForm.price?.toLocaleString('fr-FR')} FCFA / unité
+                    </Text>
+                  </View>
+                  <Ionicons name="checkmark-circle" size={24} color={Colors.primary} />
+                </View>
+              ) : null}
+
+              {/* Step 1: Client Lambda Info (DIRECTLY AT TOP - NO SCROLLING REQUIRED!) */}
+              <Text style={{ fontSize: 13, fontWeight: '800', color: '#1E293B', marginBottom: 6 }}>1. Coordonnées du Client Lambda 👤</Text>
+              <TextInput
+                style={[styles.input, { backgroundColor: 'white', marginBottom: 8 }]}
+                placeholder="Nom & Prénom du client (ex: Koffi Jean)"
+                value={agentOrderForm.clientName}
+                onChangeText={t => setAgentOrderForm(prev => ({ ...prev, clientName: t }))}
+              />
+              <TextInput
+                style={[styles.input, { backgroundColor: 'white', marginBottom: 14 }]}
+                placeholder="Téléphone mobile (ex: 07 07 07 07 07)"
+                keyboardType="phone-pad"
+                value={agentOrderForm.clientPhone}
+                onChangeText={t => setAgentOrderForm(prev => ({ ...prev, clientPhone: t }))}
+              />
+
+              {/* Step 2: Payment Method */}
+              <Text style={{ fontSize: 13, fontWeight: '800', color: '#1E293B', marginBottom: 8 }}>2. Mode d'Encaissement 💳</Text>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
+                {[
+                  { id: 'cash', label: '💵 Espèces (Cash)' },
+                  { id: 'wave', label: '🌊 Wave Mobile' },
+                  { id: 'orange', label: '🟧 Orange' },
+                  { id: 'mtn', label: '🟨 MTN' },
+                  { id: 'moov', label: '🟦 Moov' },
+                ].map((pm) => (
+                  <TouchableOpacity
+                    key={pm.id}
+                    style={[
+                      { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12, backgroundColor: 'white', borderWidth: 1, borderColor: '#CBD5E1' },
+                      agentOrderForm.paymentMethod === pm.id && { backgroundColor: Colors.primary, borderColor: Colors.primary }
+                    ]}
+                    onPress={() => setAgentOrderForm(prev => ({ ...prev, paymentMethod: pm.id as any }))}
+                  >
+                    <Text style={[{ fontSize: 11, fontWeight: '700', color: '#1E293B' }, agentOrderForm.paymentMethod === pm.id && { color: 'white' }]}>
+                      {pm.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              {/* Step 3: Quantité */}
+              <View style={{ backgroundColor: 'white', padding: 12, borderRadius: 14, marginBottom: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderWidth: 1, borderColor: '#E2E8F0' }}>
+                <View>
+                  <Text style={{ fontSize: 11, fontWeight: '700', color: Colors.textSecondary }}>Quantité commandée</Text>
+                  <Text style={{ fontSize: 15, fontWeight: '900', color: '#0F172A', marginTop: 1 }}>
+                    {agentOrderForm.quantity} plat(s) / formule(s)
+                  </Text>
+                </View>
+
+                {/* Quantity Controls */}
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#F8FAFC', padding: 4, borderRadius: 10, borderWidth: 1, borderColor: '#CBD5E1' }}>
+                  <TouchableOpacity
+                    onPress={() => setAgentOrderForm(prev => ({ ...prev, quantity: Math.max(1, prev.quantity - 1) }))}
+                    style={{ width: 30, height: 30, borderRadius: 8, backgroundColor: '#E2E8F0', alignItems: 'center', justifyContent: 'center' }}
+                  >
+                    <Text style={{ fontSize: 16, fontWeight: '900', color: '#1E293B' }}>-</Text>
+                  </TouchableOpacity>
+                  <Text style={{ fontSize: 15, fontWeight: '900', color: '#0F172A' }}>{agentOrderForm.quantity}</Text>
+                  <TouchableOpacity
+                    onPress={() => setAgentOrderForm(prev => ({ ...prev, quantity: prev.quantity + 1 }))}
+                    style={{ width: 30, height: 30, borderRadius: 8, backgroundColor: Colors.primary, alignItems: 'center', justifyContent: 'center' }}
+                  >
+                    <Text style={{ fontSize: 16, fontWeight: '900', color: 'white' }}>+</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              {/* Step 4: Restaurant Selection (If wanting to change) */}
+              <Text style={{ fontSize: 13, fontWeight: '800', color: '#1E293B', marginBottom: 8 }}>3. Établissement Partner ({agentOrderForm.restaurantName || 'Choisir'})</Text>
               {agentRestaurants.length === 0 ? (
                 <Text style={{ fontSize: 12, color: Colors.textSecondary, marginBottom: 16 }}>Aucun restaurant disponible.</Text>
               ) : (
@@ -4950,10 +5032,10 @@ const getCategoryLabel = (cat?: string) => {
                 </ScrollView>
               )}
 
-              {/* Step 2: Offer Selection with HD Images & Aperçu Details */}
-              <Text style={{ fontSize: 13, fontWeight: '800', color: '#1E293B', marginBottom: 8 }}>2. Sélectionner l'Offre Menu (Flash / Deal)</Text>
+              {/* Step 5: Offer Selection (If wanting to change offer) */}
+              <Text style={{ fontSize: 13, fontWeight: '800', color: '#1E293B', marginBottom: 8 }}>4. Sélectionner une autre Offre Menu</Text>
               <View style={{ gap: 10, marginBottom: 16 }}>
-                {[...flashOffers, ...dealOffers].slice(0, 10).map((off) => {
+                {[...flashOffers, ...dealOffers].slice(0, 8).map((off) => {
                   const img = (off.photos && Array.isArray(off.photos) && off.photos[0]) ||
                               (typeof off.photos === 'string' && off.photos) ||
                               off.image || off.photo_url || off.image_url ||
@@ -4978,11 +5060,13 @@ const getCategoryLabel = (cat?: string) => {
                         offerId: off.id,
                         offerTitle: off.title,
                         offerType: off.type || 'flash',
-                        price: pNew
+                        price: pNew,
+                        restaurantName: off.restaurant || off.restaurants?.name || prev.restaurantName,
+                        restaurantId: off.restaurant_id || off.restaurantId || prev.restaurantId
                       }))}
                     >
                       {/* HD Menu Thumbnail */}
-                      <View style={{ width: 68, height: 68, borderRadius: 12, overflow: 'hidden', backgroundColor: '#F1F5F9' }}>
+                      <View style={{ width: 60, height: 60, borderRadius: 12, overflow: 'hidden', backgroundColor: '#F1F5F9' }}>
                         <Image source={{ uri: img }} style={{ width: '100%', height: '100%', resizeMode: 'cover' }} />
                       </View>
 
@@ -4995,21 +5079,21 @@ const getCategoryLabel = (cat?: string) => {
                           <Text style={{ fontSize: 10, fontWeight: '800', color: '#10B981' }}>{discountStr}</Text>
                         </View>
 
-                        <Text style={{ fontSize: 14, fontWeight: '800', color: '#0F172A' }} numberOfLines={1}>
+                        <Text style={{ fontSize: 13, fontWeight: '800', color: '#0F172A' }} numberOfLines={1}>
                           {off.title}
                         </Text>
 
-                        <Text style={{ fontSize: 14, fontWeight: '900', color: Colors.primary, marginTop: 2 }}>
-                          {pNew.toLocaleString('fr-FR')} FCFA <Text style={{ fontSize: 11, color: '#9CA3AF', textDecorationLine: 'line-through', fontWeight: '400' }}>{pOld.toLocaleString('fr-FR')} F</Text>
+                        <Text style={{ fontSize: 13, fontWeight: '900', color: Colors.primary, marginTop: 2 }}>
+                          {pNew.toLocaleString('fr-FR')} FCFA <Text style={{ fontSize: 10, color: '#9CA3AF', textDecorationLine: 'line-through', fontWeight: '400' }}>{pOld.toLocaleString('fr-FR')} F</Text>
                         </Text>
                       </View>
 
                       {/* Action: Detail Preview Button + Selection Indicator */}
-                      <View style={{ alignItems: 'flex-end', gap: 8 }}>
+                      <View style={{ alignItems: 'flex-end', gap: 6 }}>
                         {isSelected ? (
-                          <Ionicons name="checkmark-circle" size={24} color={Colors.primary} />
+                          <Ionicons name="checkmark-circle" size={22} color={Colors.primary} />
                         ) : (
-                          <Ionicons name="ellipse-outline" size={24} color="#94A3B8" />
+                          <Ionicons name="ellipse-outline" size={22} color="#94A3B8" />
                         )}
 
                         <TouchableOpacity
@@ -5036,74 +5120,6 @@ const getCategoryLabel = (cat?: string) => {
                     </TouchableOpacity>
                   );
                 })}
-              </View>
-
-              {/* Step 3: Quantité */}
-              <View style={{ backgroundColor: 'white', padding: 14, borderRadius: 16, marginBottom: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderWidth: 1, borderColor: '#E2E8F0' }}>
-                <View>
-                  <Text style={{ fontSize: 11, fontWeight: '700', color: Colors.textSecondary }}>Nombre de formules / plats</Text>
-                  <Text style={{ fontSize: 16, fontWeight: '900', color: '#0F172A', marginTop: 2 }}>
-                    Quantité commandée : {agentOrderForm.quantity}
-                  </Text>
-                </View>
-
-                {/* Quantity Controls */}
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#F8FAFC', padding: 6, borderRadius: 12, borderWidth: 1, borderColor: '#CBD5E1' }}>
-                  <TouchableOpacity
-                    onPress={() => setAgentOrderForm(prev => ({ ...prev, quantity: Math.max(1, prev.quantity - 1) }))}
-                    style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: '#E2E8F0', alignItems: 'center', justifyContent: 'center' }}
-                  >
-                    <Text style={{ fontSize: 18, fontWeight: '900', color: '#1E293B' }}>-</Text>
-                  </TouchableOpacity>
-                  <Text style={{ fontSize: 16, fontWeight: '900', color: '#0F172A' }}>{agentOrderForm.quantity}</Text>
-                  <TouchableOpacity
-                    onPress={() => setAgentOrderForm(prev => ({ ...prev, quantity: prev.quantity + 1 }))}
-                    style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: Colors.primary, alignItems: 'center', justifyContent: 'center' }}
-                  >
-                    <Text style={{ fontSize: 18, fontWeight: '900', color: 'white' }}>+</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-
-              {/* Step 4: Client Lambda Info */}
-              <Text style={{ fontSize: 13, fontWeight: '800', color: '#1E293B', marginBottom: 4 }}>3. Coordonnées du Client Lambda</Text>
-              <TextInput
-                style={[styles.input, { backgroundColor: 'white' }]}
-                placeholder="Nom & Prénom du client (ex: Koffi Jean)"
-                value={agentOrderForm.clientName}
-                onChangeText={t => setAgentOrderForm(prev => ({ ...prev, clientName: t }))}
-              />
-              <TextInput
-                style={[styles.input, { backgroundColor: 'white', marginTop: -4 }]}
-                placeholder="Téléphone mobile (ex: 07 07 07 07 07)"
-                keyboardType="phone-pad"
-                value={agentOrderForm.clientPhone}
-                onChangeText={t => setAgentOrderForm(prev => ({ ...prev, clientPhone: t }))}
-              />
-
-              {/* Step 5: Payment Method */}
-              <Text style={{ fontSize: 13, fontWeight: '800', color: '#1E293B', marginBottom: 8, marginTop: 8 }}>4. Mode d'Encaissement</Text>
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 20 }}>
-                {[
-                  { id: 'cash', label: '💵 Espèces (Cash)' },
-                  { id: 'wave', label: '🌊 Wave Mobile' },
-                  { id: 'orange', label: '🟧 Orange Money' },
-                  { id: 'mtn', label: '🟨 MTN Mobile Money' },
-                  { id: 'moov', label: '🟦 Moov Money' },
-                ].map((pm) => (
-                  <TouchableOpacity
-                    key={pm.id}
-                    style={[
-                      { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12, backgroundColor: 'white', borderWidth: 1, borderColor: '#CBD5E1' },
-                      agentOrderForm.paymentMethod === pm.id && { backgroundColor: Colors.primary, borderColor: Colors.primary }
-                    ]}
-                    onPress={() => setAgentOrderForm(prev => ({ ...prev, paymentMethod: pm.id as any }))}
-                  >
-                    <Text style={[{ fontSize: 11, fontWeight: '700', color: '#1E293B' }, agentOrderForm.paymentMethod === pm.id && { color: 'white' }]}>
-                      {pm.label}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
               </View>
             </ScrollView>
 
