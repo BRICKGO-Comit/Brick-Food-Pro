@@ -2694,8 +2694,8 @@ const getCategoryLabel = (cat?: string) => {
                 
                 <TouchableOpacity style={[styles.paymentRadioRow, paymentMethod === 'wave' && styles.paymentRadioActive]} onPress={() => setPaymentMethod('wave')}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                    <Image source={{ uri: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSZaeFi3xAkC86Ui29AojMASpYfFMPLDzf-1hTcDVS-0Q&s=10' }} style={{ width: 40, height: 40, borderRadius: 10, resizeMode: 'contain' }} />
-                    <Text style={styles.paymentRadioLabel}>Wave</Text>
+                    <Image source={{ uri: 'https://cdn-icons-png.flaticon.com/512/10096/10096417.png' }} style={{ width: 36, height: 36, borderRadius: 8, resizeMode: 'contain' }} />
+                    <Text style={styles.paymentRadioLabel}>Wave Mobile Money</Text>
                   </View>
                   <View style={styles.radioOutline}>
                     {paymentMethod === 'wave' && <View style={styles.radioDot} />}
@@ -2704,7 +2704,7 @@ const getCategoryLabel = (cat?: string) => {
 
                 <TouchableOpacity style={[styles.paymentRadioRow, paymentMethod === 'orange' && styles.paymentRadioActive]} onPress={() => setPaymentMethod('orange')}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                    <Image source={{ uri: 'https://lookaside.fbsbx.com/lookaside/crawler/media/?media_id=100075829930034' }} style={{ width: 40, height: 40, borderRadius: 10, resizeMode: 'contain' }} />
+                    <Image source={{ uri: 'https://cdn-icons-png.flaticon.com/512/888/888865.png' }} style={{ width: 36, height: 36, borderRadius: 8, resizeMode: 'contain' }} />
                     <Text style={styles.paymentRadioLabel}>Orange Money</Text>
                   </View>
                   <View style={styles.radioOutline}>
@@ -2714,7 +2714,7 @@ const getCategoryLabel = (cat?: string) => {
 
                 <TouchableOpacity style={[styles.paymentRadioRow, paymentMethod === 'mtn' && styles.paymentRadioActive]} onPress={() => setPaymentMethod('mtn')}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                    <Image source={{ uri: 'https://naabifinance.com/wp-content/uploads/2025/08/mtn-momo-mobile-money-uganda-logo-png_seeklogo-556395.png' }} style={{ width: 40, height: 40, borderRadius: 10, resizeMode: 'contain' }} />
+                    <Image source={{ uri: 'https://cdn-icons-png.flaticon.com/512/888/888870.png' }} style={{ width: 36, height: 36, borderRadius: 8, resizeMode: 'contain' }} />
                     <Text style={styles.paymentRadioLabel}>MTN Mobile Money</Text>
                   </View>
                   <View style={styles.radioOutline}>
@@ -2724,7 +2724,7 @@ const getCategoryLabel = (cat?: string) => {
 
                 <TouchableOpacity style={[styles.paymentRadioRow, paymentMethod === 'moov' && styles.paymentRadioActive]} onPress={() => setPaymentMethod('moov')}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                    <Image source={{ uri: 'https://play-lh.googleusercontent.com/SNbhaGrpDOyRFXa_A2emZ7kxTsZIAxGL67pN7Xn0l5OHk11qXE3ZvNg-a5hHrAl1xPhnZhsTUV-NORunc-ez' }} style={{ width: 40, height: 40, borderRadius: 10, resizeMode: 'contain' }} />
+                    <Image source={{ uri: 'https://cdn-icons-png.flaticon.com/512/888/888874.png' }} style={{ width: 36, height: 36, borderRadius: 8, resizeMode: 'contain' }} />
                     <Text style={styles.paymentRadioLabel}>Moov Money</Text>
                   </View>
                   <View style={styles.radioOutline}>
@@ -2734,8 +2734,8 @@ const getCategoryLabel = (cat?: string) => {
 
                 <TouchableOpacity style={[styles.paymentRadioRow, paymentMethod === 'cb' && styles.paymentRadioActive]} onPress={() => setPaymentMethod('cb')}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                    <Image source={{ uri: 'https://www.eleane.com/wp-content/uploads/2017/07/Logo_CB.png' }} style={{ width: 40, height: 40, borderRadius: 10, resizeMode: 'contain' }} />
-                    <Text style={styles.paymentRadioLabel}>Carte bancaire  <Text style={{ fontSize: 10, color: Colors.textSecondary }}>VISA / MC</Text></Text>
+                    <Image source={{ uri: 'https://cdn-icons-png.flaticon.com/512/179/179457.png' }} style={{ width: 36, height: 36, borderRadius: 8, resizeMode: 'contain' }} />
+                    <Text style={styles.paymentRadioLabel}>Carte bancaire <Text style={{ fontSize: 10, color: Colors.textSecondary }}>(VISA / Mastercard)</Text></Text>
                   </View>
                   <View style={styles.radioOutline}>
                     {paymentMethod === 'cb' && <View style={styles.radioDot} />}
