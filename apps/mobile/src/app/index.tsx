@@ -406,6 +406,29 @@ export default function MobileApp() {
     );
   };
 
+  const getRestaurantDefaultImage = (resto: any) => {
+    if (resto?.logo_url && resto.logo_url.trim().length > 5) return resto.logo_url;
+    if (resto?.cover_url && resto.cover_url.trim().length > 5) return resto.cover_url;
+
+    const desc = (resto?.description || '').toLowerCase();
+    const cat = (resto?.category || '').toLowerCase();
+    const name = (resto?.name || '').toLowerCase();
+
+    if (name.includes('poulet') || desc.includes('poulet') || desc.includes('braisé') || name.includes('parisien')) {
+      return 'https://images.unsplash.com/photo-1544025162-d76694265947?w=500'; // Poulet braisé & grillades HD
+    }
+    if (cat.includes('burger') || cat.includes('fast_food') || name.includes('burger') || name.includes('fast')) {
+      return 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=500'; // Burger gourmet HD
+    }
+    if (cat.includes('lounge') || cat.includes('bar') || desc.includes('cocktail')) {
+      return 'https://images.unsplash.com/photo-1572116469696-31de0f17cc34?w=500'; // Lounge & Cocktails HD
+    }
+    if (cat.includes('hotel') || desc.includes('chambre')) {
+      return 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=500'; // Hôtel de luxe HD
+    }
+    return 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=500'; // Restaurant élégant HD
+  };
+
   const formatYMDToFrench = (ymdStr: string) => {
     if (!ymdStr) return '';
     const parts = ymdStr.split('-');
@@ -3202,16 +3225,12 @@ const getCategoryLabel = (cat?: string) => {
                 </View>
               ) : (
                 filteredRestaurants.map((resto) => {
-                  const restoImg = resto.logo_url || resto.cover_url;
+                  const restoImg = getRestaurantDefaultImage(resto);
                   return (
                     <TouchableOpacity key={resto.id} style={styles.partnerCard} onPress={() => setSelectedPartnerResto(resto)}>
                       <View style={styles.partnerLeft}>
                         <View style={[styles.partnerLogoContainer, { overflow: 'hidden', backgroundColor: Colors.primaryLight }]}>
-                          {restoImg ? (
-                            <Image source={{ uri: restoImg }} style={{ width: '100%', height: '100%', borderRadius: 20, resizeMode: 'cover' }} />
-                          ) : (
-                            <Ionicons name="restaurant" size={20} color={Colors.primary} />
-                          )}
+                          <Image source={{ uri: restoImg }} style={{ width: '100%', height: '100%', borderRadius: 20, resizeMode: 'cover' }} />
                         </View>
                         <View style={styles.partnerInfo}>
                           <Text style={styles.partnerCardName}>{resto.name}</Text>
@@ -4573,7 +4592,7 @@ const getCategoryLabel = (cat?: string) => {
                   {/* Hero Cover Image & Overlay Controls */}
                   <View style={{ position: 'relative', width: '100%', height: 220, backgroundColor: '#111827' }}>
                     <Image
-                      source={{ uri: selectedPartnerResto.cover_url || selectedPartnerResto.photos?.[0] || 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=800' }}
+                      source={{ uri: selectedPartnerResto.cover_url || selectedPartnerResto.photos?.[0] || getRestaurantDefaultImage(selectedPartnerResto) }}
                       style={{ width: '100%', height: '100%', resizeMode: 'cover' }}
                     />
                     <View style={{ position: 'absolute', top: 16, left: 16, right: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -4604,13 +4623,7 @@ const getCategoryLabel = (cat?: string) => {
                   <View style={{ paddingHorizontal: 20 }}>
                     <View style={{ flexDirection: 'row', alignItems: 'flex-end', marginTop: -36, marginBottom: 12, justifyContent: 'space-between' }}>
                       <View style={{ width: 72, height: 72, borderRadius: 36, backgroundColor: 'white', padding: 3, elevation: 6, shadowColor: '#000', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.2, shadowRadius: 6 }}>
-                        {selectedPartnerResto.logo_url ? (
-                          <Image source={{ uri: selectedPartnerResto.logo_url }} style={{ width: '100%', height: '100%', borderRadius: 33, resizeMode: 'cover' }} />
-                        ) : (
-                          <View style={{ width: '100%', height: '100%', borderRadius: 33, backgroundColor: Colors.primary, alignItems: 'center', justifyContent: 'center' }}>
-                            <Ionicons name="restaurant" size={32} color="white" />
-                          </View>
-                        )}
+                        <Image source={{ uri: getRestaurantDefaultImage(selectedPartnerResto) }} style={{ width: '100%', height: '100%', borderRadius: 33, resizeMode: 'cover' }} />
                       </View>
 
                       <View style={{ backgroundColor: '#ECFDF5', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, borderWidth: 1, borderColor: '#A7F3D0' }}>
