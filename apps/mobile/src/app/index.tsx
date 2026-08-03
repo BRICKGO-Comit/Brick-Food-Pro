@@ -3738,21 +3738,17 @@ const getCategoryLabel = (cat?: string) => {
 
     return (
       <SafeAreaView style={styles.mainContainer} edges={['top', 'bottom']}>
-        {/* Header with Location Pin */}
-        <View style={{ paddingHorizontal: 20, paddingTop: 12, paddingBottom: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-            <Ionicons name="location" size={18} color="#1E293B" />
-            <Text style={{ fontSize: 14, fontWeight: '700', color: '#1E293B' }}>
-              📍 Cocody, Abidjan
+        {/* Header with Agent Name positioned ABOVE Location Pin */}
+        <View style={{ paddingHorizontal: 20, paddingTop: 14, paddingBottom: 6 }}>
+          <Text style={{ fontSize: 18, fontWeight: '900', color: Colors.textPrimary, marginBottom: 2 }}>
+            Bonjour, {profile?.full_name || 'Agent Commercial'} 👋
+          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+            <Ionicons name="location" size={15} color={Colors.primary} />
+            <Text style={{ fontSize: 13, fontWeight: '700', color: Colors.textSecondary }}>
+              Cocody, Abidjan
             </Text>
           </View>
-          <TouchableOpacity 
-            style={{ backgroundColor: '#F1F5F9', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 12, flexDirection: 'row', alignItems: 'center', gap: 4 }}
-            onPress={() => handleLogout()}
-          >
-            <Ionicons name="log-out-outline" size={16} color="#64748B" />
-            <Text style={{ fontSize: 11, fontWeight: '700', color: '#64748B' }}>Déconnexion</Text>
-          </TouchableOpacity>
         </View>
 
         {agentTab === 'home' && (
