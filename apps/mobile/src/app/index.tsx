@@ -3797,29 +3797,32 @@ const getCategoryLabel = (cat?: string) => {
                 </TouchableOpacity>
               </View>
             ) : (
-              agentRestaurants.map((resto) => (
-                <View key={resto.id} style={[styles.partnerCard, { marginBottom: 12, padding: 14 }]}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
-                    <View style={{ width: 44, height: 44, borderRadius: 10, backgroundColor: '#FFEBEB', alignItems: 'center', justifyContent: 'center' }}>
-                      <Ionicons name="restaurant" size={22} color={Colors.primary} />
+              agentRestaurants.map((resto) => {
+                const restoImg = getRestaurantDefaultImage(resto);
+                return (
+                  <View key={resto.id} style={[styles.partnerCard, { marginBottom: 12, padding: 14 }]}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
+                      <View style={{ width: 50, height: 50, borderRadius: 12, overflow: 'hidden', backgroundColor: '#F1F5F9', borderWidth: 1, borderColor: '#E2E8F0' }}>
+                        <Image source={{ uri: restoImg }} style={{ width: '100%', height: '100%', resizeMode: 'cover' }} />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ fontSize: 15, fontWeight: '800', color: Colors.textPrimary }}>{resto.name}</Text>
+                        <Text style={{ fontSize: 12, color: Colors.textSecondary, marginTop: 2 }}>📍 {resto.address}</Text>
+                        <Text style={{ fontSize: 12, color: Colors.textSecondary, marginTop: 1 }}>📞 {resto.phone}</Text>
+                      </View>
+                      <TouchableOpacity 
+                        style={{ backgroundColor: Colors.primary, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8 }}
+                        onPress={() => {
+                          setNewProp(prev => ({ ...prev, restaurant: resto.name, restaurantId: resto.id }));
+                          setShowCreateProposalModal(true);
+                        }}
+                      >
+                        <Text style={{ color: 'white', fontSize: 12, fontWeight: '800' }}>⚡ Offre</Text>
+                      </TouchableOpacity>
                     </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={{ fontSize: 15, fontWeight: '800', color: Colors.textPrimary }}>{resto.name}</Text>
-                      <Text style={{ fontSize: 12, color: Colors.textSecondary, marginTop: 2 }}>📍 {resto.address}</Text>
-                      <Text style={{ fontSize: 12, color: Colors.textSecondary, marginTop: 1 }}>📞 {resto.phone}</Text>
-                    </View>
-                    <TouchableOpacity 
-                      style={{ backgroundColor: Colors.primary, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8 }}
-                      onPress={() => {
-                        setNewProp(prev => ({ ...prev, restaurant: resto.name, restaurantId: resto.id }));
-                        setShowCreateProposalModal(true);
-                      }}
-                    >
-                      <Text style={{ color: 'white', fontSize: 12, fontWeight: '800' }}>⚡ Offre</Text>
-                    </TouchableOpacity>
                   </View>
-                </View>
-              ))
+                );
+              })
             )}
 
             <View style={{ height: 32 }} />
@@ -3843,25 +3846,33 @@ const getCategoryLabel = (cat?: string) => {
               </TouchableOpacity>
             </View>
 
-            {agentRestaurants.map((resto) => (
-              <View key={resto.id} style={styles.partnerItem}>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.partnerName}>{resto.name}</Text>
-                    <Text style={styles.partnerSub}>{resto.address} • {resto.phone}</Text>
+            {agentRestaurants.map((resto) => {
+              const restoImg = getRestaurantDefaultImage(resto);
+              return (
+                <TouchableOpacity key={resto.id} style={styles.partnerItem} onPress={() => setSelectedPartnerResto(resto)}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+                    <View style={{ width: 44, height: 44, borderRadius: 10, overflow: 'hidden', backgroundColor: '#F1F5F9', borderWidth: 1, borderColor: '#E2E8F0' }}>
+                      <Image source={{ uri: restoImg }} style={{ width: '100%', height: '100%', resizeMode: 'cover' }} />
+                    </View>
+
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.partnerName}>{resto.name}</Text>
+                      <Text style={styles.partnerSub}>{resto.address} • {resto.phone}</Text>
+                    </View>
+
+                    <TouchableOpacity 
+                      style={{ backgroundColor: Colors.primary, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 6 }} 
+                      onPress={() => {
+                        setNewProp(prev => ({ ...prev, restaurant: resto.name, restaurantId: resto.id }));
+                        setShowCreateProposalModal(true);
+                      }}
+                    >
+                      <Text style={{ color: 'white', fontSize: 11, fontWeight: '700' }}>⚡ Proposer</Text>
+                    </TouchableOpacity>
                   </View>
-                  <TouchableOpacity 
-                    style={{ backgroundColor: Colors.primary, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 6 }} 
-                    onPress={() => {
-                      setNewProp(prev => ({ ...prev, restaurant: resto.name, restaurantId: resto.id }));
-                      setShowCreateProposalModal(true);
-                    }}
-                  >
-                    <Text style={{ color: 'white', fontSize: 11, fontWeight: '700' }}>⚡ Proposer</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            ))}
+                </TouchableOpacity>
+              );
+            })}
           </ScrollView>
         )}
 
