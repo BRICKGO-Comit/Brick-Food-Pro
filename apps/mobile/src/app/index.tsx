@@ -2562,31 +2562,65 @@ const getCategoryLabel = (cat?: string) => {
                 <View>
                   <Text style={{ fontSize: 11, color: '#6B7280' }}>Prix avec réduction</Text>
                   <Text style={{ fontSize: 20, fontWeight: '900', color: Colors.primary }}>
-                    {(selectedFlash ? selectedFlash.priceNew : selectedDeal?.priceNew)?.toLocaleString()} FCFA
+                    {(selectedFlash ? selectedFlash.priceNew : selectedDeal?.priceNew)?.toLocaleString('fr-FR')} FCFA
                   </Text>
+                  {role === 'agent' && (
+                    <Text style={{ fontSize: 10, fontWeight: '800', color: '#10B981', marginTop: 1 }}>
+                      🎁 Gain (+{adminCommissionRate}%) : +{Math.round(((selectedFlash ? selectedFlash.priceNew : selectedDeal?.priceNew || 5000) * (adminCommissionRate / 100))).toLocaleString('fr-FR')} F
+                    </Text>
+                  )}
                 </View>
 
-                <TouchableOpacity
-                  style={{ backgroundColor: Colors.primary, paddingHorizontal: 24, height: 48, borderRadius: 24, flexDirection: 'row', alignItems: 'center', gap: 8, shadowColor: Colors.primary, shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.3, shadowRadius: 6, elevation: 4 }}
-                  onPress={() => {
-                    if (!isLoggedIn) {
-                      setPendingOfferAfterAuth({
-                        type: selectedFlash ? 'flash' : 'deal',
-                        offer: selectedFlash || selectedDeal,
-                        step: 1
-                      });
-                      setIsSignup(false);
-                      setShowClientAuthModal(true);
-                    } else {
-                      setBookingStep(1);
-                    }
-                  }}
-                >
-                  <Text style={{ color: 'white', fontSize: 15, fontWeight: '900' }}>
-                    {selectedFlash ? '⚡ J\'en profite' : '❤️ Je réserve'}
-                  </Text>
-                  <Ionicons name="arrow-forward" size={16} color="white" />
-                </TouchableOpacity>
+                {role === 'agent' ? (
+                  <TouchableOpacity
+                    style={{ backgroundColor: Colors.primary, paddingHorizontal: 18, height: 48, borderRadius: 24, flexDirection: 'row', alignItems: 'center', gap: 6, shadowColor: Colors.primary, shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.3, shadowRadius: 6, elevation: 4 }}
+                    onPress={() => {
+                      const off = selectedFlash || selectedDeal;
+                      if (off) {
+                        const pNew = Number(off.priceNew || off.price_promo || off.price || 5000);
+                        setAgentOrderForm(prev => ({
+                          ...prev,
+                          offerId: off.id,
+                          offerTitle: off.title,
+                          offerType: off.type || (selectedFlash ? 'flash' : 'deal'),
+                          price: pNew,
+                          restaurantName: off.restaurant || off.restaurants?.name || prev.restaurantName,
+                          restaurantId: off.restaurant_id || off.restaurantId || prev.restaurantId
+                        }));
+                      }
+                      setSelectedFlash(null);
+                      setSelectedDeal(null);
+                      setShowAgentOrderModal(true);
+                    }}
+                  >
+                    <Text style={{ color: 'white', fontSize: 13, fontWeight: '900' }}>
+                      🛍️ Valider Vente Terrain
+                    </Text>
+                    <Ionicons name="arrow-forward" size={16} color="white" />
+                  </TouchableOpacity>
+                ) : (
+                  <TouchableOpacity
+                    style={{ backgroundColor: Colors.primary, paddingHorizontal: 24, height: 48, borderRadius: 24, flexDirection: 'row', alignItems: 'center', gap: 8, shadowColor: Colors.primary, shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.3, shadowRadius: 6, elevation: 4 }}
+                    onPress={() => {
+                      if (!isLoggedIn) {
+                        setPendingOfferAfterAuth({
+                          type: selectedFlash ? 'flash' : 'deal',
+                          offer: selectedFlash || selectedDeal,
+                          step: 1
+                        });
+                        setIsSignup(false);
+                        setShowClientAuthModal(true);
+                      } else {
+                        setBookingStep(1);
+                      }
+                    }}
+                  >
+                    <Text style={{ color: 'white', fontSize: 15, fontWeight: '900' }}>
+                      {selectedFlash ? '⚡ J\'en profite' : '❤️ Je réserve'}
+                    </Text>
+                    <Ionicons name="arrow-forward" size={16} color="white" />
+                  </TouchableOpacity>
+                )}
               </View>
             </View>
           )}
