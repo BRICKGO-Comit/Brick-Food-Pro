@@ -137,6 +137,8 @@ export default function MobileApp() {
   const [agentPeriodFilter, setAgentPeriodFilter] = useState<'mois' | 'semaine' | 'aujourdhui' | 'annee' | 'tout'>('mois');
   const [showPeriodModal, setShowPeriodModal] = useState<boolean>(false);
   const [agentZone, setAgentZone] = useState<string>('Cocody');
+  const [customZoneInput, setCustomZoneInput] = useState<string>('');
+  const [adminCommissionRate, setAdminCommissionRate] = useState<number>(10);
   const [showZoneModal, setShowZoneModal] = useState<boolean>(false);
   const [showAgentOrderModal, setShowAgentOrderModal] = useState<boolean>(false);
   const [showPassQRModal, setShowPassQRModal] = useState<boolean>(false);
@@ -285,7 +287,7 @@ export default function MobileApp() {
     try {
       setIsCreatingResto(true);
       const totalAmt = agentOrderForm.price * agentOrderForm.quantity;
-      const commissionAmt = totalAmt * 0.10;
+      const commissionAmt = totalAmt * (adminCommissionRate / 100);
       const randCode = `RES-${Math.floor(1000 + Math.random() * 9000)}-${agentZone.substring(0, 3).toUpperCase()}`;
 
       const newOrderPayload = {
@@ -1159,6 +1161,17 @@ const getCategoryLabel = (cat?: string) => {
   useEffect(() => {
     if (!isLoggedIn || role !== 'agent' || !user) return;
     const loadAgentData = async () => {
+      // 0. Commission Rate from Admin Settings
+      const { data: settingRow } = await supabase
+        .from('system_settings')
+        .select('value')
+        .eq('key', 'default_commission_rate')
+        .maybeSingle();
+
+      const ratePct = settingRow?.value ? parseFloat(settingRow.value) : 10;
+      const validRate = (!isNaN(ratePct) && ratePct > 0) ? ratePct : 10;
+      setAdminCommissionRate(validRate);
+
       // 1. Restaurants
       const { data: allRestos } = await supabase
         .from('restaurants')
@@ -1193,7 +1206,7 @@ const getCategoryLabel = (cat?: string) => {
         const amt = Number(o.commission_amount || 0);
         if (amt > 0) return s + amt;
         const tot = Number(o.total_amount || o.price || 0);
-        return s + (tot * 0.10); // 10% commission fallback
+        return s + (tot * (validRate / 100)); // Dynamic commission fallback from Admin
       }, 0);
 
       setAgentStats({ commission, ordersCount: finalOrders.length });
@@ -4748,8 +4761,35 @@ const getCategoryLabel = (cat?: string) => {
                 </TouchableOpacity>
               ))}
 
+              {/* Custom Zone Input */}
+              <View style={{ marginTop: 8, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#E2E8F0' }}>
+                <Text style={{ fontSize: 11, fontWeight: '700', color: Colors.textSecondary, marginBottom: 6 }}>
+                  ✍️ Saisir une autre zone (ex: Abobo, Bingerville...) :
+                </Text>
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                  <TextInput
+                    style={{ flex: 1, backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#CBD5E1', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8, fontSize: 13, color: '#0F172A' }}
+                    placeholder="ex: Abobo, Bingerville..."
+                    value={customZoneInput}
+                    onChangeText={setCustomZoneInput}
+                  />
+                  <TouchableOpacity
+                    style={{ backgroundColor: Colors.primary, paddingHorizontal: 14, borderRadius: 12, justifyContent: 'center' }}
+                    onPress={() => {
+                      if (customZoneInput.trim()) {
+                        setAgentZone(customZoneInput.trim());
+                        setCustomZoneInput('');
+                        setShowZoneModal(false);
+                      }
+                    }}
+                  >
+                    <Text style={{ color: 'white', fontWeight: '800', fontSize: 12 }}>OK</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+
               <TouchableOpacity
-                style={{ backgroundColor: '#0F172A', borderRadius: 14, paddingVertical: 12, alignItems: 'center', marginTop: 8 }}
+                style={{ backgroundColor: '#0F172A', borderRadius: 14, paddingVertical: 12, alignItems: 'center', marginTop: 12 }}
                 onPress={() => setShowZoneModal(false)}
               >
                 <Text style={{ color: 'white', fontWeight: '800', fontSize: 13 }}>Fermer</Text>
@@ -4836,7 +4876,7 @@ const getCategoryLabel = (cat?: string) => {
                     {(agentOrderForm.price * agentOrderForm.quantity).toLocaleString('fr-FR')} FCFA
                   </Text>
                   <Text style={{ fontSize: 11, fontWeight: '800', color: '#10B981', marginTop: 2 }}>
-                    🎁 Commission Agent (+10%) : +{((agentOrderForm.price * agentOrderForm.quantity) * 0.10).toLocaleString('fr-FR')} FCFA
+                    🎁 Commission Agent (+{adminCommissionRate}%) : +{((agentOrderForm.price * agentOrderForm.quantity) * (adminCommissionRate / 100)).toLocaleString('fr-FR')} FCFA
                   </Text>
                 </View>
 
