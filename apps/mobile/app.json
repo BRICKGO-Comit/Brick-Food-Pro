@@ -1,7 +1,8 @@
 {
   "expo": {
     "name": "BRICK DEAL",
-    "slug": "brick-deal",
+    "slug": "brickdeal",
+    "owner": "brickfood123s-team",
     "scheme": "brickdeal",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -14,9 +15,11 @@
       "backgroundColor": "#D60309"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.brickfood.brickdeal"
     },
     "android": {
+      "package": "com.brickfood.brickdeal",
       "adaptiveIcon": {
         "foregroundImage": "./assets/Icone.png",
         "backgroundColor": "#D60309"
@@ -27,6 +30,11 @@
     },
     "plugins": [
       "expo-router"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "290b1fcf-922d-46a2-8ff9-1e5148233da6"
+      }
+    }
   }
 }
