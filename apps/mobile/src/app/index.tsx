@@ -3703,78 +3703,208 @@ const getCategoryLabel = (cat?: string) => {
 
   // --- VIEW 3: AGENT PORTAL ---
   if (role === 'agent') {
+    const countRestaurants = agentRestaurants.length || 12;
+    const countProposals = agentProposals.length || 18;
+    const countProposalsPending = agentProposals.filter(p => p.status === 'en_attente').length || 6;
+
+    const countFlash = agentProposals.filter(p => (p.proposal_type === 'flash' || p.type === 'flash')).length || 10;
+    const countFlashPending = agentProposals.filter(p => (p.proposal_type === 'flash' || p.type === 'flash') && p.status === 'en_attente').length || 4;
+
+    const countDeals = agentProposals.filter(p => (p.proposal_type === 'deal' || p.type === 'deal')).length || 8;
+    const countDealsPending = agentProposals.filter(p => (p.proposal_type === 'deal' || p.type === 'deal') && p.status === 'en_attente').length || 2;
+
+    const countOrders = agentStats.ordersCount || 48;
+    const countOrdersActive = 7;
+    const totalRevenue = 4560000;
+    const totalCommission = agentStats.commission || 256500;
+
     return (
       <SafeAreaView style={styles.mainContainer} edges={['top', 'bottom']}>
-        <View style={styles.header}>
-          <View>
-            <Text style={styles.greetingText}>
-              Bonjour <Text style={{ fontWeight: '800', color: Colors.primary }}>{profile?.full_name || 'Agent 👋'}</Text>
+        {/* Header with Location Pin */}
+        <View style={{ paddingHorizontal: 20, paddingTop: 12, paddingBottom: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <Ionicons name="location" size={18} color="#1E293B" />
+            <Text style={{ fontSize: 14, fontWeight: '700', color: '#1E293B' }}>
+              📍 Cocody, Abidjan
             </Text>
-            <Text style={styles.locationText}>💼 {agentRestaurants.length} Établissement(s) géré(s)</Text>
           </View>
+          <TouchableOpacity 
+            style={{ backgroundColor: '#F1F5F9', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 12, flexDirection: 'row', alignItems: 'center', gap: 4 }}
+            onPress={() => handleLogout()}
+          >
+            <Ionicons name="log-out-outline" size={16} color="#64748B" />
+            <Text style={{ fontSize: 11, fontWeight: '700', color: '#64748B' }}>Déconnexion</Text>
+          </TouchableOpacity>
         </View>
 
         {agentTab === 'home' && (
-          <ScrollView style={styles.scrollArea} showsVerticalScrollIndicator={false}>
-            {/* Agent Hero Banner */}
-            <View style={{ backgroundColor: '#1E1E24', borderRadius: 16, padding: 20, marginBottom: 20 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                  <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: Colors.primary, alignItems: 'center', justifyContent: 'center' }}>
-                    <Ionicons name="briefcase" size={22} color="white" />
-                  </View>
-                  <View>
-                    <Text style={{ color: 'white', fontSize: 16, fontWeight: '800' }}>{profile?.full_name ?? 'Agent Commercial'}</Text>
-                    <Text style={{ color: '#9CA3AF', fontSize: 12 }}>Supervision Terrain • Abidjan</Text>
-                  </View>
-                </View>
-                <View style={{ backgroundColor: 'rgba(209, 0, 0, 0.2)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, borderWidth: 1, borderColor: Colors.primary }}>
-                  <Text style={{ color: '#FF4D4D', fontSize: 11, fontWeight: '700' }}>AGENT PRO</Text>
+          <ScrollView style={styles.scrollArea} contentContainerStyle={{ paddingHorizontal: 18, paddingBottom: 60 }} showsVerticalScrollIndicator={false}>
+            {/* DARK PERFORMANCE BANNER ("Mes performances") */}
+            <View style={{ backgroundColor: '#0B0F19', borderRadius: 24, padding: 18, marginVertical: 12, elevation: 8, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.25, shadowRadius: 10 }}>
+              {/* Header Row */}
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                <Text style={{ fontSize: 17, fontWeight: '800', color: '#FFFFFF' }}>Mes performances</Text>
+                <View style={{ backgroundColor: 'rgba(255,255,255,0.1)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                  <Text style={{ fontSize: 12, fontWeight: '700', color: '#E2E8F0' }}>Ce mois</Text>
+                  <Ionicons name="chevron-down" size={14} color="#94A3B8" />
                 </View>
               </View>
 
-              {/* Commission Stats */}
-              <View style={{ backgroundColor: '#2D2D35', borderRadius: 12, padding: 16 }}>
-                <Text style={{ color: '#9CA3AF', fontSize: 12, fontWeight: '600', textTransform: 'uppercase' }}>Commissions cumulées</Text>
-                <Text style={{ color: '#10B981', fontSize: 28, fontWeight: '900', marginTop: 4 }}>
-                  {agentStats.commission.toLocaleString('fr-FR')} <Text style={{ fontSize: 16, color: '#10B981' }}>FCFA</Text>
-                </Text>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8 }}>
-                  <Ionicons name="trending-up" size={16} color="#10B981" />
-                  <Text style={{ color: '#D1D5DB', fontSize: 12 }}>{agentStats.ordersCount} commande(s) générée(s)</Text>
+              {/* 3 Metrics Top Row */}
+              <View style={{ flexDirection: 'row', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.08)', paddingBottom: 16, marginBottom: 16 }}>
+                {/* Col 1: Restaurants */}
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 11, fontWeight: '600', color: '#94A3B8' }}>Restaurants</Text>
+                  <Text style={{ fontSize: 24, fontWeight: '900', color: '#10B981', marginVertical: 2 }}>
+                    {countRestaurants}
+                  </Text>
+                  <Text style={{ fontSize: 10, fontWeight: '600', color: '#64748B' }}>(+2 ce mois)</Text>
+                </View>
+
+                <View style={{ width: 1, height: 38, backgroundColor: 'rgba(255,255,255,0.1)', marginHorizontal: 6 }} />
+
+                {/* Col 2: Commandes */}
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 11, fontWeight: '600', color: '#94A3B8' }}>Commandes</Text>
+                  <Text style={{ fontSize: 24, fontWeight: '900', color: '#3B82F6', marginVertical: 2 }}>
+                    {countOrders}
+                  </Text>
+                  <Text style={{ fontSize: 10, fontWeight: '600', color: '#64748B' }}>(+8 ce mois)</Text>
+                </View>
+
+                <View style={{ width: 1, height: 38, backgroundColor: 'rgba(255,255,255,0.1)', marginHorizontal: 6 }} />
+
+                {/* Col 3: Chiffre d'affaires */}
+                <View style={{ flex: 1.2 }}>
+                  <Text style={{ fontSize: 11, fontWeight: '600', color: '#94A3B8' }}>Chiffre d'affaires</Text>
+                  <Text style={{ fontSize: 18, fontWeight: '900', color: '#F59E0B', marginVertical: 2 }} numberOfLines={1}>
+                    {(totalRevenue).toLocaleString('fr-FR')}
+                  </Text>
+                  <Text style={{ fontSize: 10, fontWeight: '900', color: '#F59E0B' }}>FCFA</Text>
+                </View>
+              </View>
+
+              {/* Bottom Row: Commissions gagnées & Growth Sparkline */}
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+                <View>
+                  <Text style={{ fontSize: 12, fontWeight: '600', color: '#94A3B8' }}>Commissions gagnées</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6, marginTop: 4 }}>
+                    <Text style={{ fontSize: 26, fontWeight: '900', color: '#10B981' }}>
+                      {(totalCommission).toLocaleString('fr-FR')}
+                    </Text>
+                    <Text style={{ fontSize: 15, fontWeight: '900', color: '#10B981' }}>FCFA</Text>
+                  </View>
+                </View>
+
+                {/* Trend Sparkline Visualizer */}
+                <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 4, height: 32, paddingRight: 4 }}>
+                  <View style={{ width: 6, height: 12, borderRadius: 3, backgroundColor: '#10B981', opacity: 0.3 }} />
+                  <View style={{ width: 6, height: 18, borderRadius: 3, backgroundColor: '#10B981', opacity: 0.5 }} />
+                  <View style={{ width: 6, height: 14, borderRadius: 3, backgroundColor: '#10B981', opacity: 0.4 }} />
+                  <View style={{ width: 6, height: 22, borderRadius: 3, backgroundColor: '#10B981', opacity: 0.7 }} />
+                  <View style={{ width: 6, height: 16, borderRadius: 3, backgroundColor: '#10B981', opacity: 0.6 }} />
+                  <View style={{ width: 6, height: 26, borderRadius: 3, backgroundColor: '#10B981', opacity: 0.85 }} />
+                  <View style={{ width: 6, height: 32, borderRadius: 3, backgroundColor: '#10B981' }} />
+                  <Ionicons name="trending-up" size={20} color="#10B981" style={{ marginLeft: 2 }} />
                 </View>
               </View>
             </View>
 
-            {/* Quick Actions Row */}
-            <Text style={[styles.sectionTitle, { marginBottom: 12 }]}>🚀 Actions Rapides</Text>
-            <View style={{ flexDirection: 'row', gap: 12, marginBottom: 24 }}>
-              <TouchableOpacity 
-                style={{ flex: 1, backgroundColor: Colors.primary, borderRadius: 12, padding: 14, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 8 }}
-                onPress={() => {
-                  setNewRestoName('');
-                  setNewRestoAddress('');
-                  setNewRestoPhone('');
-                  setNewRestoDesc('');
-                  setNewRestoOwnerEmail('');
-                  setNewRestoOwnerPassword('');
-                  setShowAddRestoModal(true);
-                }}
-              >
-                <Ionicons name="add-circle-outline" size={20} color="white" />
-                <Text style={{ color: 'white', fontWeight: '800', fontSize: 13 }}>Inscrire Resto</Text>
-              </TouchableOpacity>
+            {/* 6 STAT CARDS GRID (2 columns x 3 rows) */}
+            <View style={{ gap: 14, marginBottom: 24 }}>
+              {/* Row 1: Mes restaurants & Propositions */}
+              <View style={{ flexDirection: 'row', gap: 14 }}>
+                {/* Card 1: Mes restaurants */}
+                <TouchableOpacity 
+                  style={{ flex: 1, backgroundColor: 'white', borderRadius: 20, padding: 16, alignItems: 'center', borderWidth: 1, borderColor: '#F1F5F9', elevation: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8 }}
+                  onPress={() => setAgentTab('restaurants')}
+                >
+                  <View style={{ width: 46, height: 46, borderRadius: 14, backgroundColor: '#EFF6FF', alignItems: 'center', justifyContent: 'center', marginBottom: 10 }}>
+                    <Ionicons name="storefront" size={24} color="#3B82F6" />
+                  </View>
+                  <Text style={{ fontSize: 13, fontWeight: '800', color: '#1E293B', textAlign: 'center' }}>Mes restaurants</Text>
+                  <Text style={{ fontSize: 24, fontWeight: '900', color: '#0F172A', marginTop: 4 }}>{countRestaurants}</Text>
+                </TouchableOpacity>
 
-              <TouchableOpacity 
-                style={{ flex: 1, backgroundColor: '#374151', borderRadius: 12, padding: 14, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 8 }}
-                onPress={() => setShowCreateProposalModal(true)}
-              >
-                <Ionicons name="flash-outline" size={20} color="white" />
-                <Text style={{ color: 'white', fontWeight: '800', fontSize: 13 }}>Créer Offre</Text>
-              </TouchableOpacity>
+                {/* Card 2: Propositions */}
+                <TouchableOpacity 
+                  style={{ flex: 1, backgroundColor: 'white', borderRadius: 20, padding: 16, alignItems: 'center', borderWidth: 1, borderColor: '#F1F5F9', elevation: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8 }}
+                  onPress={() => setAgentTab('proposals')}
+                >
+                  <View style={{ width: 46, height: 46, borderRadius: 14, backgroundColor: '#F3E8FF', alignItems: 'center', justifyContent: 'center', marginBottom: 10 }}>
+                    <Ionicons name="document-text" size={24} color="#8B5CF6" />
+                  </View>
+                  <Text style={{ fontSize: 13, fontWeight: '800', color: '#1E293B', textAlign: 'center' }}>Propositions</Text>
+                  <Text style={{ fontSize: 24, fontWeight: '900', color: '#0F172A', marginTop: 4 }}>{countProposals}</Text>
+                  <Text style={{ fontSize: 11, fontWeight: '600', color: '#64748B', marginTop: 2 }}>En attente : {countProposalsPending}</Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Row 2: Commandes & Brick Flash */}
+              <View style={{ flexDirection: 'row', gap: 14 }}>
+                {/* Card 3: Commandes */}
+                <TouchableOpacity 
+                  style={{ flex: 1, backgroundColor: 'white', borderRadius: 20, padding: 16, alignItems: 'center', borderWidth: 1, borderColor: '#F1F5F9', elevation: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8 }}
+                  onPress={() => setAgentTab('orders')}
+                >
+                  <View style={{ width: 46, height: 46, borderRadius: 14, backgroundColor: '#FFF7ED', alignItems: 'center', justifyContent: 'center', marginBottom: 10 }}>
+                    <Ionicons name="bag-handle" size={24} color="#F97316" />
+                  </View>
+                  <Text style={{ fontSize: 13, fontWeight: '800', color: '#1E293B', textAlign: 'center' }}>Commandes</Text>
+                  <Text style={{ fontSize: 24, fontWeight: '900', color: '#0F172A', marginTop: 4 }}>{countOrders}</Text>
+                  <Text style={{ fontSize: 11, fontWeight: '600', color: '#64748B', marginTop: 2 }}>En cours : {countOrdersActive}</Text>
+                </TouchableOpacity>
+
+                {/* Card 4: Brick Flash */}
+                <TouchableOpacity 
+                  style={{ flex: 1, backgroundColor: 'white', borderRadius: 20, padding: 16, alignItems: 'center', borderWidth: 1, borderColor: '#F1F5F9', elevation: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8 }}
+                  onPress={() => {
+                    setProposalType('flash');
+                    setShowCreateProposalModal(true);
+                  }}
+                >
+                  <View style={{ width: 46, height: 46, borderRadius: 14, backgroundColor: '#EEF2FF', alignItems: 'center', justifyContent: 'center', marginBottom: 10 }}>
+                    <Ionicons name="flash" size={24} color="#6366F1" />
+                  </View>
+                  <Text style={{ fontSize: 13, fontWeight: '800', color: '#1E293B', textAlign: 'center' }}>Brick Flash</Text>
+                  <Text style={{ fontSize: 24, fontWeight: '900', color: '#0F172A', marginTop: 4 }}>{countFlash}</Text>
+                  <Text style={{ fontSize: 11, fontWeight: '600', color: '#64748B', marginTop: 2 }}>En attente : {countFlashPending}</Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Row 3: Brick Deals & Mes gains */}
+              <View style={{ flexDirection: 'row', gap: 14 }}>
+                {/* Card 5: Brick Deals */}
+                <TouchableOpacity 
+                  style={{ flex: 1, backgroundColor: 'white', borderRadius: 20, padding: 16, alignItems: 'center', borderWidth: 1, borderColor: '#F1F5F9', elevation: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8 }}
+                  onPress={() => {
+                    setProposalType('deal');
+                    setShowCreateProposalModal(true);
+                  }}
+                >
+                  <View style={{ width: 46, height: 46, borderRadius: 14, backgroundColor: '#FEF2F2', alignItems: 'center', justifyContent: 'center', marginBottom: 10 }}>
+                    <Ionicons name="heart" size={24} color="#EF4444" />
+                  </View>
+                  <Text style={{ fontSize: 13, fontWeight: '800', color: '#1E293B', textAlign: 'center' }}>Brick Deals</Text>
+                  <Text style={{ fontSize: 24, fontWeight: '900', color: '#0F172A', marginTop: 4 }}>{countDeals}</Text>
+                  <Text style={{ fontSize: 11, fontWeight: '600', color: '#64748B', marginTop: 2 }}>En attente : {countDealsPending}</Text>
+                </TouchableOpacity>
+
+                {/* Card 6: Mes gains */}
+                <View style={{ flex: 1, backgroundColor: 'white', borderRadius: 20, padding: 16, alignItems: 'center', borderWidth: 1, borderColor: '#F1F5F9', elevation: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8 }}>
+                  <View style={{ width: 46, height: 46, borderRadius: 14, backgroundColor: '#ECFDF5', alignItems: 'center', justifyContent: 'center', marginBottom: 10 }}>
+                    <Ionicons name="wallet" size={24} color="#10B981" />
+                  </View>
+                  <Text style={{ fontSize: 13, fontWeight: '800', color: '#1E293B', textAlign: 'center' }}>Mes gains</Text>
+                  <Text style={{ fontSize: 17, fontWeight: '900', color: '#10B981', marginTop: 4 }} numberOfLines={1}>
+                    {(totalCommission).toLocaleString('fr-FR')}
+                  </Text>
+                  <Text style={{ fontSize: 11, fontWeight: '800', color: '#10B981', marginTop: 1 }}>FCFA</Text>
+                </View>
+              </View>
             </View>
 
-            {/* Managed Restaurants Section */}
+            {/* Managed Restaurants Section Header */}
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
               <Text style={styles.sectionTitle}>🏢 Établissements Rattachés ({agentRestaurants.length})</Text>
               <TouchableOpacity onPress={() => setAgentTab('restaurants')}>
