@@ -134,6 +134,8 @@ export default function MobileApp() {
   const [clientOrders, setClientOrders] = useState<any[]>([]);
   const [agentRestaurants, setAgentRestaurants] = useState<any[]>([]);
   const [agentOrders, setAgentOrders] = useState<any[]>([]);
+  const [agentPeriodFilter, setAgentPeriodFilter] = useState<'mois' | 'semaine' | 'aujourdhui' | 'annee' | 'tout'>('mois');
+  const [showPeriodModal, setShowPeriodModal] = useState<boolean>(false);
   const [selectedAgentOrder, setSelectedAgentOrder] = useState<any | null>(null);
   const [selectedClientOrder, setSelectedClientOrder] = useState<any | null>(null);
   const [selectedPartnerResto, setSelectedPartnerResto] = useState<any | null>(null);
@@ -3720,21 +3722,52 @@ const getCategoryLabel = (cat?: string) => {
 
   // --- VIEW 3: AGENT PORTAL ---
   if (role === 'agent') {
-    const countRestaurants = agentRestaurants.length;
-    const countProposals = agentProposals.length;
-    const countProposalsPending = agentProposals.filter((p: any) => p.status === 'en_attente').length;
+    const filterByPeriod = (dateStr: string) => {
+      if (!dateStr) return true;
+      const d = new Date(dateStr);
+      const now = new Date();
 
-    const countFlash = agentProposals.filter((p: any) => (p.type === 'flash' || p.proposal_type === 'flash')).length;
-    const countFlashPending = agentProposals.filter((p: any) => (p.type === 'flash' || p.proposal_type === 'flash') && p.status === 'en_attente').length;
+      if (agentPeriodFilter === 'aujourdhui') {
+        return d.toDateString() === now.toDateString();
+      }
+      if (agentPeriodFilter === 'semaine') {
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(now.getDate() - 7);
+        return d >= sevenDaysAgo;
+      }
+      if (agentPeriodFilter === 'mois') {
+        return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+      }
+      if (agentPeriodFilter === 'annee') {
+        return d.getFullYear() === now.getFullYear();
+      }
+      return true; // 'tout'
+    };
 
-    const countDeals = agentProposals.filter((p: any) => (p.type === 'deal' || p.proposal_type === 'deal')).length;
-    const countDealsPending = agentProposals.filter((p: any) => (p.type === 'deal' || p.proposal_type === 'deal') && p.status === 'en_attente').length;
+    const filteredAgentRestos = agentRestaurants.filter(r => filterByPeriod(r.created_at));
+    const filteredAgentOrds = agentOrders.filter(o => filterByPeriod(o.created_at));
+    const filteredAgentProps = agentProposals.filter(p => filterByPeriod(p.created_at));
 
-    const countOrders = agentOrders.length || agentStats.ordersCount;
-    const countOrdersActive = agentOrders.filter((o: any) => o.status !== 'terminee' && o.status !== 'annulee' && o.status !== 'livree').length;
+    const countRestaurants = filteredAgentRestos.length;
+    const countProposals = filteredAgentProps.length;
+    const countProposalsPending = filteredAgentProps.filter((p: any) => p.status === 'en_attente').length;
 
-    const totalRevenue = agentOrders.reduce((sum: number, o: any) => sum + Number(o.total_amount || o.price || 0), 0);
-    const totalCommission = agentStats.commission || agentOrders.reduce((sum: number, o: any) => sum + Number(o.commission_amount || (Number(o.total_amount || 0) * 0.10)), 0);
+    const countFlash = filteredAgentProps.filter((p: any) => (p.type === 'flash' || p.proposal_type === 'flash')).length;
+    const countFlashPending = filteredAgentProps.filter((p: any) => (p.type === 'flash' || p.proposal_type === 'flash') && p.status === 'en_attente').length;
+
+    const countDeals = filteredAgentProps.filter((p: any) => (p.type === 'deal' || p.proposal_type === 'deal')).length;
+    const countDealsPending = filteredAgentProps.filter((p: any) => (p.type === 'deal' || p.proposal_type === 'deal') && p.status === 'en_attente').length;
+
+    const countOrders = filteredAgentOrds.length;
+    const countOrdersActive = filteredAgentOrds.filter((o: any) => o.status !== 'terminee' && o.status !== 'annulee' && o.status !== 'livree').length;
+
+    const totalRevenue = filteredAgentOrds.reduce((sum: number, o: any) => sum + Number(o.total_amount || o.price || 0), 0);
+    const totalCommission = filteredAgentOrds.reduce((sum: number, o: any) => sum + Number(o.commission_amount || (Number(o.total_amount || 0) * 0.10)), 0);
+
+    const periodLabel = agentPeriodFilter === 'aujourdhui' ? "Aujourd'hui" :
+                        agentPeriodFilter === 'semaine' ? 'Cette semaine' :
+                        agentPeriodFilter === 'mois' ? 'Ce mois' :
+                        agentPeriodFilter === 'annee' ? 'Cette année' : 'Tout l\'historique';
 
     return (
       <SafeAreaView style={styles.mainContainer} edges={['top', 'bottom']}>
@@ -3758,10 +3791,13 @@ const getCategoryLabel = (cat?: string) => {
               {/* Header Row */}
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
                 <Text style={{ fontSize: 17, fontWeight: '800', color: '#FFFFFF' }}>Mes performances</Text>
-                <View style={{ backgroundColor: 'rgba(255,255,255,0.1)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                  <Text style={{ fontSize: 12, fontWeight: '700', color: '#E2E8F0' }}>Ce mois</Text>
+                <TouchableOpacity 
+                  style={{ backgroundColor: 'rgba(255,255,255,0.12)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, flexDirection: 'row', alignItems: 'center', gap: 4 }}
+                  onPress={() => setShowPeriodModal(true)}
+                >
+                  <Text style={{ fontSize: 12, fontWeight: '700', color: '#E2E8F0' }}>{periodLabel}</Text>
                   <Ionicons name="chevron-down" size={14} color="#94A3B8" />
-                </View>
+                </TouchableOpacity>
               </View>
 
               {/* 3 Metrics Top Row */}
@@ -4370,6 +4406,75 @@ const getCategoryLabel = (cat?: string) => {
             <Text style={[styles.navBtnText, agentTab === 'profile' && styles.activeNavText]}>Profil</Text>
           </TouchableOpacity>
         </View>
+
+        {/* PERIOD SELECTION MODAL */}
+        <Modal visible={showPeriodModal} transparent animationType="fade">
+          <View style={{ flex: 1, backgroundColor: 'rgba(15, 23, 42, 0.75)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+            <View style={{ width: '100%', maxWidth: 340, backgroundColor: 'white', borderRadius: 24, padding: 20, elevation: 10 }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                <Text style={{ fontSize: 16, fontWeight: '900', color: '#0F172A' }}>🗓️ Période des statistiques</Text>
+                <TouchableOpacity onPress={() => setShowPeriodModal(false)} style={{ padding: 4 }}>
+                  <Ionicons name="close-circle" size={24} color="#9CA3AF" />
+                </TouchableOpacity>
+              </View>
+
+              <Text style={{ fontSize: 12, color: Colors.textSecondary, marginBottom: 14 }}>
+                Sélectionnez une période pour filtrer vos performances et commissions :
+              </Text>
+
+              {[
+                { id: 'mois', label: '📅 Ce mois (Par défaut)', icon: 'calendar-outline' },
+                { id: 'semaine', label: '⚡ Cette semaine (7 jours)', icon: 'time-outline' },
+                { id: 'aujourdhui', label: "📍 Aujourd'hui (Dernières 24h)", icon: 'today-outline' },
+                { id: 'annee', label: '🌟 Cette année (2026)', icon: 'ribbon-outline' },
+                { id: 'tout', label: '🚀 Tout l\'historique cumulé', icon: 'stats-chart-outline' },
+              ].map((opt) => (
+                <TouchableOpacity
+                  key={opt.id}
+                  style={[
+                    {
+                      paddingVertical: 12,
+                      paddingHorizontal: 14,
+                      borderRadius: 14,
+                      marginBottom: 8,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      borderWidth: 1,
+                      borderColor: '#E2E8F0',
+                      backgroundColor: '#F8FAFC'
+                    },
+                    agentPeriodFilter === opt.id && {
+                      backgroundColor: Colors.primaryLight,
+                      borderColor: Colors.primary
+                    }
+                  ]}
+                  onPress={() => {
+                    setAgentPeriodFilter(opt.id as any);
+                    setShowPeriodModal(false);
+                  }}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                    <Ionicons name={opt.icon as any} size={18} color={agentPeriodFilter === opt.id ? Colors.primary : '#64748B'} />
+                    <Text style={{ fontSize: 13, fontWeight: agentPeriodFilter === opt.id ? '800' : '600', color: agentPeriodFilter === opt.id ? Colors.primary : '#1E293B' }}>
+                      {opt.label}
+                    </Text>
+                  </View>
+                  {agentPeriodFilter === opt.id && (
+                    <Ionicons name="checkmark-circle" size={18} color={Colors.primary} />
+                  )}
+                </TouchableOpacity>
+              ))}
+
+              <TouchableOpacity
+                style={{ backgroundColor: '#0F172A', borderRadius: 14, paddingVertical: 12, alignItems: 'center', marginTop: 8 }}
+                onPress={() => setShowPeriodModal(false)}
+              >
+                <Text style={{ color: 'white', fontWeight: '800', fontSize: 13 }}>Fermer</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
 
         {/* CREATE PROPOSAL MODAL (Agent exclusive) */}
         <Modal visible={showCreateProposalModal} animationType="slide">
