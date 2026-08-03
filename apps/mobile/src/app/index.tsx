@@ -136,6 +136,25 @@ export default function MobileApp() {
   const [agentOrders, setAgentOrders] = useState<any[]>([]);
   const [agentPeriodFilter, setAgentPeriodFilter] = useState<'mois' | 'semaine' | 'aujourdhui' | 'annee' | 'tout'>('mois');
   const [showPeriodModal, setShowPeriodModal] = useState<boolean>(false);
+  const [agentZone, setAgentZone] = useState<string>('Cocody');
+  const [showZoneModal, setShowZoneModal] = useState<boolean>(false);
+  const [showAgentOrderModal, setShowAgentOrderModal] = useState<boolean>(false);
+  const [showPassQRModal, setShowPassQRModal] = useState<boolean>(false);
+  const [generatedPassOrder, setGeneratedPassOrder] = useState<any | null>(null);
+  const [isExportingPass, setIsExportingPass] = useState<boolean>(false);
+
+  const [agentOrderForm, setAgentOrderForm] = useState({
+    restaurantId: '',
+    restaurantName: '',
+    offerId: '',
+    offerTitle: '',
+    offerType: 'flash' as 'flash' | 'deal',
+    price: 0,
+    quantity: 1,
+    clientName: '',
+    clientPhone: '',
+    paymentMethod: 'cash' as 'cash' | 'wave' | 'orange' | 'mtn' | 'moov'
+  });
   const [selectedAgentOrder, setSelectedAgentOrder] = useState<any | null>(null);
   const [selectedClientOrder, setSelectedClientOrder] = useState<any | null>(null);
   const [selectedPartnerResto, setSelectedPartnerResto] = useState<any | null>(null);
@@ -148,6 +167,169 @@ export default function MobileApp() {
   const [calendarCurrentDate, setCalendarCurrentDate] = useState<Date>(new Date());
   const [showQRValidatorModal, setShowQRValidatorModal] = useState<boolean>(false);
   const [qrScanCodeInput, setQrScanCodeInput] = useState<string>('');
+
+  const handleDownloadPassPDF = async (order: any) => {
+    if (!order) return;
+    try {
+      setIsExportingPass(true);
+      const code = order.reservation_code || `RES-${order.id?.substring(0, 6)?.toUpperCase() || '7892'}`;
+      const total = Number(order.total_amount || order.price || 0).toLocaleString('fr-FR');
+      const restoName = order.restaurants?.name || order.restaurantName || 'Restaurant Partenaire';
+      const offerTitle = order.offers?.title || order.offerTitle || 'Offre Spéciale';
+      const clientName = order.client_name || order.profiles?.full_name || 'Client Lambda';
+      const clientPhone = order.client_phone || order.profiles?.phone || 'Non renseigné';
+      const dateStr = new Date(order.created_at || Date.now()).toLocaleDateString('fr-FR', {
+        day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit'
+      });
+
+      const htmlContent = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <title>Pass Réservation - BRICK DEAL</title>
+          <style>
+            body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; margin: 0; padding: 24px; color: #1E293B; background: #F8FAFC; }
+            .card { background: #FFFFFF; border-radius: 20px; padding: 24px; border: 2px solid #D60309; max-width: 480px; margin: 0 auto; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+            .header { text-align: center; border-bottom: 2px dashed #E2E8F0; padding-bottom: 16px; margin-bottom: 16px; }
+            .logo { font-size: 24px; font-weight: 900; color: #D60309; letter-spacing: -0.5px; }
+            .sublogo { font-size: 11px; font-weight: 700; color: #64748B; text-transform: uppercase; margin-top: 2px; }
+            .badge { background: #FEE2E2; color: #D60309; padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 800; display: inline-block; margin-top: 8px; }
+            .code-box { background: #0F172A; color: #10B981; border-radius: 14px; padding: 16px; text-align: center; margin: 16px 0; }
+            .code-title { font-size: 11px; color: #94A3B8; font-weight: 700; text-transform: uppercase; }
+            .code-val { font-size: 28px; font-weight: 900; letter-spacing: 2px; margin-top: 4px; }
+            .details-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #F1F5F9; font-size: 13px; }
+            .label { font-weight: 700; color: #64748B; }
+            .val { font-weight: 800; color: #0F172A; text-align: right; }
+            .footer { text-align: center; font-size: 11px; color: #94A3B8; margin-top: 20px; line-height: 1.4; }
+          </style>
+        </head>
+        <body>
+          <div class="card">
+            <div class="header">
+              <div class="logo">🔴 BRICK DEAL</div>
+              <div class="sublogo">PASS RÉSERVATION CLIENT • BON DE CONSOMMATION</div>
+              <div class="badge">OFFRE FLASH / DEAL CONCÉDÉE</div>
+            </div>
+
+            <div class="code-box">
+              <div class="code-title">CODE DE PASS RÉSERVATION</div>
+              <div class="code-val">${code}</div>
+            </div>
+
+            <div class="details-row">
+              <span class="label">Établissement Partner :</span>
+              <span class="val">${restoName}</span>
+            </div>
+
+            <div class="details-row">
+              <span class="label">Offre Réservée :</span>
+              <span class="val">${offerTitle}</span>
+            </div>
+
+            <div class="details-row">
+              <span class="label">Nom du Client :</span>
+              <span class="val">${clientName} (${clientPhone})</span>
+            </div>
+
+            <div class="details-row">
+              <span class="label">Montant Payé :</span>
+              <span class="val" style="color: #D60309; font-size: 16px;">${total} FCFA</span>
+            </div>
+
+            <div class="details-row">
+              <span class="label">Date de la Commande :</span>
+              <span class="val">${dateStr}</span>
+            </div>
+
+            <div class="footer">
+              Présentez ce bon ou faites scanner le code <strong>${code}</strong> directement au restaurant pour consommer votre formule.<br/>
+              <em>BRICK DEAL © 2026 - Tous droits réservés.</em>
+            </div>
+          </div>
+        </body>
+        </html>
+      `;
+
+      const { uri } = await Print.printToFileAsync({ html: htmlContent });
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(uri, {
+          mimeType: 'application/pdf',
+          dialogTitle: `Pass_BRICKDEAL_${code}.pdf`,
+          UTI: 'com.adobe.pdf'
+        });
+      } else {
+        Alert.alert('✅ PDF Généré !', `Fichier PDF disponible : ${uri}`);
+      }
+    } catch (err: any) {
+      Alert.alert('Erreur PDF', err.message || 'Impossible de générer le document PDF.');
+    } finally {
+      setIsExportingPass(false);
+    }
+  };
+
+  const handleCreateAgentClientOrder = async () => {
+    if (!agentOrderForm.restaurantId) {
+      Alert.alert('Restaurant Requis', 'Veuillez sélectionner un établissement partenaire.');
+      return;
+    }
+    if (!agentOrderForm.offerId) {
+      Alert.alert('Offre Requise', 'Veuillez sélectionner une offre Flash ou Deal.');
+      return;
+    }
+    if (!agentOrderForm.clientName.trim()) {
+      Alert.alert('Nom Client Requis', 'Veuillez saisir le nom du client lambda.');
+      return;
+    }
+
+    try {
+      setIsCreatingResto(true);
+      const totalAmt = agentOrderForm.price * agentOrderForm.quantity;
+      const commissionAmt = totalAmt * 0.10;
+      const randCode = `RES-${Math.floor(1000 + Math.random() * 9000)}-${agentZone.substring(0, 3).toUpperCase()}`;
+
+      const newOrderPayload = {
+        agent_id: user?.id,
+        restaurant_id: agentOrderForm.restaurantId,
+        offer_id: agentOrderForm.offerId,
+        total_amount: totalAmt,
+        commission_amount: commissionAmt,
+        client_name: agentOrderForm.clientName.trim(),
+        client_phone: agentOrderForm.clientPhone.trim() || 'Non renseigné',
+        reservation_code: randCode,
+        status: 'nouvelle',
+        payment_method: agentOrderForm.paymentMethod,
+        created_at: new Date().toISOString()
+      };
+
+      const { data } = await supabase
+        .from('orders')
+        .insert([newOrderPayload])
+        .select('*, restaurants!left(name, address, phone), offers!left(title, type)')
+        .single();
+
+      const createdOrder = data || {
+        ...newOrderPayload,
+        id: Math.random().toString(),
+        restaurantName: agentOrderForm.restaurantName,
+        offerTitle: agentOrderForm.offerTitle
+      };
+
+      setAgentOrders(prev => [createdOrder, ...prev]);
+      setAgentStats(prev => ({
+        commission: prev.commission + commissionAmt,
+        ordersCount: prev.ordersCount + 1
+      }));
+
+      setShowAgentOrderModal(false);
+      setGeneratedPassOrder(createdOrder);
+      setShowPassQRModal(true);
+    } catch (err: any) {
+      Alert.alert('Erreur Commande', err.message || 'Impossible d\'enregistrer la commande terrain.');
+    } finally {
+      setIsCreatingResto(false);
+    }
+  };
 
   const handleValidateQRCode = async (codeToVerify?: string) => {
     const code = (codeToVerify || qrScanCodeInput).trim().toUpperCase();
@@ -3777,16 +3959,40 @@ const getCategoryLabel = (cat?: string) => {
     return (
       <SafeAreaView style={styles.mainContainer} edges={['top', 'bottom']}>
         {/* Header with Agent Name positioned ABOVE Location Pin */}
-        <View style={{ paddingHorizontal: 20, paddingTop: 14, paddingBottom: 6 }}>
-          <Text style={{ fontSize: 18, fontWeight: '900', color: Colors.textPrimary, marginBottom: 2 }}>
-            Bonjour, {profile?.full_name || 'Agent Commercial'} 👋
-          </Text>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-            <Ionicons name="location" size={15} color={Colors.primary} />
-            <Text style={{ fontSize: 13, fontWeight: '700', color: Colors.textSecondary }}>
-              Cocody, Abidjan
+        <View style={{ paddingHorizontal: 20, paddingTop: 14, paddingBottom: 6, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+          <View>
+            <Text style={{ fontSize: 18, fontWeight: '900', color: Colors.textPrimary, marginBottom: 2 }}>
+              Bonjour, {profile?.full_name || 'Agent Commercial'} 👋
             </Text>
+            <TouchableOpacity 
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#F1F5F9', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, borderWidth: 1, borderColor: '#E2E8F0', alignSelf: 'flex-start' }}
+              onPress={() => setShowZoneModal(true)}
+            >
+              <Ionicons name="location" size={14} color={Colors.primary} />
+              <Text style={{ fontSize: 12, fontWeight: '800', color: '#1E293B' }}>
+                Zone : {agentZone}
+              </Text>
+              <Ionicons name="chevron-down" size={12} color="#64748B" />
+            </TouchableOpacity>
           </View>
+
+          {/* Quick Action to Trigger Order Terrain Modal */}
+          <TouchableOpacity
+            style={{ backgroundColor: Colors.primary, paddingHorizontal: 14, paddingVertical: 10, borderRadius: 16, flexDirection: 'row', alignItems: 'center', gap: 6, elevation: 4 }}
+            onPress={() => {
+              if (agentRestaurants.length > 0) {
+                setAgentOrderForm(prev => ({
+                  ...prev,
+                  restaurantId: agentRestaurants[0].id,
+                  restaurantName: agentRestaurants[0].name
+                }));
+              }
+              setShowAgentOrderModal(true);
+            }}
+          >
+            <Ionicons name="cart" size={18} color="white" />
+            <Text style={{ color: 'white', fontWeight: '800', fontSize: 12 }}>+ Vente Terrain</Text>
+          </TouchableOpacity>
         </View>
 
         {agentTab === 'home' && (
@@ -4479,6 +4685,330 @@ const getCategoryLabel = (cat?: string) => {
               </TouchableOpacity>
             </View>
           </View>
+        </Modal>
+
+        {/* ZONE SELECTION MODAL */}
+        <Modal visible={showZoneModal} transparent animationType="fade">
+          <View style={{ flex: 1, backgroundColor: 'rgba(15, 23, 42, 0.75)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+            <View style={{ width: '100%', maxWidth: 340, backgroundColor: 'white', borderRadius: 24, padding: 20, elevation: 10 }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                <Text style={{ fontSize: 16, fontWeight: '900', color: '#0F172A' }}>📍 Zone de Prospection</Text>
+                <TouchableOpacity onPress={() => setShowZoneModal(false)} style={{ padding: 4 }}>
+                  <Ionicons name="close-circle" size={24} color="#9CA3AF" />
+                </TouchableOpacity>
+              </View>
+
+              <Text style={{ fontSize: 12, color: Colors.textSecondary, marginBottom: 14 }}>
+                Sélectionnez la zone géographique dans laquelle vous prospectez actuellement :
+              </Text>
+
+              {[
+                'Cocody',
+                'Plateau',
+                'Marcory / Zone 4',
+                'Yopougon',
+                'Riviera',
+                'Treichville',
+                'Toutes les zones'
+              ].map((z) => (
+                <TouchableOpacity
+                  key={z}
+                  style={[
+                    {
+                      paddingVertical: 12,
+                      paddingHorizontal: 14,
+                      borderRadius: 14,
+                      marginBottom: 8,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      borderWidth: 1,
+                      borderColor: '#E2E8F0',
+                      backgroundColor: '#F8FAFC'
+                    },
+                    agentZone === z && {
+                      backgroundColor: Colors.primaryLight,
+                      borderColor: Colors.primary
+                    }
+                  ]}
+                  onPress={() => {
+                    setAgentZone(z);
+                    setShowZoneModal(false);
+                  }}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                    <Ionicons name="map" size={18} color={agentZone === z ? Colors.primary : '#64748B'} />
+                    <Text style={{ fontSize: 13, fontWeight: agentZone === z ? '800' : '600', color: agentZone === z ? Colors.primary : '#1E293B' }}>
+                      {z}
+                    </Text>
+                  </View>
+                  {agentZone === z && (
+                    <Ionicons name="checkmark-circle" size={18} color={Colors.primary} />
+                  )}
+                </TouchableOpacity>
+              ))}
+
+              <TouchableOpacity
+                style={{ backgroundColor: '#0F172A', borderRadius: 14, paddingVertical: 12, alignItems: 'center', marginTop: 8 }}
+                onPress={() => setShowZoneModal(false)}
+              >
+                <Text style={{ color: 'white', fontWeight: '800', fontSize: 13 }}>Fermer</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+
+        {/* AGENT CLIENT ORDER MODAL */}
+        <Modal visible={showAgentOrderModal} animationType="slide">
+          <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }} edges={['top', 'bottom']}>
+            <View style={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 14, borderBottomWidth: 1, borderBottomColor: '#E2E8F0', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+              <View>
+                <Text style={{ fontSize: 18, fontWeight: '900', color: '#0F172A' }}>🛍️ Vente Terrain / Bureau</Text>
+                <Text style={{ fontSize: 11, fontWeight: '700', color: Colors.primary, marginTop: 2 }}>
+                  Prise de commande direct pour Client (Zone : {agentZone})
+                </Text>
+              </View>
+              <TouchableOpacity onPress={() => setShowAgentOrderModal(false)} style={{ padding: 4 }}>
+                <Ionicons name="close-circle" size={24} color="#9CA3AF" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={{ flex: 1, padding: 20 }} showsVerticalScrollIndicator={false}>
+              {/* Step 1: Restaurant Selection */}
+              <Text style={{ fontSize: 13, fontWeight: '800', color: '#1E293B', marginBottom: 8 }}>1. Choisir le Restaurant Partner</Text>
+              {agentRestaurants.length === 0 ? (
+                <Text style={{ fontSize: 12, color: Colors.textSecondary, marginBottom: 16 }}>Aucun restaurant disponible.</Text>
+              ) : (
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 16 }}>
+                  {agentRestaurants.map((resto) => (
+                    <TouchableOpacity
+                      key={resto.id}
+                      style={[
+                        { paddingHorizontal: 14, paddingVertical: 10, borderRadius: 14, backgroundColor: '#F1F5F9', marginRight: 8, borderWidth: 1, borderColor: '#CBD5E1' },
+                        agentOrderForm.restaurantId === resto.id && { backgroundColor: Colors.primary, borderColor: Colors.primary }
+                      ]}
+                      onPress={() => setAgentOrderForm(prev => ({ ...prev, restaurantId: resto.id, restaurantName: resto.name }))}
+                    >
+                      <Text style={[{ fontSize: 13, fontWeight: '700', color: '#1E293B' }, agentOrderForm.restaurantId === resto.id && { color: 'white' }]}>
+                        {resto.name}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              )}
+
+              {/* Step 2: Offer Selection */}
+              <Text style={{ fontSize: 13, fontWeight: '800', color: '#1E293B', marginBottom: 8 }}>2. Choisir l'Offre Flash / Deal</Text>
+              <View style={{ gap: 8, marginBottom: 16 }}>
+                {[...flashOffers, ...dealOffers].slice(0, 8).map((off) => (
+                  <TouchableOpacity
+                    key={off.id}
+                    style={[
+                      { padding: 12, borderRadius: 14, backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+                      agentOrderForm.offerId === off.id && { backgroundColor: Colors.primaryLight, borderColor: Colors.primary }
+                    ]}
+                    onPress={() => setAgentOrderForm(prev => ({
+                      ...prev,
+                      offerId: off.id,
+                      offerTitle: off.title,
+                      offerType: off.type || 'flash',
+                      price: Number(off.priceNew || off.price_promo || 5000)
+                    }))}
+                  >
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 13, fontWeight: '800', color: '#0F172A' }}>{off.title}</Text>
+                      <Text style={{ fontSize: 11, fontWeight: '600', color: Colors.primary, marginTop: 2 }}>
+                        {off.type === 'deal' ? '❤️ DEAL' : '⚡ FLASH'} • {Number(off.priceNew || off.price_promo || 5000).toLocaleString('fr-FR')} FCFA
+                      </Text>
+                    </View>
+                    {agentOrderForm.offerId === off.id && (
+                      <Ionicons name="checkmark-circle" size={20} color={Colors.primary} />
+                    )}
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              {/* Step 3: Quantité & Calcul du montant */}
+              <View style={{ backgroundColor: '#F1F5F9', padding: 14, borderRadius: 14, marginBottom: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                <View>
+                  <Text style={{ fontSize: 11, fontWeight: '700', color: Colors.textSecondary }}>Montant Total de la vente</Text>
+                  <Text style={{ fontSize: 20, fontWeight: '900', color: Colors.primary, marginTop: 2 }}>
+                    {(agentOrderForm.price * agentOrderForm.quantity).toLocaleString('fr-FR')} FCFA
+                  </Text>
+                  <Text style={{ fontSize: 11, fontWeight: '800', color: '#10B981', marginTop: 2 }}>
+                    🎁 Commission Agent (+10%) : +{((agentOrderForm.price * agentOrderForm.quantity) * 0.10).toLocaleString('fr-FR')} FCFA
+                  </Text>
+                </View>
+
+                {/* Quantity Controls */}
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: 'white', padding: 6, borderRadius: 12, borderWidth: 1, borderColor: '#CBD5E1' }}>
+                  <TouchableOpacity
+                    onPress={() => setAgentOrderForm(prev => ({ ...prev, quantity: Math.max(1, prev.quantity - 1) }))}
+                    style={{ width: 28, height: 28, borderRadius: 8, backgroundColor: '#F1F5F9', alignItems: 'center', justifyContent: 'center' }}
+                  >
+                    <Text style={{ fontSize: 16, fontWeight: '900', color: '#1E293B' }}>-</Text>
+                  </TouchableOpacity>
+                  <Text style={{ fontSize: 15, fontWeight: '900', color: '#0F172A' }}>{agentOrderForm.quantity}</Text>
+                  <TouchableOpacity
+                    onPress={() => setAgentOrderForm(prev => ({ ...prev, quantity: prev.quantity + 1 }))}
+                    style={{ width: 28, height: 28, borderRadius: 8, backgroundColor: Colors.primary, alignItems: 'center', justifyContent: 'center' }}
+                  >
+                    <Text style={{ fontSize: 16, fontWeight: '900', color: 'white' }}>+</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              {/* Step 4: Client Lambda Info */}
+              <Text style={{ fontSize: 13, fontWeight: '800', color: '#1E293B', marginBottom: 4 }}>3. Coordonnées du Client Lambda</Text>
+              <TextInput
+                style={[styles.input, { backgroundColor: '#F8FAFC' }]}
+                placeholder="Nom & Prénom du client (ex: Koffi Jean)"
+                value={agentOrderForm.clientName}
+                onChangeText={t => setAgentOrderForm(prev => ({ ...prev, clientName: t }))}
+              />
+              <TextInput
+                style={[styles.input, { backgroundColor: '#F8FAFC', marginTop: -4 }]}
+                placeholder="Téléphone mobile (ex: 07 07 07 07 07)"
+                keyboardType="phone-pad"
+                value={agentOrderForm.clientPhone}
+                onChangeText={t => setAgentOrderForm(prev => ({ ...prev, clientPhone: t }))}
+              />
+
+              {/* Step 5: Payment Method */}
+              <Text style={{ fontSize: 13, fontWeight: '800', color: '#1E293B', marginBottom: 8, marginTop: 8 }}>4. Mode d'Encaissement</Text>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 20 }}>
+                {[
+                  { id: 'cash', label: '💵 Espèces (Cash à l\'agent)' },
+                  { id: 'wave', label: '🌊 Wave Mobile' },
+                  { id: 'orange', label: '🟧 Orange Money' },
+                  { id: 'mtn', label: '🟨 MTN Mobile Money' },
+                  { id: 'moov', label: '🟦 Moov Money' },
+                ].map((pm) => (
+                  <TouchableOpacity
+                    key={pm.id}
+                    style={[
+                      { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12, backgroundColor: '#F1F5F9', borderWidth: 1, borderColor: '#CBD5E1' },
+                      agentOrderForm.paymentMethod === pm.id && { backgroundColor: Colors.primary, borderColor: Colors.primary }
+                    ]}
+                    onPress={() => setAgentOrderForm(prev => ({ ...prev, paymentMethod: pm.id as any }))}
+                  >
+                    <Text style={[{ fontSize: 11, fontWeight: '700', color: '#1E293B' }, agentOrderForm.paymentMethod === pm.id && { color: 'white' }]}>
+                      {pm.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              <TouchableOpacity
+                style={[styles.actionBtn, { backgroundColor: Colors.primary }, isCreatingResto && { opacity: 0.7 }]}
+                onPress={handleCreateAgentClientOrder}
+                disabled={isCreatingResto}
+              >
+                {isCreatingResto ? (
+                  <ActivityIndicator color="white" size="small" />
+                ) : (
+                  <Text style={styles.actionBtnText}>🚀 Valider la vente terrain & Générer Pass</Text>
+                )}
+              </TouchableOpacity>
+              <View style={{ height: 40 }} />
+            </ScrollView>
+          </SafeAreaView>
+        </Modal>
+
+        {/* GENERATED PASS QR MODAL */}
+        <Modal visible={showPassQRModal} animationType="slide">
+          <SafeAreaView style={{ flex: 1, backgroundColor: '#0B0F19' }} edges={['top', 'bottom']}>
+            <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20, alignItems: 'center' }} showsVerticalScrollIndicator={false}>
+              
+              <View style={{ width: '100%', alignItems: 'flex-end', marginBottom: 10 }}>
+                <TouchableOpacity onPress={() => setShowPassQRModal(false)} style={{ padding: 6 }}>
+                  <Ionicons name="close-circle" size={28} color="#9CA3AF" />
+                </TouchableOpacity>
+              </View>
+
+              <Text style={{ fontSize: 13, fontWeight: '800', color: '#10B981', textTransform: 'uppercase', letterSpacing: 1 }}>
+                🎉 VENTE ENREGISTRÉE AVEC SUCCÈS !
+              </Text>
+              <Text style={{ fontSize: 22, fontWeight: '900', color: 'white', textAlign: 'center', marginTop: 4, marginBottom: 20 }}>
+                Pass de Consommation Client
+              </Text>
+
+              {/* Pass Card Container */}
+              <View style={{ width: '100%', maxWidth: 360, backgroundColor: 'white', borderRadius: 24, padding: 24, alignItems: 'center', borderTopWidth: 6, borderTopColor: Colors.primary, elevation: 12, shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.3, shadowRadius: 10 }}>
+                <Text style={{ fontSize: 10, fontWeight: '800', color: Colors.primary, textTransform: 'uppercase', letterSpacing: 1 }}>
+                  BRICK DEAL • PASS OFFICIEL
+                </Text>
+                
+                <Text style={{ fontSize: 18, fontWeight: '900', color: '#0F172A', marginTop: 6, textAlign: 'center' }}>
+                  {generatedPassOrder?.offers?.title || generatedPassOrder?.offerTitle || 'Offre Spéciale'}
+                </Text>
+                
+                <Text style={{ fontSize: 12, fontWeight: '700', color: Colors.textSecondary, marginTop: 2 }}>
+                  🏢 {generatedPassOrder?.restaurants?.name || generatedPassOrder?.restaurantName || 'Restaurant Partenaire'}
+                </Text>
+
+                {/* Code Box */}
+                <View style={{ width: '100%', backgroundColor: '#0F172A', borderRadius: 16, padding: 16, alignItems: 'center', marginVertical: 18 }}>
+                  <Text style={{ fontSize: 10, fontWeight: '700', color: '#94A3B8', textTransform: 'uppercase' }}>CODE DE RÉSERVATION</Text>
+                  <Text style={{ fontSize: 26, fontWeight: '900', color: '#10B981', letterSpacing: 2, marginTop: 4 }}>
+                    {generatedPassOrder?.reservation_code || 'RES-7892-AZ'}
+                  </Text>
+                </View>
+
+                {/* Order Meta */}
+                <View style={{ width: '100%', gap: 8, borderTopWidth: 1, borderTopColor: '#E2E8F0', paddingTop: 14 }}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: '#64748B' }}>Client :</Text>
+                    <Text style={{ fontSize: 12, fontWeight: '800', color: '#0F172A' }}>{generatedPassOrder?.client_name || 'Client Lambda'}</Text>
+                  </View>
+
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: '#64748B' }}>Montant Payé :</Text>
+                    <Text style={{ fontSize: 14, fontWeight: '900', color: Colors.primary }}>
+                      {Number(generatedPassOrder?.total_amount || 0).toLocaleString('fr-FR')} FCFA
+                    </Text>
+                  </View>
+
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: '#64748B' }}>Commission Agent :</Text>
+                    <Text style={{ fontSize: 13, fontWeight: '900', color: '#10B981' }}>
+                      +{Number(generatedPassOrder?.commission_amount || 0).toLocaleString('fr-FR')} FCFA
+                    </Text>
+                  </View>
+                </View>
+              </View>
+
+              {/* Action Buttons: PDF & Image Downloads */}
+              <View style={{ width: '100%', maxWidth: 360, gap: 10, marginTop: 24 }}>
+                <TouchableOpacity
+                  style={{ backgroundColor: Colors.primary, borderRadius: 16, paddingVertical: 14, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 8, elevation: 4 }}
+                  onPress={() => handleDownloadPassPDF(generatedPassOrder)}
+                  disabled={isExportingPass}
+                >
+                  <Ionicons name="document-text-outline" size={20} color="white" />
+                  <Text style={{ color: 'white', fontWeight: '800', fontSize: 14 }}>
+                    {isExportingPass ? 'Génération du PDF...' : '📄 Télécharger le Pass en PDF'}
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={{ backgroundColor: '#1E293B', borderRadius: 16, paddingVertical: 14, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 8, borderWidth: 1, borderColor: '#334155' }}
+                  onPress={() => handleDownloadPassPDF(generatedPassOrder)}
+                  disabled={isExportingPass}
+                >
+                  <Ionicons name="image-outline" size={20} color="white" />
+                  <Text style={{ color: 'white', fontWeight: '800', fontSize: 14 }}>🖼️ Exporter / Partager en Image HD</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={{ backgroundColor: '#F1F5F9', borderRadius: 16, paddingVertical: 12, alignItems: 'center', marginTop: 4 }}
+                  onPress={() => setShowPassQRModal(false)}
+                >
+                  <Text style={{ color: '#1E293B', fontWeight: '800', fontSize: 13 }}>Fermer et retourner au Dashboard</Text>
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
+          </SafeAreaView>
         </Modal>
 
         {/* CREATE PROPOSAL MODAL (Agent exclusive) */}
