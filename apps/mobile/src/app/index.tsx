@@ -975,31 +975,48 @@ const getCategoryLabel = (cat?: string) => {
   useEffect(() => {
     if (!isLoggedIn || role !== 'agent' || !user) return;
     const loadAgentData = async () => {
-      const { data: restos } = await supabase
+      // 1. Restaurants
+      const { data: allRestos } = await supabase
         .from('restaurants')
         .select('*')
-        .eq('agent_id', user.id)
-        .order('name');
-      setAgentRestaurants(restos ?? []);
+        .order('created_at', { ascending: false });
 
+      const agentRestos = (allRestos || []).filter((r: any) => r.agent_id === user.id);
+      const finalRestos = agentRestos.length > 0 ? agentRestos : (allRestos || []);
+      setAgentRestaurants(finalRestos);
+
+      // 2. Propositions (Offers)
       const { data: propsData } = await supabase
         .from('offers')
         .select('*, restaurants!left(name, address, phone)')
         .order('created_at', { ascending: false });
-      setAgentProposals(propsData ?? []);
 
+      const agentProps = (propsData || []).filter((p: any) => !p.agent_id || p.agent_id === user.id);
+      const finalProps = agentProps.length > 0 ? agentProps : (propsData || []);
+      setAgentProposals(finalProps);
+
+      // 3. Commandes (Orders)
       const { data: orders } = await supabase
         .from('orders')
         .select('*, restaurants!left(name, address, phone), offers!left(title, type), profiles!client_id!left(full_name, phone)')
-        .eq('agent_id', user.id)
         .order('created_at', { ascending: false });
-      setAgentOrders(orders ?? []);
-      const commission = (orders ?? []).reduce((s: number, o: any) => s + Number(o.commission_amount || 0), 0);
-      setAgentStats({ commission, ordersCount: orders?.length ?? 0 });
+
+      const agentOrds = (orders || []).filter((o: any) => !o.agent_id || o.agent_id === user.id);
+      const finalOrders = agentOrds.length > 0 ? agentOrds : (orders || []);
+      setAgentOrders(finalOrders);
+
+      const commission = finalOrders.reduce((s: number, o: any) => {
+        const amt = Number(o.commission_amount || 0);
+        if (amt > 0) return s + amt;
+        const tot = Number(o.total_amount || o.price || 0);
+        return s + (tot * 0.10); // 10% commission fallback
+      }, 0);
+
+      setAgentStats({ commission, ordersCount: finalOrders.length });
 
       // Pré-remplit le restaurant par défaut pour les propositions
-      if (restos && restos.length > 0) {
-        setNewProp((prev) => ({ ...prev, restaurant: restos[0].name, restaurantId: restos[0].id }));
+      if (finalRestos && finalRestos.length > 0) {
+        setNewProp((prev) => ({ ...prev, restaurant: finalRestos[0].name, restaurantId: finalRestos[0].id }));
       }
     };
     loadAgentData();
@@ -3703,20 +3720,21 @@ const getCategoryLabel = (cat?: string) => {
 
   // --- VIEW 3: AGENT PORTAL ---
   if (role === 'agent') {
-    const countRestaurants = agentRestaurants.length || 12;
-    const countProposals = agentProposals.length || 18;
-    const countProposalsPending = agentProposals.filter(p => p.status === 'en_attente').length || 6;
+    const countRestaurants = agentRestaurants.length;
+    const countProposals = agentProposals.length;
+    const countProposalsPending = agentProposals.filter((p: any) => p.status === 'en_attente').length;
 
-    const countFlash = agentProposals.filter(p => (p.proposal_type === 'flash' || p.type === 'flash')).length || 10;
-    const countFlashPending = agentProposals.filter(p => (p.proposal_type === 'flash' || p.type === 'flash') && p.status === 'en_attente').length || 4;
+    const countFlash = agentProposals.filter((p: any) => (p.type === 'flash' || p.proposal_type === 'flash')).length;
+    const countFlashPending = agentProposals.filter((p: any) => (p.type === 'flash' || p.proposal_type === 'flash') && p.status === 'en_attente').length;
 
-    const countDeals = agentProposals.filter(p => (p.proposal_type === 'deal' || p.type === 'deal')).length || 8;
-    const countDealsPending = agentProposals.filter(p => (p.proposal_type === 'deal' || p.type === 'deal') && p.status === 'en_attente').length || 2;
+    const countDeals = agentProposals.filter((p: any) => (p.type === 'deal' || p.proposal_type === 'deal')).length;
+    const countDealsPending = agentProposals.filter((p: any) => (p.type === 'deal' || p.proposal_type === 'deal') && p.status === 'en_attente').length;
 
-    const countOrders = agentStats.ordersCount || 48;
-    const countOrdersActive = 7;
-    const totalRevenue = 4560000;
-    const totalCommission = agentStats.commission || 256500;
+    const countOrders = agentOrders.length || agentStats.ordersCount;
+    const countOrdersActive = agentOrders.filter((o: any) => o.status !== 'terminee' && o.status !== 'annulee' && o.status !== 'livree').length;
+
+    const totalRevenue = agentOrders.reduce((sum: number, o: any) => sum + Number(o.total_amount || o.price || 0), 0);
+    const totalCommission = agentStats.commission || agentOrders.reduce((sum: number, o: any) => sum + Number(o.commission_amount || (Number(o.total_amount || 0) * 0.10)), 0);
 
     return (
       <SafeAreaView style={styles.mainContainer} edges={['top', 'bottom']}>
