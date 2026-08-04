@@ -326,6 +326,18 @@ export default function MobileApp() {
       }));
 
       setAgentOrderStep(0);
+      setAgentOrderForm({
+        restaurantId: '',
+        restaurantName: '',
+        offerId: '',
+        offerTitle: '',
+        offerType: 'flash',
+        price: 0,
+        clientName: '',
+        clientPhone: '',
+        quantity: 1,
+        paymentMethod: 'wave'
+      });
       setGeneratedPassOrder(createdOrder);
       setShowPassQRModal(true);
     } catch (err: any) {
@@ -4081,13 +4093,18 @@ const getCategoryLabel = (cat?: string) => {
           <TouchableOpacity
             style={{ backgroundColor: Colors.primary, paddingHorizontal: 14, paddingVertical: 10, borderRadius: 16, flexDirection: 'row', alignItems: 'center', gap: 6, elevation: 4 }}
             onPress={() => {
-              if (agentRestaurants.length > 0) {
-                setAgentOrderForm(prev => ({
-                  ...prev,
-                  restaurantId: agentRestaurants[0].id,
-                  restaurantName: agentRestaurants[0].name
-                }));
-              }
+              setAgentOrderForm({
+                restaurantId: agentRestaurants.length > 0 ? agentRestaurants[0].id : '',
+                restaurantName: agentRestaurants.length > 0 ? agentRestaurants[0].name : '',
+                offerId: '',
+                offerTitle: '',
+                offerType: 'flash',
+                price: 0,
+                clientName: '',
+                clientPhone: '',
+                quantity: 1,
+                paymentMethod: 'wave'
+              });
               setAgentTab('orders');
               setAgentOrderStep(0);
             }}
@@ -4784,15 +4801,18 @@ const getCategoryLabel = (cat?: string) => {
                               style={{ backgroundColor: Colors.primary, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 10, flexDirection: 'row', alignItems: 'center', gap: 6, elevation: 2 }}
                               onPress={() => {
                                 const effectiveRestoId = item.restaurant_id || item.restaurantId || restoObj?.id || (agentRestaurants.length > 0 ? agentRestaurants[0].id : '') || 'resto_default';
-                                setAgentOrderForm(prev => ({
-                                  ...prev,
+                                setAgentOrderForm({
                                   offerId: item.id,
                                   offerTitle: item.title,
                                   offerType: item.type || 'flash',
                                   price: pNew,
                                   restaurantName: restoName,
-                                  restaurantId: item.restaurant_id || restoObj.id || ''
-                                }));
+                                  restaurantId: effectiveRestoId,
+                                  clientName: '',
+                                  clientPhone: '',
+                                  quantity: 1,
+                                  paymentMethod: 'wave'
+                                });
                                 setAgentOrderStep(1);
                               }}
                             >
