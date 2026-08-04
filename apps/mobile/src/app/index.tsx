@@ -4901,7 +4901,7 @@ const getCategoryLabel = (cat?: string) => {
                       {/* Wave Logo Badge Image */}
                       <View style={{ width: 50, height: 50, borderRadius: 14, backgroundColor: '#1DC4E9', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', borderWidth: 1.5, borderColor: '#00B5DF' }}>
                         <Image
-                          source={{ uri: 'https://images.seeklogo.com/logo-png/43/1/wave-mobile-money-logo-png_seeklogo-439502.png' }}
+                          source={require('../../../../assets/wave_logo.jpg')}
                           style={{ width: 42, height: 42, resizeMode: 'contain' }}
                         />
                       </View>
@@ -5240,93 +5240,121 @@ const getCategoryLabel = (cat?: string) => {
         {/* GENERATED PASS QR MODAL */}
         <Modal visible={showPassQRModal} animationType="slide">
           <SafeAreaView style={{ flex: 1, backgroundColor: '#0B0F19' }} edges={['top', 'bottom']}>
-            <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20, alignItems: 'center' }} showsVerticalScrollIndicator={false}>
+            <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: 40, alignItems: 'center' }} showsVerticalScrollIndicator={false}>
               
-              <View style={{ width: '100%', alignItems: 'flex-end', marginBottom: 10 }}>
-                <TouchableOpacity onPress={() => setShowPassQRModal(false)} style={{ padding: 6 }}>
-                  <Ionicons name="close-circle" size={28} color="#9CA3AF" />
+              {/* Header with close */}
+              <View style={{ width: '100%', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                <View style={{ flex: 1 }} />
+                <TouchableOpacity onPress={() => setShowPassQRModal(false)} style={{ padding: 8, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 20 }}>
+                  <Ionicons name="close" size={24} color="#9CA3AF" />
                 </TouchableOpacity>
               </View>
 
-              <Text style={{ fontSize: 13, fontWeight: '800', color: '#10B981', textTransform: 'uppercase', letterSpacing: 1 }}>
-                🎉 VENTE ENREGISTRÉE AVEC SUCCÈS !
-              </Text>
-              <Text style={{ fontSize: 22, fontWeight: '900', color: 'white', textAlign: 'center', marginTop: 4, marginBottom: 20 }}>
-                Pass de Consommation Client
+              {/* Success Badge */}
+              <View style={{ backgroundColor: 'rgba(16,185,129,0.15)', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 30, marginBottom: 10 }}>
+                <Text style={{ fontSize: 15, fontWeight: '900', color: '#10B981', textTransform: 'uppercase', letterSpacing: 1.5 }}>
+                  🎉 VENTE ENREGISTRÉE !
+                </Text>
+              </View>
+              <Text style={{ fontSize: 26, fontWeight: '900', color: 'white', textAlign: 'center', marginBottom: 24 }}>
+                Pass de Consommation
               </Text>
 
-              {/* Pass Card Container */}
-              <View style={{ width: '100%', maxWidth: 360, backgroundColor: 'white', borderRadius: 24, padding: 24, alignItems: 'center', borderTopWidth: 6, borderTopColor: Colors.primary, elevation: 12, shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.3, shadowRadius: 10 }}>
-                <Text style={{ fontSize: 10, fontWeight: '800', color: Colors.primary, textTransform: 'uppercase', letterSpacing: 1 }}>
-                  BRICK DEAL • PASS OFFICIEL
-                </Text>
+              {/* ===== LARGE PASS CARD ===== */}
+              <View style={{ width: '100%', backgroundColor: 'white', borderRadius: 28, paddingVertical: 32, paddingHorizontal: 24, alignItems: 'center', borderTopWidth: 7, borderTopColor: Colors.primary, elevation: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.35, shadowRadius: 14 }}>
                 
-                <Text style={{ fontSize: 18, fontWeight: '900', color: '#0F172A', marginTop: 6, textAlign: 'center' }}>
+                {/* Brand label */}
+                <View style={{ backgroundColor: '#FFF1F2', paddingHorizontal: 16, paddingVertical: 6, borderRadius: 20, marginBottom: 14 }}>
+                  <Text style={{ fontSize: 12, fontWeight: '900', color: Colors.primary, textTransform: 'uppercase', letterSpacing: 1.5 }}>
+                    🔥 BRICK DEAL • PASS OFFICIEL
+                  </Text>
+                </View>
+                
+                {/* Offer Title - LARGE */}
+                <Text style={{ fontSize: 24, fontWeight: '900', color: '#0F172A', textAlign: 'center', lineHeight: 30, marginBottom: 6 }}>
                   {generatedPassOrder?.offers?.title || generatedPassOrder?.offerTitle || 'Offre Spéciale'}
                 </Text>
                 
-                <Text style={{ fontSize: 12, fontWeight: '700', color: Colors.textSecondary, marginTop: 2 }}>
+                {/* Restaurant */}
+                <Text style={{ fontSize: 15, fontWeight: '700', color: '#64748B', marginBottom: 20, textAlign: 'center' }}>
                   🏢 {generatedPassOrder?.restaurants?.name || generatedPassOrder?.restaurantName || 'Restaurant Partenaire'}
                 </Text>
 
-                {/* Code Box */}
-                <View style={{ width: '100%', backgroundColor: '#0F172A', borderRadius: 16, padding: 16, alignItems: 'center', marginVertical: 18 }}>
-                  <Text style={{ fontSize: 10, fontWeight: '700', color: '#94A3B8', textTransform: 'uppercase' }}>CODE DE RÉSERVATION</Text>
-                  <Text style={{ fontSize: 26, fontWeight: '900', color: '#10B981', letterSpacing: 2, marginTop: 4 }}>
+                {/* ===== CODE BOX - VERY LARGE ===== */}
+                <View style={{ width: '100%', backgroundColor: '#0F172A', borderRadius: 20, paddingVertical: 24, paddingHorizontal: 20, alignItems: 'center', marginBottom: 24 }}>
+                  <Text style={{ fontSize: 12, fontWeight: '800', color: '#94A3B8', textTransform: 'uppercase', letterSpacing: 2 }}>CODE DE RÉSERVATION</Text>
+                  <Text style={{ fontSize: 36, fontWeight: '900', color: '#10B981', letterSpacing: 4, marginTop: 8 }}>
                     {generatedPassOrder?.reservation_code || 'RES-7892-AZ'}
                   </Text>
                 </View>
 
-                {/* Order Meta */}
-                <View style={{ width: '100%', gap: 8, borderTopWidth: 1, borderTopColor: '#E2E8F0', paddingTop: 14 }}>
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                    <Text style={{ fontSize: 12, fontWeight: '700', color: '#64748B' }}>Client :</Text>
-                    <Text style={{ fontSize: 12, fontWeight: '800', color: '#0F172A' }}>{generatedPassOrder?.client_name || 'Client Lambda'}</Text>
+                {/* Dashed separator */}
+                <View style={{ width: '100%', borderTopWidth: 2, borderStyle: 'dashed', borderColor: '#E2E8F0', marginBottom: 20 }} />
+
+                {/* Order Details - LARGE ROWS */}
+                <View style={{ width: '100%', gap: 14 }}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Text style={{ fontSize: 15, fontWeight: '700', color: '#94A3B8' }}>👤 Client</Text>
+                    <Text style={{ fontSize: 16, fontWeight: '900', color: '#0F172A' }}>{generatedPassOrder?.client_name || 'Client Lambda'}</Text>
                   </View>
 
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                    <Text style={{ fontSize: 12, fontWeight: '700', color: '#64748B' }}>Montant Payé :</Text>
-                    <Text style={{ fontSize: 14, fontWeight: '900', color: Colors.primary }}>
+                  <View style={{ height: 1, backgroundColor: '#F1F5F9' }} />
+
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Text style={{ fontSize: 15, fontWeight: '700', color: '#94A3B8' }}>💰 Montant Payé</Text>
+                    <Text style={{ fontSize: 20, fontWeight: '900', color: Colors.primary }}>
                       {Number(generatedPassOrder?.total_amount || 0).toLocaleString('fr-FR')} FCFA
                     </Text>
                   </View>
 
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                    <Text style={{ fontSize: 12, fontWeight: '700', color: '#64748B' }}>Commission Agent :</Text>
-                    <Text style={{ fontSize: 13, fontWeight: '900', color: '#10B981' }}>
+                  <View style={{ height: 1, backgroundColor: '#F1F5F9' }} />
+
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Text style={{ fontSize: 15, fontWeight: '700', color: '#94A3B8' }}>🎁 Commission</Text>
+                    <Text style={{ fontSize: 18, fontWeight: '900', color: '#10B981' }}>
                       +{Number(generatedPassOrder?.commission_amount || 0).toLocaleString('fr-FR')} FCFA
                     </Text>
+                  </View>
+
+                  <View style={{ height: 1, backgroundColor: '#F1F5F9' }} />
+
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Text style={{ fontSize: 15, fontWeight: '700', color: '#94A3B8' }}>📱 Paiement</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <Image source={require('../../../../assets/wave_logo.jpg')} style={{ width: 24, height: 24, borderRadius: 6 }} />
+                      <Text style={{ fontSize: 16, fontWeight: '900', color: '#1DC4E9' }}>Wave</Text>
+                    </View>
                   </View>
                 </View>
               </View>
 
-              {/* Action Buttons: PDF & Image Downloads */}
-              <View style={{ width: '100%', maxWidth: 360, gap: 10, marginTop: 24 }}>
+              {/* ===== ACTION BUTTONS - FULL WIDTH ===== */}
+              <View style={{ width: '100%', gap: 12, marginTop: 28 }}>
                 <TouchableOpacity
-                  style={{ backgroundColor: Colors.primary, borderRadius: 16, paddingVertical: 14, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 8, elevation: 4 }}
+                  style={{ backgroundColor: Colors.primary, borderRadius: 20, paddingVertical: 18, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 10, elevation: 6, shadowColor: Colors.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.4, shadowRadius: 8 }}
                   onPress={() => handleDownloadPassPDF(generatedPassOrder)}
                   disabled={isExportingPass}
                 >
-                  <Ionicons name="document-text-outline" size={20} color="white" />
-                  <Text style={{ color: 'white', fontWeight: '800', fontSize: 14 }}>
-                    {isExportingPass ? 'Génération du PDF...' : '📄 Télécharger le Pass en PDF'}
+                  <Ionicons name="document-text-outline" size={22} color="white" />
+                  <Text style={{ color: 'white', fontWeight: '900', fontSize: 16 }}>
+                    {isExportingPass ? 'Génération...' : '📄 Télécharger en PDF'}
                   </Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
-                  style={{ backgroundColor: '#1E293B', borderRadius: 16, paddingVertical: 14, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 8, borderWidth: 1, borderColor: '#334155' }}
+                  style={{ backgroundColor: '#1E293B', borderRadius: 20, paddingVertical: 18, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 10, borderWidth: 1.5, borderColor: '#334155' }}
                   onPress={() => handleDownloadPassPDF(generatedPassOrder)}
                   disabled={isExportingPass}
                 >
-                  <Ionicons name="image-outline" size={20} color="white" />
-                  <Text style={{ color: 'white', fontWeight: '800', fontSize: 14 }}>🖼️ Exporter / Partager en Image HD</Text>
+                  <Ionicons name="share-social-outline" size={22} color="white" />
+                  <Text style={{ color: 'white', fontWeight: '900', fontSize: 16 }}>🖼️ Partager en Image HD</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
-                  style={{ backgroundColor: '#F1F5F9', borderRadius: 16, paddingVertical: 12, alignItems: 'center', marginTop: 4 }}
+                  style={{ backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 20, paddingVertical: 16, alignItems: 'center', marginTop: 6, borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)' }}
                   onPress={() => setShowPassQRModal(false)}
                 >
-                  <Text style={{ color: '#1E293B', fontWeight: '800', fontSize: 13 }}>Fermer et retourner au Dashboard</Text>
+                  <Text style={{ color: 'white', fontWeight: '800', fontSize: 15 }}>← Retour au Dashboard</Text>
                 </TouchableOpacity>
               </View>
             </ScrollView>
