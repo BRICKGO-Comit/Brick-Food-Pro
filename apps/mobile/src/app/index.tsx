@@ -4949,7 +4949,7 @@ const getCategoryLabel = (cat?: string) => {
                   <View style={{ width: '100%', alignItems: 'center' }}>
                     {/* Wave Logo Large */}
                     <View style={{ width: 100, height: 100, borderRadius: 30, backgroundColor: '#1DC4E9', alignItems: 'center', justifyContent: 'center', marginBottom: 24, elevation: 8, shadowColor: '#1DC4E9', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.4, shadowRadius: 12 }}>
-                      <Image source={require('../../../../assets/wave_logo.jpg')} style={{ width: 80, height: 80, resizeMode: 'contain' }} />
+                      <Image source={require('../../assets/wave_logo.jpg')} style={{ width: 80, height: 80, resizeMode: 'contain' }} />
                     </View>
 
                     <Text style={{ fontSize: 22, fontWeight: '900', color: 'white', textAlign: 'center', marginBottom: 6 }}>
@@ -4994,7 +4994,7 @@ const getCategoryLabel = (cat?: string) => {
                       style={{ width: '100%', backgroundColor: '#1DC4E9', borderRadius: 20, paddingVertical: 18, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 10, elevation: 6, shadowColor: '#1DC4E9', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.4, shadowRadius: 10 }}
                       onPress={handleCreateAgentClientOrder}
                     >
-                      <Image source={require('../../../../assets/wave_logo.jpg')} style={{ width: 28, height: 28, borderRadius: 8 }} />
+                      <Image source={require('../../assets/wave_logo.jpg')} style={{ width: 28, height: 28, borderRadius: 8 }} />
                       <Text style={{ color: 'white', fontWeight: '900', fontSize: 17 }}>Confirmer le Paiement Wave</Text>
                     </TouchableOpacity>
 
@@ -5345,7 +5345,7 @@ const getCategoryLabel = (cat?: string) => {
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                     <Text style={{ fontSize: 15, fontWeight: '700', color: '#94A3B8' }}>📱 Paiement</Text>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                      <Image source={require('../../../../assets/wave_logo.jpg')} style={{ width: 24, height: 24, borderRadius: 6 }} />
+                      <Image source={require('../../assets/wave_logo.jpg')} style={{ width: 24, height: 24, borderRadius: 6 }} />
                       <Text style={{ fontSize: 16, fontWeight: '900', color: '#1DC4E9' }}>Wave</Text>
                     </View>
                   </View>
