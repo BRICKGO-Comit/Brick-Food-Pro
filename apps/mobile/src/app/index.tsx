@@ -4864,63 +4864,6 @@ const getCategoryLabel = (cat?: string) => {
                     </View>
                   </View>
 
-                  {/* Step 2: Exclusive Wave Payment Card */}
-                  <View style={{ backgroundColor: 'white', padding: 16, borderRadius: 18, marginBottom: 16, borderWidth: 1, borderColor: '#E2E8F0', elevation: 2 }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                        <View style={{ width: 28, height: 28, borderRadius: 8, backgroundColor: '#E0F7FC', alignItems: 'center', justifyContent: 'center' }}>
-                          <Ionicons name="card" size={16} color="#00C2E8" />
-                        </View>
-                        <Text style={{ fontSize: 14, fontWeight: '800', color: '#0F172A' }}>2. Mode d'Encaissement Officiel</Text>
-                      </View>
-                      <View style={{ backgroundColor: '#ECFDF5', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, borderWidth: 1, borderColor: '#A7F3D0' }}>
-                        <Text style={{ fontSize: 10, fontWeight: '800', color: '#047857' }}>✓ WAVE SEULEMENT</Text>
-                      </View>
-                    </View>
-
-                    {/* Exclusive Wave Mobile Card */}
-                    <TouchableOpacity
-                      style={{
-                        backgroundColor: '#F0FAFD',
-                        borderWidth: 2,
-                        borderColor: '#1DC4E9',
-                        borderRadius: 16,
-                        padding: 14,
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        gap: 14,
-                        shadowColor: '#1DC4E9',
-                        shadowOffset: { width: 0, height: 4 },
-                        shadowOpacity: 0.15,
-                        shadowRadius: 8,
-                        elevation: 3
-                      }}
-                      onPress={() => setAgentOrderForm(prev => ({ ...prev, paymentMethod: 'wave' }))}
-                      activeOpacity={0.9}
-                    >
-                      {/* Wave Logo Badge Image */}
-                      <View style={{ width: 50, height: 50, borderRadius: 14, backgroundColor: '#1DC4E9', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', borderWidth: 1.5, borderColor: '#00B5DF' }}>
-                        <Image
-                          source={require('../../../../assets/wave_logo.jpg')}
-                          style={{ width: 42, height: 42, resizeMode: 'contain' }}
-                        />
-                      </View>
-
-                      <View style={{ flex: 1 }}>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                          <Text style={{ fontSize: 16, fontWeight: '900', color: '#0B2545' }}>Wave Mobile Money</Text>
-                          <View style={{ backgroundColor: '#1DC4E9', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 }}>
-                            <Text style={{ fontSize: 9, fontWeight: '900', color: 'white' }}>OFFICIEL</Text>
-                          </View>
-                        </View>
-                        <Text style={{ fontSize: 11, fontWeight: '700', color: '#0084A8', marginTop: 2 }}>
-                          Paiement instantané par QR Code / Transfert sans frais (0%)
-                        </Text>
-                      </View>
-
-                      <Ionicons name="checkmark-circle" size={24} color="#1DC4E9" />
-                    </TouchableOpacity>
-                  </View>
 
                   {/* Step 3: Quantité & Calcul du montant */}
                   <View style={{ backgroundColor: 'white', padding: 16, borderRadius: 18, marginBottom: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderWidth: 1, borderColor: '#E2E8F0', elevation: 2 }}>
@@ -4983,19 +4926,100 @@ const getCategoryLabel = (cat?: string) => {
                       { backgroundColor: Colors.primary, paddingHorizontal: 18, paddingVertical: 12, borderRadius: 14, flexDirection: 'row', alignItems: 'center', gap: 6, elevation: 4 },
                       isCreatingResto && { opacity: 0.7 }
                     ]}
-                    onPress={handleCreateAgentClientOrder}
+                    onPress={() => setAgentOrderStep(2)}
                     disabled={isCreatingResto}
                   >
                     {isCreatingResto ? (
                       <ActivityIndicator color="white" size="small" />
                     ) : (
                       <>
-                        <Text style={{ color: 'white', fontWeight: '900', fontSize: 13 }}>Valider Vente & Pass</Text>
+                        <Text style={{ color: 'white', fontWeight: '900', fontSize: 13 }}>Passer au Paiement 💳</Text>
                         <Ionicons name="arrow-forward" size={16} color="white" />
                       </>
                     )}
                   </TouchableOpacity>
                 </View>
+              </View>
+            )}
+            {/* --- STEP 2: ÉCRAN DE PAIEMENT WAVE --- */}
+            {agentOrderStep === 2 && (
+              <View style={{ flex: 1, backgroundColor: '#0B0F19', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+                {!isCreatingResto && !generatedPassOrder ? (
+                  // Payment confirmation screen before processing
+                  <View style={{ width: '100%', alignItems: 'center' }}>
+                    {/* Wave Logo Large */}
+                    <View style={{ width: 100, height: 100, borderRadius: 30, backgroundColor: '#1DC4E9', alignItems: 'center', justifyContent: 'center', marginBottom: 24, elevation: 8, shadowColor: '#1DC4E9', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.4, shadowRadius: 12 }}>
+                      <Image source={require('../../../../assets/wave_logo.jpg')} style={{ width: 80, height: 80, resizeMode: 'contain' }} />
+                    </View>
+
+                    <Text style={{ fontSize: 22, fontWeight: '900', color: 'white', textAlign: 'center', marginBottom: 6 }}>
+                      Paiement Wave Mobile Money
+                    </Text>
+                    <Text style={{ fontSize: 14, fontWeight: '600', color: '#94A3B8', textAlign: 'center', marginBottom: 30 }}>
+                      Paiement instantané • Sans frais (0%)
+                    </Text>
+
+                    {/* Order Summary Card */}
+                    <View style={{ width: '100%', backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 20, padding: 20, marginBottom: 30, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }}>
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+                        <Text style={{ fontSize: 14, fontWeight: '700', color: '#94A3B8' }}>Pack</Text>
+                        <Text style={{ fontSize: 15, fontWeight: '900', color: 'white' }} numberOfLines={1}>{agentOrderForm.offerTitle || 'Offre'}</Text>
+                      </View>
+                      <View style={{ height: 1, backgroundColor: 'rgba(255,255,255,0.08)' }} />
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 14, marginBottom: 14 }}>
+                        <Text style={{ fontSize: 14, fontWeight: '700', color: '#94A3B8' }}>Établissement</Text>
+                        <Text style={{ fontSize: 14, fontWeight: '800', color: 'white' }}>{agentOrderForm.restaurantName || 'Restaurant'}</Text>
+                      </View>
+                      <View style={{ height: 1, backgroundColor: 'rgba(255,255,255,0.08)' }} />
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 14, marginBottom: 14 }}>
+                        <Text style={{ fontSize: 14, fontWeight: '700', color: '#94A3B8' }}>Client</Text>
+                        <Text style={{ fontSize: 14, fontWeight: '800', color: 'white' }}>{agentOrderForm.clientName || 'Client'}</Text>
+                      </View>
+                      <View style={{ height: 1, backgroundColor: 'rgba(255,255,255,0.08)' }} />
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 14, marginBottom: 14 }}>
+                        <Text style={{ fontSize: 14, fontWeight: '700', color: '#94A3B8' }}>Quantité</Text>
+                        <Text style={{ fontSize: 15, fontWeight: '900', color: 'white' }}>{agentOrderForm.quantity}x</Text>
+                      </View>
+                      <View style={{ height: 1, backgroundColor: 'rgba(255,255,255,0.08)' }} />
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 14 }}>
+                        <Text style={{ fontSize: 16, fontWeight: '900', color: '#10B981' }}>💰 TOTAL</Text>
+                        <Text style={{ fontSize: 22, fontWeight: '900', color: '#10B981' }}>
+                          {(agentOrderForm.price * agentOrderForm.quantity).toLocaleString('fr-FR')} FCFA
+                        </Text>
+                      </View>
+                    </View>
+
+                    {/* Pay Button */}
+                    <TouchableOpacity
+                      style={{ width: '100%', backgroundColor: '#1DC4E9', borderRadius: 20, paddingVertical: 18, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 10, elevation: 6, shadowColor: '#1DC4E9', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.4, shadowRadius: 10 }}
+                      onPress={handleCreateAgentClientOrder}
+                    >
+                      <Image source={require('../../../../assets/wave_logo.jpg')} style={{ width: 28, height: 28, borderRadius: 8 }} />
+                      <Text style={{ color: 'white', fontWeight: '900', fontSize: 17 }}>Confirmer le Paiement Wave</Text>
+                    </TouchableOpacity>
+
+                    {/* Back button */}
+                    <TouchableOpacity
+                      style={{ marginTop: 16, paddingVertical: 14, alignItems: 'center' }}
+                      onPress={() => setAgentOrderStep(1)}
+                    >
+                      <Text style={{ color: '#94A3B8', fontWeight: '700', fontSize: 14 }}>← Retour au formulaire</Text>
+                    </TouchableOpacity>
+                  </View>
+                ) : isCreatingResto ? (
+                  // Processing animation
+                  <View style={{ alignItems: 'center' }}>
+                    <View style={{ width: 100, height: 100, borderRadius: 50, backgroundColor: 'rgba(29,196,233,0.15)', alignItems: 'center', justifyContent: 'center', marginBottom: 24 }}>
+                      <ActivityIndicator size="large" color="#1DC4E9" />
+                    </View>
+                    <Text style={{ fontSize: 20, fontWeight: '900', color: 'white', textAlign: 'center', marginBottom: 8 }}>
+                      Traitement en cours...
+                    </Text>
+                    <Text style={{ fontSize: 14, fontWeight: '600', color: '#94A3B8', textAlign: 'center' }}>
+                      Validation du paiement Wave Mobile Money
+                    </Text>
+                  </View>
+                ) : null}
               </View>
             )}
           </View>
