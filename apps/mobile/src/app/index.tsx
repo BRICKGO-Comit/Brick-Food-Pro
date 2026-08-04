@@ -4913,220 +4913,287 @@ const getCategoryLabel = (cat?: string) => {
         {/* AGENT CLIENT ORDER MODAL */}
         <Modal visible={showAgentOrderModal} animationType="slide">
           <SafeAreaView style={{ flex: 1, backgroundColor: '#F8FAFC' }} edges={['top', 'bottom']}>
-            {/* Header */}
-            <View style={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 14, backgroundColor: 'white', borderBottomWidth: 1, borderBottomColor: '#E2E8F0', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+            {/* Header Ultra Premium */}
+            <View style={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 16, backgroundColor: '#0F172A', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
               <View>
-                <Text style={{ fontSize: 18, fontWeight: '900', color: '#0F172A' }}>🛍️ Vente Terrain / Bureau</Text>
-                <Text style={{ fontSize: 11, fontWeight: '700', color: Colors.primary, marginTop: 2 }}>
-                  Prise de commande direct (Zone : {agentZone})
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <Text style={{ fontSize: 18, fontWeight: '900', color: 'white' }}>🛍️ Vente Terrain & Prospect</Text>
+                  <View style={{ backgroundColor: '#1DC4E9', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 }}>
+                    <Text style={{ fontSize: 10, fontWeight: '900', color: '#0F172A' }}>PRO</Text>
+                  </View>
+                </View>
+                <Text style={{ fontSize: 12, fontWeight: '700', color: '#38BDF8', marginTop: 3 }}>
+                  📍 Zone commerciale : {agentZone}
                 </Text>
               </View>
-              <TouchableOpacity onPress={() => setShowAgentOrderModal(false)} style={{ padding: 4 }}>
-                <Ionicons name="close-circle" size={24} color="#9CA3AF" />
+              <TouchableOpacity
+                onPress={() => setShowAgentOrderModal(false)}
+                style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center' }}
+              >
+                <Ionicons name="close" size={22} color="white" />
               </TouchableOpacity>
             </View>
 
-            <ScrollView style={{ flex: 1, padding: 18 }} contentContainerStyle={{ paddingBottom: 110 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+            <ScrollView style={{ flex: 1, padding: 18 }} contentContainerStyle={{ paddingBottom: 120 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
               {/* Selected Offer Top Banner */}
               {agentOrderForm.offerTitle ? (
-                <View style={{ backgroundColor: Colors.primaryLight, padding: 12, borderRadius: 14, borderWidth: 1, borderColor: Colors.primary, marginBottom: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                <View style={{ backgroundColor: '#EFF6FF', padding: 14, borderRadius: 16, borderWidth: 1.5, borderColor: '#3B82F6', marginBottom: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', elevation: 2 }}>
                   <View style={{ flex: 1 }}>
-                    <Text style={{ fontSize: 10, fontWeight: '900', color: Colors.primary }}>OFFRE SÉLECTIONNÉE POUR LA VENTE</Text>
-                    <Text style={{ fontSize: 14, fontWeight: '900', color: '#0F172A', marginTop: 2 }} numberOfLines={1}>{agentOrderForm.offerTitle}</Text>
-                    <Text style={{ fontSize: 12, color: Colors.textSecondary, marginTop: 1 }}>
-                      🏢 {agentOrderForm.restaurantName || 'Établissement'} • {agentOrderForm.price?.toLocaleString('fr-FR')} FCFA / unité
+                    <Text style={{ fontSize: 10, fontWeight: '900', color: '#1D4ED8', letterSpacing: 0.5 }}>⚡ OFFRE SÉLECTIONNÉE POUR LA VENTE</Text>
+                    <Text style={{ fontSize: 15, fontWeight: '900', color: '#0F172A', marginTop: 3 }} numberOfLines={1}>{agentOrderForm.offerTitle}</Text>
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: Colors.primary, marginTop: 2 }}>
+                      🏢 {agentOrderForm.restaurantName || 'Établissement Partner'} • {agentOrderForm.price?.toLocaleString('fr-FR')} FCFA / unité
                     </Text>
                   </View>
-                  <Ionicons name="checkmark-circle" size={24} color={Colors.primary} />
+                  <Ionicons name="checkmark-circle" size={26} color="#2563EB" />
                 </View>
               ) : null}
 
-              {/* Step 1: Client Lambda Info (DIRECTLY AT TOP - NO SCROLLING REQUIRED!) */}
-              <Text style={{ fontSize: 13, fontWeight: '800', color: '#1E293B', marginBottom: 6 }}>1. Coordonnées du Client Lambda 👤</Text>
-              <TextInput
-                style={[styles.input, { backgroundColor: 'white', marginBottom: 8 }]}
-                placeholder="Nom & Prénom du client (ex: Koffi Jean)"
-                value={agentOrderForm.clientName}
-                onChangeText={t => setAgentOrderForm(prev => ({ ...prev, clientName: t }))}
-              />
-              <TextInput
-                style={[styles.input, { backgroundColor: 'white', marginBottom: 14 }]}
-                placeholder="Téléphone mobile (ex: 07 07 07 07 07)"
-                keyboardType="phone-pad"
-                value={agentOrderForm.clientPhone}
-                onChangeText={t => setAgentOrderForm(prev => ({ ...prev, clientPhone: t }))}
-              />
+              {/* Step 1: Client Lambda Info */}
+              <View style={{ backgroundColor: 'white', padding: 16, borderRadius: 18, marginBottom: 16, borderWidth: 1, borderColor: '#E2E8F0', elevation: 2 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                  <View style={{ width: 28, height: 28, borderRadius: 8, backgroundColor: '#FFF1F2', alignItems: 'center', justifyContent: 'center' }}>
+                    <Ionicons name="person" size={16} color={Colors.primary} />
+                  </View>
+                  <Text style={{ fontSize: 14, fontWeight: '800', color: '#0F172A' }}>1. Coordonnées du Client Lambda</Text>
+                </View>
 
-              {/* Step 2: Payment Method */}
-              <Text style={{ fontSize: 13, fontWeight: '800', color: '#1E293B', marginBottom: 8 }}>2. Mode d'Encaissement 💳</Text>
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
-                {[
-                  { id: 'cash', label: '💵 Espèces (Cash)' },
-                  { id: 'wave', label: '🌊 Wave Mobile' },
-                  { id: 'orange', label: '🟧 Orange' },
-                  { id: 'mtn', label: '🟨 MTN' },
-                  { id: 'moov', label: '🟦 Moov' },
-                ].map((pm) => (
-                  <TouchableOpacity
-                    key={pm.id}
-                    style={[
-                      { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12, backgroundColor: 'white', borderWidth: 1, borderColor: '#CBD5E1' },
-                      agentOrderForm.paymentMethod === pm.id && { backgroundColor: Colors.primary, borderColor: Colors.primary }
-                    ]}
-                    onPress={() => setAgentOrderForm(prev => ({ ...prev, paymentMethod: pm.id as any }))}
-                  >
-                    <Text style={[{ fontSize: 11, fontWeight: '700', color: '#1E293B' }, agentOrderForm.paymentMethod === pm.id && { color: 'white' }]}>
-                      {pm.label}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
+                <View style={{ gap: 10 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#F8FAFC', borderWidth: 1.5, borderColor: '#CBD5E1', borderRadius: 14, paddingHorizontal: 12, height: 48 }}>
+                    <Ionicons name="person-outline" size={18} color="#64748B" style={{ marginRight: 10 }} />
+                    <TextInput
+                      style={{ flex: 1, fontSize: 14, fontWeight: '600', color: '#0F172A' }}
+                      placeholder="Nom & Prénom du client (ex: Koffi Jean)"
+                      placeholderTextColor="#94A3B8"
+                      value={agentOrderForm.clientName}
+                      onChangeText={t => setAgentOrderForm(prev => ({ ...prev, clientName: t }))}
+                    />
+                  </View>
+
+                  <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#F8FAFC', borderWidth: 1.5, borderColor: '#CBD5E1', borderRadius: 14, paddingHorizontal: 12, height: 48 }}>
+                    <Ionicons name="call-outline" size={18} color="#64748B" style={{ marginRight: 10 }} />
+                    <TextInput
+                      style={{ flex: 1, fontSize: 14, fontWeight: '600', color: '#0F172A' }}
+                      placeholder="Numéro mobile (ex: 07 07 07 07 07)"
+                      placeholderTextColor="#94A3B8"
+                      keyboardType="phone-pad"
+                      value={agentOrderForm.clientPhone}
+                      onChangeText={t => setAgentOrderForm(prev => ({ ...prev, clientPhone: t }))}
+                    />
+                  </View>
+                </View>
               </View>
 
-              {/* Step 3: Quantité */}
-              <View style={{ backgroundColor: 'white', padding: 12, borderRadius: 14, marginBottom: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderWidth: 1, borderColor: '#E2E8F0' }}>
+              {/* Step 2: Exclusive Wave Payment Card */}
+              <View style={{ backgroundColor: 'white', padding: 16, borderRadius: 18, marginBottom: 16, borderWidth: 1, borderColor: '#E2E8F0', elevation: 2 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <View style={{ width: 28, height: 28, borderRadius: 8, backgroundColor: '#E0F7FC', alignItems: 'center', justifyContent: 'center' }}>
+                      <Ionicons name="card" size={16} color="#00C2E8" />
+                    </View>
+                    <Text style={{ fontSize: 14, fontWeight: '800', color: '#0F172A' }}>2. Mode d'Encaissement Officiel</Text>
+                  </View>
+                  <View style={{ backgroundColor: '#ECFDF5', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, borderWidth: 1, borderColor: '#A7F3D0' }}>
+                    <Text style={{ fontSize: 10, fontWeight: '800', color: '#047857' }}>✓ WAVE SEULEMENT</Text>
+                  </View>
+                </View>
+
+                {/* Exclusive Wave Mobile Card */}
+                <TouchableOpacity
+                  style={{
+                    backgroundColor: '#F0FAFD',
+                    borderWidth: 2,
+                    borderColor: '#1DC4E9',
+                    borderRadius: 16,
+                    padding: 14,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 14,
+                    shadowColor: '#1DC4E9',
+                    shadowOffset: { width: 0, height: 4 },
+                    shadowOpacity: 0.15,
+                    shadowRadius: 8,
+                    elevation: 3
+                  }}
+                  onPress={() => setAgentOrderForm(prev => ({ ...prev, paymentMethod: 'wave' }))}
+                  activeOpacity={0.9}
+                >
+                  {/* Wave Logo Badge Image */}
+                  <View style={{ width: 48, height: 48, borderRadius: 14, backgroundColor: '#1DC4E9', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', borderWidth: 1, borderColor: '#00B5DF' }}>
+                    <Image
+                      source={{ uri: 'https://upload.wikimedia.org/wikipedia/commons/thumb/d/d4/Wave_logo.png/600px-Wave_logo.png' }}
+                      style={{ width: 34, height: 34, resizeMode: 'contain' }}
+                      defaultSource={{ uri: 'https://cdn-icons-png.flaticon.com/512/888/888870.png' }}
+                    />
+                  </View>
+
+                  <View style={{ flex: 1 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <Text style={{ fontSize: 16, fontWeight: '900', color: '#0B2545' }}>Wave Mobile Money</Text>
+                      <View style={{ backgroundColor: '#1DC4E9', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 }}>
+                        <Text style={{ fontSize: 9, fontWeight: '900', color: 'white' }}>OFFICIEL</Text>
+                      </View>
+                    </View>
+                    <Text style={{ fontSize: 11, fontWeight: '700', color: '#0084A8', marginTop: 2 }}>
+                      Paiement instantané par QR Code / Transfert sans frais (0%)
+                    </Text>
+                  </View>
+
+                  <Ionicons name="checkmark-circle" size={24} color="#1DC4E9" />
+                </TouchableOpacity>
+              </View>
+
+              {/* Step 3: Quantité & Calcul du montant */}
+              <View style={{ backgroundColor: 'white', padding: 16, borderRadius: 18, marginBottom: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderWidth: 1, borderColor: '#E2E8F0', elevation: 2 }}>
                 <View>
-                  <Text style={{ fontSize: 11, fontWeight: '700', color: Colors.textSecondary }}>Quantité commandée</Text>
-                  <Text style={{ fontSize: 15, fontWeight: '900', color: '#0F172A', marginTop: 1 }}>
-                    {agentOrderForm.quantity} plat(s) / formule(s)
+                  <Text style={{ fontSize: 11, fontWeight: '700', color: Colors.textSecondary }}>Nombre de formules / plats</Text>
+                  <Text style={{ fontSize: 16, fontWeight: '900', color: '#0F172A', marginTop: 2 }}>
+                    Quantité : {agentOrderForm.quantity}
                   </Text>
                 </View>
 
                 {/* Quantity Controls */}
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#F8FAFC', padding: 4, borderRadius: 10, borderWidth: 1, borderColor: '#CBD5E1' }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#F8FAFC', padding: 6, borderRadius: 12, borderWidth: 1.5, borderColor: '#CBD5E1' }}>
                   <TouchableOpacity
                     onPress={() => setAgentOrderForm(prev => ({ ...prev, quantity: Math.max(1, prev.quantity - 1) }))}
-                    style={{ width: 30, height: 30, borderRadius: 8, backgroundColor: '#E2E8F0', alignItems: 'center', justifyContent: 'center' }}
+                    style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: '#E2E8F0', alignItems: 'center', justifyContent: 'center' }}
                   >
-                    <Text style={{ fontSize: 16, fontWeight: '900', color: '#1E293B' }}>-</Text>
+                    <Text style={{ fontSize: 18, fontWeight: '900', color: '#1E293B' }}>-</Text>
                   </TouchableOpacity>
-                  <Text style={{ fontSize: 15, fontWeight: '900', color: '#0F172A' }}>{agentOrderForm.quantity}</Text>
+                  <Text style={{ fontSize: 16, fontWeight: '900', color: '#0F172A' }}>{agentOrderForm.quantity}</Text>
                   <TouchableOpacity
                     onPress={() => setAgentOrderForm(prev => ({ ...prev, quantity: prev.quantity + 1 }))}
-                    style={{ width: 30, height: 30, borderRadius: 8, backgroundColor: Colors.primary, alignItems: 'center', justifyContent: 'center' }}
+                    style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: Colors.primary, alignItems: 'center', justifyContent: 'center' }}
                   >
-                    <Text style={{ fontSize: 16, fontWeight: '900', color: 'white' }}>+</Text>
+                    <Text style={{ fontSize: 18, fontWeight: '900', color: 'white' }}>+</Text>
                   </TouchableOpacity>
                 </View>
               </View>
 
               {/* Step 4: Restaurant Selection (If wanting to change) */}
-              <Text style={{ fontSize: 13, fontWeight: '800', color: '#1E293B', marginBottom: 8 }}>3. Établissement Partner ({agentOrderForm.restaurantName || 'Choisir'})</Text>
-              {agentRestaurants.length === 0 ? (
-                <Text style={{ fontSize: 12, color: Colors.textSecondary, marginBottom: 16 }}>Aucun restaurant disponible.</Text>
-              ) : (
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 16 }}>
-                  {agentRestaurants.map((resto) => (
-                    <TouchableOpacity
-                      key={resto.id}
-                      style={[
-                        { paddingHorizontal: 14, paddingVertical: 10, borderRadius: 14, backgroundColor: 'white', marginRight: 8, borderWidth: 1, borderColor: '#CBD5E1' },
-                        agentOrderForm.restaurantId === resto.id && { backgroundColor: Colors.primary, borderColor: Colors.primary }
-                      ]}
-                      onPress={() => setAgentOrderForm(prev => ({ ...prev, restaurantId: resto.id, restaurantName: resto.name }))}
-                    >
-                      <Text style={[{ fontSize: 13, fontWeight: '700', color: '#1E293B' }, agentOrderForm.restaurantId === resto.id && { color: 'white' }]}>
-                        🏢 {resto.name}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </ScrollView>
-              )}
+              <View style={{ backgroundColor: 'white', padding: 16, borderRadius: 18, marginBottom: 16, borderWidth: 1, borderColor: '#E2E8F0', elevation: 2 }}>
+                <Text style={{ fontSize: 13, fontWeight: '800', color: '#1E293B', marginBottom: 10 }}>
+                  🏢 Établissement Partner ({agentOrderForm.restaurantName || 'Sélectionner'})
+                </Text>
+                {agentRestaurants.length === 0 ? (
+                  <Text style={{ fontSize: 12, color: Colors.textSecondary }}>Aucun restaurant disponible.</Text>
+                ) : (
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                    {agentRestaurants.map((resto) => (
+                      <TouchableOpacity
+                        key={resto.id}
+                        style={[
+                          { paddingHorizontal: 14, paddingVertical: 10, borderRadius: 14, backgroundColor: '#F8FAFC', marginRight: 8, borderWidth: 1.5, borderColor: '#E2E8F0' },
+                          agentOrderForm.restaurantId === resto.id && { backgroundColor: Colors.primary, borderColor: Colors.primary }
+                        ]}
+                        onPress={() => setAgentOrderForm(prev => ({ ...prev, restaurantId: resto.id, restaurantName: resto.name }))}
+                      >
+                        <Text style={[{ fontSize: 13, fontWeight: '800', color: '#1E293B' }, agentOrderForm.restaurantId === resto.id && { color: 'white' }]}>
+                          🏢 {resto.name}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                )}
+              </View>
 
               {/* Step 5: Offer Selection (If wanting to change offer) */}
-              <Text style={{ fontSize: 13, fontWeight: '800', color: '#1E293B', marginBottom: 8 }}>4. Sélectionner une autre Offre Menu</Text>
-              <View style={{ gap: 10, marginBottom: 16 }}>
-                {[...flashOffers, ...dealOffers].slice(0, 8).map((off) => {
-                  const img = (off.photos && Array.isArray(off.photos) && off.photos[0]) ||
-                              (typeof off.photos === 'string' && off.photos) ||
-                              off.image || off.photo_url || off.image_url ||
-                              'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=500';
+              <View style={{ backgroundColor: 'white', padding: 16, borderRadius: 18, marginBottom: 16, borderWidth: 1, borderColor: '#E2E8F0', elevation: 2 }}>
+                <Text style={{ fontSize: 13, fontWeight: '800', color: '#1E293B', marginBottom: 10 }}>⚡ Sélectionner une autre Offre Menu</Text>
+                <View style={{ gap: 10 }}>
+                  {[...flashOffers, ...dealOffers].slice(0, 8).map((off) => {
+                    const img = (off.photos && Array.isArray(off.photos) && off.photos[0]) ||
+                                (typeof off.photos === 'string' && off.photos) ||
+                                off.image || off.photo_url || off.image_url ||
+                                'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=500';
 
-                  const pNew = Number(off.priceNew || off.price_promo || off.price || 5000);
-                  const pOld = Number(off.price_normal || off.priceOld || Math.round(pNew * 1.25));
-                  const discountStr = off.discount || (pOld > pNew ? `-${Math.round((1 - (pNew / pOld)) * 100)}%` : '-20%');
-                  const typeStr = (off.type === 'deal' || off.proposal_type === 'deal') ? '❤️ DEAL' : '⚡ FLASH';
+                    const pNew = Number(off.priceNew || off.price_promo || off.price || 5000);
+                    const pOld = Number(off.price_normal || off.priceOld || Math.round(pNew * 1.25));
+                    const discountStr = off.discount || (pOld > pNew ? `-${Math.round((1 - (pNew / pOld)) * 100)}%` : '-20%');
+                    const typeStr = (off.type === 'deal' || off.proposal_type === 'deal') ? '❤️ DEAL' : '⚡ FLASH';
 
-                  const isSelected = agentOrderForm.offerId === off.id;
+                    const isSelected = agentOrderForm.offerId === off.id;
 
-                  return (
-                    <TouchableOpacity
-                      key={off.id}
-                      style={[
-                        { backgroundColor: 'white', borderRadius: 16, padding: 12, borderWidth: 1.5, borderColor: '#E2E8F0', flexDirection: 'row', gap: 12, alignItems: 'center' },
-                        isSelected && { borderColor: Colors.primary, backgroundColor: Colors.primaryLight }
-                      ]}
-                      onPress={() => setAgentOrderForm(prev => ({
-                        ...prev,
-                        offerId: off.id,
-                        offerTitle: off.title,
-                        offerType: off.type || 'flash',
-                        price: pNew,
-                        restaurantName: off.restaurant || off.restaurants?.name || prev.restaurantName,
-                        restaurantId: off.restaurant_id || off.restaurantId || prev.restaurantId
-                      }))}
-                    >
-                      {/* HD Menu Thumbnail */}
-                      <View style={{ width: 60, height: 60, borderRadius: 12, overflow: 'hidden', backgroundColor: '#F1F5F9' }}>
-                        <Image source={{ uri: img }} style={{ width: '100%', height: '100%', resizeMode: 'cover' }} />
-                      </View>
-
-                      {/* Content */}
-                      <View style={{ flex: 1 }}>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
-                          <Text style={{ fontSize: 10, fontWeight: '900', color: typeStr.includes('FLASH') ? Colors.primary : '#D97706', backgroundColor: typeStr.includes('FLASH') ? '#FFF1F2' : '#FFFBEB', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 }}>
-                            {typeStr}
-                          </Text>
-                          <Text style={{ fontSize: 10, fontWeight: '800', color: '#10B981' }}>{discountStr}</Text>
+                    return (
+                      <TouchableOpacity
+                        key={off.id}
+                        style={[
+                          { backgroundColor: '#F8FAFC', borderRadius: 16, padding: 12, borderWidth: 1.5, borderColor: '#E2E8F0', flexDirection: 'row', gap: 12, alignItems: 'center' },
+                          isSelected && { borderColor: Colors.primary, backgroundColor: Colors.primaryLight }
+                        ]}
+                        onPress={() => setAgentOrderForm(prev => ({
+                          ...prev,
+                          offerId: off.id,
+                          offerTitle: off.title,
+                          offerType: off.type || 'flash',
+                          price: pNew,
+                          restaurantName: off.restaurant || off.restaurants?.name || prev.restaurantName,
+                          restaurantId: off.restaurant_id || off.restaurantId || prev.restaurantId
+                        }))}
+                      >
+                        {/* HD Menu Thumbnail */}
+                        <View style={{ width: 60, height: 60, borderRadius: 12, overflow: 'hidden', backgroundColor: '#F1F5F9' }}>
+                          <Image source={{ uri: img }} style={{ width: '100%', height: '100%', resizeMode: 'cover' }} />
                         </View>
 
-                        <Text style={{ fontSize: 13, fontWeight: '800', color: '#0F172A' }} numberOfLines={1}>
-                          {off.title}
-                        </Text>
+                        {/* Content */}
+                        <View style={{ flex: 1 }}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+                            <Text style={{ fontSize: 10, fontWeight: '900', color: typeStr.includes('FLASH') ? Colors.primary : '#D97706', backgroundColor: typeStr.includes('FLASH') ? '#FFF1F2' : '#FFFBEB', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 }}>
+                              {typeStr}
+                            </Text>
+                            <Text style={{ fontSize: 10, fontWeight: '800', color: '#10B981' }}>{discountStr}</Text>
+                          </View>
 
-                        <Text style={{ fontSize: 13, fontWeight: '900', color: Colors.primary, marginTop: 2 }}>
-                          {pNew.toLocaleString('fr-FR')} FCFA <Text style={{ fontSize: 10, color: '#9CA3AF', textDecorationLine: 'line-through', fontWeight: '400' }}>{pOld.toLocaleString('fr-FR')} F</Text>
-                        </Text>
-                      </View>
+                          <Text style={{ fontSize: 13, fontWeight: '800', color: '#0F172A' }} numberOfLines={1}>
+                            {off.title}
+                          </Text>
 
-                      {/* Action: Detail Preview Button + Selection Indicator */}
-                      <View style={{ alignItems: 'flex-end', gap: 6 }}>
-                        {isSelected ? (
-                          <Ionicons name="checkmark-circle" size={22} color={Colors.primary} />
-                        ) : (
-                          <Ionicons name="ellipse-outline" size={22} color="#94A3B8" />
-                        )}
+                          <Text style={{ fontSize: 13, fontWeight: '900', color: Colors.primary, marginTop: 2 }}>
+                            {pNew.toLocaleString('fr-FR')} FCFA <Text style={{ fontSize: 10, color: '#9CA3AF', textDecorationLine: 'line-through', fontWeight: '400' }}>{pOld.toLocaleString('fr-FR')} F</Text>
+                          </Text>
+                        </View>
 
-                        <TouchableOpacity
-                          style={{ backgroundColor: '#F1F5F9', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, borderWidth: 1, borderColor: '#CBD5E1' }}
-                          onPress={() => {
-                            setShowAgentOrderModal(false);
-                            const fullItem = {
-                              ...off,
-                              image: img,
-                              priceNew: pNew,
-                              priceOld: pOld,
-                              discount: discountStr
-                            };
-                            if (off.type === 'flash' || off.proposal_type === 'flash' || off.timeRange) {
-                              handleSelectFlash(fullItem);
-                            } else {
-                              handleSelectDeal(fullItem);
-                            }
-                          }}
-                        >
-                          <Text style={{ fontSize: 10, fontWeight: '800', color: '#1E293B' }}>👁️ Détails</Text>
-                        </TouchableOpacity>
-                      </View>
-                    </TouchableOpacity>
-                  );
-                })}
+                        {/* Action: Detail Preview Button + Selection Indicator */}
+                        <View style={{ alignItems: 'flex-end', gap: 6 }}>
+                          {isSelected ? (
+                            <Ionicons name="checkmark-circle" size={22} color={Colors.primary} />
+                          ) : (
+                            <Ionicons name="ellipse-outline" size={22} color="#94A3B8" />
+                          )}
+
+                          <TouchableOpacity
+                            style={{ backgroundColor: '#F1F5F9', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, borderWidth: 1, borderColor: '#CBD5E1' }}
+                            onPress={() => {
+                              setShowAgentOrderModal(false);
+                              const fullItem = {
+                                ...off,
+                                image: img,
+                                priceNew: pNew,
+                                priceOld: pOld,
+                                discount: discountStr
+                              };
+                              if (off.type === 'flash' || off.proposal_type === 'flash' || off.timeRange) {
+                                handleSelectFlash(fullItem);
+                              } else {
+                                handleSelectDeal(fullItem);
+                              }
+                            }}
+                          >
+                            <Text style={{ fontSize: 10, fontWeight: '800', color: '#1E293B' }}>👁️ Détails</Text>
+                          </TouchableOpacity>
+                        </View>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
               </View>
             </ScrollView>
 
             {/* FLOATING STICKY CART BAR AT BOTTOM */}
             <View style={{
               paddingHorizontal: 18,
-              paddingVertical: 12,
+              paddingVertical: 14,
               backgroundColor: '#0F172A',
               borderTopLeftRadius: 24,
               borderTopRightRadius: 24,
@@ -5142,18 +5209,18 @@ const getCategoryLabel = (cat?: string) => {
               <View style={{ flex: 1, marginRight: 10 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                   <Ionicons name="cart" size={18} color="#10B981" />
-                  <Text style={{ fontSize: 13, fontWeight: '800', color: 'white' }} numberOfLines={1}>
-                    {agentOrderForm.quantity} article(s) • {(agentOrderForm.price * agentOrderForm.quantity).toLocaleString('fr-FR')} F
+                  <Text style={{ fontSize: 14, fontWeight: '900', color: 'white' }} numberOfLines={1}>
+                    {agentOrderForm.quantity} art. • {(agentOrderForm.price * agentOrderForm.quantity).toLocaleString('fr-FR')} FCFA
                   </Text>
                 </View>
                 <Text style={{ fontSize: 11, fontWeight: '800', color: '#10B981', marginTop: 2 }}>
-                  🎁 Gains (+{adminCommissionRate}%) : +{((agentOrderForm.price * agentOrderForm.quantity) * (adminCommissionRate / 100)).toLocaleString('fr-FR')} FCFA
+                  🎁 Commission (+{adminCommissionRate}%) : +{((agentOrderForm.price * agentOrderForm.quantity) * (adminCommissionRate / 100)).toLocaleString('fr-FR')} FCFA
                 </Text>
               </View>
 
               <TouchableOpacity
                 style={[
-                  { backgroundColor: Colors.primary, paddingHorizontal: 16, paddingVertical: 12, borderRadius: 14, flexDirection: 'row', alignItems: 'center', gap: 6, elevation: 4 },
+                  { backgroundColor: Colors.primary, paddingHorizontal: 18, paddingVertical: 12, borderRadius: 14, flexDirection: 'row', alignItems: 'center', gap: 6, elevation: 4 },
                   isCreatingResto && { opacity: 0.7 }
                 ]}
                 onPress={handleCreateAgentClientOrder}
