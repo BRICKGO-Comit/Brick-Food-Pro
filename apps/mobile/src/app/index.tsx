@@ -326,7 +326,7 @@ export default function MobileApp() {
         ordersCount: prev.ordersCount + 1
       }));
 
-      setShowAgentOrderModal(false);
+      setAgentOrderStep(0);
       setGeneratedPassOrder(createdOrder);
       setShowPassQRModal(true);
     } catch (err: any) {
@@ -2387,7 +2387,8 @@ const getCategoryLabel = (cat?: string) => {
                         setSelectedDeal(null);
                         setSelectedFlash(null);
                         if (role === 'agent' && agentOrderForm.restaurantId) {
-                          setShowAgentOrderModal(true);
+                          setAgentTab('orders');
+                          setAgentOrderStep(1);
                         }
                       }}
                     >
@@ -2593,7 +2594,8 @@ const getCategoryLabel = (cat?: string) => {
                       }
                       setSelectedFlash(null);
                       setSelectedDeal(null);
-                      setShowAgentOrderModal(true);
+                      setAgentTab('orders');
+                      setAgentOrderStep(1);
                     }}
                   >
                     <Text style={{ color: 'white', fontSize: 13, fontWeight: '900' }}>
@@ -4087,7 +4089,8 @@ const getCategoryLabel = (cat?: string) => {
                   restaurantName: agentRestaurants[0].name
                 }));
               }
-              setShowAgentOrderModal(true);
+              setAgentTab('orders');
+              setAgentOrderStep(0);
             }}
           >
             <Ionicons name="cart" size={18} color="white" />
