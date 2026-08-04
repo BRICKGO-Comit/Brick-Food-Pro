@@ -4943,83 +4943,167 @@ const getCategoryLabel = (cat?: string) => {
             )}
             {/* --- STEP 2: ÉCRAN DE PAIEMENT WAVE --- */}
             {agentOrderStep === 2 && (
-              <View style={{ flex: 1, backgroundColor: '#0B0F19', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-                {!isCreatingResto && !generatedPassOrder ? (
-                  // Payment confirmation screen before processing
-                  <View style={{ width: '100%', alignItems: 'center' }}>
-                    {/* Wave Logo Large */}
-                    <View style={{ width: 100, height: 100, borderRadius: 30, backgroundColor: '#1DC4E9', alignItems: 'center', justifyContent: 'center', marginBottom: 24, elevation: 8, shadowColor: '#1DC4E9', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.4, shadowRadius: 12 }}>
-                      <Image source={require('../../assets/wave_logo.jpg')} style={{ width: 80, height: 80, resizeMode: 'contain' }} />
-                    </View>
+              <View style={{ flex: 1, backgroundColor: '#F8FAFC' }}>
+                <ScrollView style={{ flex: 1, padding: 20 }} contentContainerStyle={{ paddingBottom: 60, alignItems: 'center' }} showsVerticalScrollIndicator={false}>
+                  {!isCreatingResto && !generatedPassOrder ? (
+                    <View style={{ width: '100%', alignItems: 'center' }}>
+                      {/* Top Header Step */}
+                      <View style={{ width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+                        <TouchableOpacity
+                          onPress={() => setAgentOrderStep(1)}
+                          style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: 'white', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#E2E8F0', elevation: 2 }}
+                        >
+                          <Ionicons name="arrow-back" size={20} color="#0F172A" />
+                        </TouchableOpacity>
 
-                    <Text style={{ fontSize: 22, fontWeight: '900', color: 'white', textAlign: 'center', marginBottom: 6 }}>
-                      Paiement Wave Mobile Money
-                    </Text>
-                    <Text style={{ fontSize: 14, fontWeight: '600', color: '#94A3B8', textAlign: 'center', marginBottom: 30 }}>
-                      Paiement instantané • Sans frais (0%)
-                    </Text>
+                        <View style={{ backgroundColor: '#E0F7FC', paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20, borderWidth: 1, borderColor: '#B9F1FD' }}>
+                          <Text style={{ fontSize: 12, fontWeight: '800', color: '#0084A8', letterSpacing: 0.5 }}>ÉTAPE 2/2 • ENCAISSEMENT</Text>
+                        </View>
 
-                    {/* Order Summary Card */}
-                    <View style={{ width: '100%', backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 20, padding: 20, marginBottom: 30, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }}>
-                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-                        <Text style={{ fontSize: 14, fontWeight: '700', color: '#94A3B8' }}>Pack</Text>
-                        <Text style={{ fontSize: 15, fontWeight: '900', color: 'white' }} numberOfLines={1}>{agentOrderForm.offerTitle || 'Offre'}</Text>
+                        <View style={{ width: 40 }} />
                       </View>
-                      <View style={{ height: 1, backgroundColor: 'rgba(255,255,255,0.08)' }} />
-                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 14, marginBottom: 14 }}>
-                        <Text style={{ fontSize: 14, fontWeight: '700', color: '#94A3B8' }}>Établissement</Text>
-                        <Text style={{ fontSize: 14, fontWeight: '800', color: 'white' }}>{agentOrderForm.restaurantName || 'Restaurant'}</Text>
-                      </View>
-                      <View style={{ height: 1, backgroundColor: 'rgba(255,255,255,0.08)' }} />
-                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 14, marginBottom: 14 }}>
-                        <Text style={{ fontSize: 14, fontWeight: '700', color: '#94A3B8' }}>Client</Text>
-                        <Text style={{ fontSize: 14, fontWeight: '800', color: 'white' }}>{agentOrderForm.clientName || 'Client'}</Text>
-                      </View>
-                      <View style={{ height: 1, backgroundColor: 'rgba(255,255,255,0.08)' }} />
-                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 14, marginBottom: 14 }}>
-                        <Text style={{ fontSize: 14, fontWeight: '700', color: '#94A3B8' }}>Quantité</Text>
-                        <Text style={{ fontSize: 15, fontWeight: '900', color: 'white' }}>{agentOrderForm.quantity}x</Text>
-                      </View>
-                      <View style={{ height: 1, backgroundColor: 'rgba(255,255,255,0.08)' }} />
-                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 14 }}>
-                        <Text style={{ fontSize: 16, fontWeight: '900', color: '#10B981' }}>💰 TOTAL</Text>
-                        <Text style={{ fontSize: 22, fontWeight: '900', color: '#10B981' }}>
-                          {(agentOrderForm.price * agentOrderForm.quantity).toLocaleString('fr-FR')} FCFA
+
+                      {/* Main Payment Card */}
+                      <View style={{
+                        width: '100%',
+                        backgroundColor: 'white',
+                        borderRadius: 24,
+                        padding: 24,
+                        alignItems: 'center',
+                        borderWidth: 1.5,
+                        borderColor: '#E2E8F0',
+                        elevation: 6,
+                        shadowColor: '#1DC4E9',
+                        shadowOffset: { width: 0, height: 6 },
+                        shadowOpacity: 0.12,
+                        shadowRadius: 16
+                      }}>
+                        {/* Wave Icon Badge */}
+                        <View style={{
+                          width: 84,
+                          height: 84,
+                          borderRadius: 24,
+                          backgroundColor: '#1DC4E9',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          marginBottom: 16,
+                          elevation: 6,
+                          shadowColor: '#1DC4E9',
+                          shadowOffset: { width: 0, height: 4 },
+                          shadowOpacity: 0.3,
+                          shadowRadius: 10,
+                          overflow: 'hidden'
+                        }}>
+                          <Image
+                            source={require('../../assets/wave icon.png')}
+                            style={{ width: 68, height: 68, resizeMode: 'contain' }}
+                          />
+                        </View>
+
+                        <Text style={{ fontSize: 20, fontWeight: '900', color: '#0F172A', textAlign: 'center' }}>
+                          Paiement Wave Mobile Money
                         </Text>
+                        <Text style={{ fontSize: 13, fontWeight: '600', color: '#64748B', textAlign: 'center', marginTop: 4, marginBottom: 20 }}>
+                          Paiement instantané sécurisé (0% de frais)
+                        </Text>
+
+                        {/* Order Recap Table */}
+                        <View style={{ width: '100%', backgroundColor: '#F8FAFC', borderRadius: 18, padding: 16, borderWidth: 1, borderColor: '#E2E8F0', gap: 12 }}>
+                          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <Text style={{ fontSize: 13, fontWeight: '700', color: '#64748B' }}>📦 Formule / Pack</Text>
+                            <Text style={{ fontSize: 14, fontWeight: '900', color: '#0F172A', flex: 1, textAlign: 'right' }} numberOfLines={1}>
+                              {agentOrderForm.offerTitle || 'Offre Spéciale'}
+                            </Text>
+                          </View>
+
+                          <View style={{ height: 1, backgroundColor: '#E2E8F0' }} />
+
+                          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <Text style={{ fontSize: 13, fontWeight: '700', color: '#64748B' }}>🏢 Établissement</Text>
+                            <Text style={{ fontSize: 13, fontWeight: '800', color: '#0F172A' }}>
+                              {agentOrderForm.restaurantName || 'Restaurant'}
+                            </Text>
+                          </View>
+
+                          <View style={{ height: 1, backgroundColor: '#E2E8F0' }} />
+
+                          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <Text style={{ fontSize: 13, fontWeight: '700', color: '#64748B' }}>👤 Client Lambda</Text>
+                            <Text style={{ fontSize: 13, fontWeight: '800', color: '#0F172A' }}>
+                              {agentOrderForm.clientName || 'Client'}
+                            </Text>
+                          </View>
+
+                          <View style={{ height: 1, backgroundColor: '#E2E8F0' }} />
+
+                          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <Text style={{ fontSize: 13, fontWeight: '700', color: '#64748B' }}>🔢 Quantité</Text>
+                            <Text style={{ fontSize: 14, fontWeight: '900', color: '#0F172A' }}>
+                              {agentOrderForm.quantity} x {agentOrderForm.price?.toLocaleString('fr-FR')} FCFA
+                            </Text>
+                          </View>
+
+                          <View style={{ height: 1.5, backgroundColor: '#CBD5E1' }} />
+
+                          {/* Total Row */}
+                          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 2 }}>
+                            <Text style={{ fontSize: 15, fontWeight: '900', color: '#0F172A' }}>💳 MONTANT TOTAL</Text>
+                            <Text style={{ fontSize: 20, fontWeight: '900', color: '#10B981' }}>
+                              {(agentOrderForm.price * agentOrderForm.quantity).toLocaleString('fr-FR')} FCFA
+                            </Text>
+                          </View>
+                        </View>
+
+                        {/* Commission Badge */}
+                        <View style={{ backgroundColor: '#ECFDF5', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 14, borderWidth: 1, borderColor: '#A7F3D0', marginTop: 16, width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                          <Ionicons name="gift" size={16} color="#047857" />
+                          <Text style={{ fontSize: 12, fontWeight: '800', color: '#047857' }}>
+                            Votre commission (+{adminCommissionRate}%) : +{((agentOrderForm.price * agentOrderForm.quantity) * (adminCommissionRate / 100)).toLocaleString('fr-FR')} FCFA
+                          </Text>
+                        </View>
                       </View>
-                    </View>
 
-                    {/* Pay Button */}
-                    <TouchableOpacity
-                      style={{ width: '100%', backgroundColor: '#1DC4E9', borderRadius: 20, paddingVertical: 18, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 10, elevation: 6, shadowColor: '#1DC4E9', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.4, shadowRadius: 10 }}
-                      onPress={handleCreateAgentClientOrder}
-                    >
-                      <Image source={require('../../assets/wave_logo.jpg')} style={{ width: 28, height: 28, borderRadius: 8 }} />
-                      <Text style={{ color: 'white', fontWeight: '900', fontSize: 17 }}>Confirmer le Paiement Wave</Text>
-                    </TouchableOpacity>
-
-                    {/* Back button */}
-                    <TouchableOpacity
-                      style={{ marginTop: 16, paddingVertical: 14, alignItems: 'center' }}
-                      onPress={() => setAgentOrderStep(1)}
-                    >
-                      <Text style={{ color: '#94A3B8', fontWeight: '700', fontSize: 14 }}>← Retour au formulaire</Text>
-                    </TouchableOpacity>
-                  </View>
-                ) : isCreatingResto ? (
-                  // Processing animation
-                  <View style={{ alignItems: 'center' }}>
-                    <View style={{ width: 100, height: 100, borderRadius: 50, backgroundColor: 'rgba(29,196,233,0.15)', alignItems: 'center', justifyContent: 'center', marginBottom: 24 }}>
-                      <ActivityIndicator size="large" color="#1DC4E9" />
+                      {/* Wave Confirm Button */}
+                      <TouchableOpacity
+                        style={{
+                          width: '100%',
+                          backgroundColor: '#1DC4E9',
+                          borderRadius: 20,
+                          paddingVertical: 18,
+                          alignItems: 'center',
+                          flexDirection: 'row',
+                          justifyContent: 'center',
+                          gap: 12,
+                          marginTop: 24,
+                          elevation: 6,
+                          shadowColor: '#1DC4E9',
+                          shadowOffset: { width: 0, height: 4 },
+                          shadowOpacity: 0.35,
+                          shadowRadius: 10
+                        }}
+                        onPress={handleCreateAgentClientOrder}
+                      >
+                        <Image source={require('../../assets/wave icon.png')} style={{ width: 28, height: 28, resizeMode: 'contain' }} />
+                        <Text style={{ color: 'white', fontWeight: '900', fontSize: 16 }}>
+                          Confirmer & Encaisser par Wave
+                        </Text>
+                        <Ionicons name="checkmark-circle" size={22} color="white" />
+                      </TouchableOpacity>
                     </View>
-                    <Text style={{ fontSize: 20, fontWeight: '900', color: 'white', textAlign: 'center', marginBottom: 8 }}>
-                      Traitement en cours...
-                    </Text>
-                    <Text style={{ fontSize: 14, fontWeight: '600', color: '#94A3B8', textAlign: 'center' }}>
-                      Validation du paiement Wave Mobile Money
-                    </Text>
-                  </View>
-                ) : null}
+                  ) : isCreatingResto ? (
+                    <View style={{ width: '100%', backgroundColor: 'white', borderRadius: 24, padding: 32, alignItems: 'center', marginTop: 40, elevation: 4 }}>
+                      <View style={{ width: 90, height: 90, borderRadius: 45, backgroundColor: '#E0F7FC', alignItems: 'center', justifyContent: 'center', marginBottom: 20 }}>
+                        <ActivityIndicator size="large" color="#1DC4E9" />
+                      </View>
+                      <Text style={{ fontSize: 20, fontWeight: '900', color: '#0F172A', textAlign: 'center', marginBottom: 6 }}>
+                        Validation du paiement...
+                      </Text>
+                      <Text style={{ fontSize: 13, fontWeight: '600', color: '#64748B', textAlign: 'center' }}>
+                        Enregistrement de la vente terrain et génération du Pass QR
+                      </Text>
+                    </View>
+                  ) : null}
+                </ScrollView>
               </View>
             )}
           </View>
@@ -5345,7 +5429,7 @@ const getCategoryLabel = (cat?: string) => {
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                     <Text style={{ fontSize: 15, fontWeight: '700', color: '#94A3B8' }}>📱 Paiement</Text>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                      <Image source={require('../../assets/wave_logo.jpg')} style={{ width: 24, height: 24, borderRadius: 6 }} />
+                      <Image source={require('../../assets/wave icon.png')} style={{ width: 24, height: 24, resizeMode: 'contain' }} />
                       <Text style={{ fontSize: 16, fontWeight: '900', color: '#1DC4E9' }}>Wave</Text>
                     </View>
                   </View>
