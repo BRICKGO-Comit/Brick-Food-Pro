@@ -274,10 +274,9 @@ export default function MobileApp() {
   };
 
   const handleCreateAgentClientOrder = async () => {
-    if (!agentOrderForm.restaurantId) {
-      Alert.alert('Restaurant Requis', 'Veuillez sélectionner un établissement partenaire.');
-      return;
-    }
+    // Automatic fallback for restaurantId if missing
+    const targetRestoId = agentOrderForm.restaurantId || (agentRestaurants.length > 0 ? agentRestaurants[0].id : null) || 'resto_default';
+
     if (!agentOrderForm.offerId) {
       Alert.alert('Offre Requise', 'Veuillez sélectionner une offre Flash ou Deal.');
       return;
@@ -295,7 +294,7 @@ export default function MobileApp() {
 
       const newOrderPayload = {
         agent_id: user?.id,
-        restaurant_id: agentOrderForm.restaurantId,
+        restaurant_id: targetRestoId,
         offer_id: agentOrderForm.offerId,
         total_amount: totalAmt,
         commission_amount: commissionAmt,
@@ -4784,6 +4783,7 @@ const getCategoryLabel = (cat?: string) => {
                             <TouchableOpacity
                               style={{ backgroundColor: Colors.primary, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 10, flexDirection: 'row', alignItems: 'center', gap: 6, elevation: 2 }}
                               onPress={() => {
+                                const effectiveRestoId = item.restaurant_id || item.restaurantId || restoObj?.id || (agentRestaurants.length > 0 ? agentRestaurants[0].id : '') || 'resto_default';
                                 setAgentOrderForm(prev => ({
                                   ...prev,
                                   offerId: item.id,
