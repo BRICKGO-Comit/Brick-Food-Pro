@@ -4645,11 +4645,15 @@ const getCategoryLabel = (cat?: string) => {
                   {/* Category Pills */}
                   <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
                     {[
-                      { id: 'all', label: 'Toutes les offres' },
+                      { id: 'all', label: '🌐 Toutes les offres' },
                       { id: 'flash', label: '⚡ Flash' },
                       { id: 'deal', label: '❤️ Deals' },
+                      { id: 'restaurant', label: '🍽️ Restaurants' },
                       { id: 'fast_food', label: '🍔 Fast Food' },
-                      { id: 'boissons', label: '🍹 Boissons' }
+                      { id: 'maquis', label: '🍺 Maquis' },
+                      { id: 'lounge_bar', label: '🍸 Lounge & Bar' },
+                      { id: 'hotel', label: '🏨 Hôtels' },
+                      { id: 'patisserie', label: '🍰 Pâtisseries' }
                     ].map((cat) => (
                       <TouchableOpacity
                         key={cat.id}
@@ -4674,15 +4678,26 @@ const getCategoryLabel = (cat?: string) => {
                     const allOffersList = [...flashOffers, ...dealOffers];
 
                     const filtered = allOffersList.filter((item) => {
+                      const restoObj = agentRestaurants.find(r => r.id === item.restaurant_id || r.name === item.restaurant) || item.restaurants || {};
+                      const itemCat = (item.category || item.type_category || '').toLowerCase();
+                      const restoCat = (restoObj.category || item.restaurants?.category || '').toLowerCase();
+                      const combinedText = `${itemCat} ${restoCat} ${item.title || ''} ${item.description || ''} ${restoObj.name || item.restaurant || ''}`.toLowerCase();
+
                       if (agentCatalogCategory === 'flash' && item.type !== 'flash' && item.proposal_type !== 'flash') return false;
                       if (agentCatalogCategory === 'deal' && item.type !== 'deal' && item.proposal_type !== 'deal') return false;
-                      if (agentCatalogCategory === 'fast_food' && !item.category?.toLowerCase().includes('fast')) return false;
+                      if (agentCatalogCategory === 'restaurant' && !(restoCat.includes('restaurant') || combinedText.includes('restaurant') || combinedText.includes('resto'))) return false;
+                      if (agentCatalogCategory === 'fast_food' && !(restoCat.includes('fast') || combinedText.includes('fast') || combinedText.includes('burger') || combinedText.includes('chawarma') || combinedText.includes('pizza') || combinedText.includes('tacos') || combinedText.includes('sandwich'))) return false;
+                      if (agentCatalogCategory === 'maquis' && !(restoCat.includes('maquis') || combinedText.includes('maquis') || combinedText.includes('grill') || combinedText.includes('poulet') || combinedText.includes('poisson') || combinedText.includes('choukouya'))) return false;
+                      if (agentCatalogCategory === 'lounge_bar' && !(restoCat.includes('lounge') || restoCat.includes('bar') || combinedText.includes('lounge') || combinedText.includes('bar') || combinedText.includes('cocktail') || combinedText.includes('boisson') || combinedText.includes('biere') || combinedText.includes('vin'))) return false;
+                      if (agentCatalogCategory === 'hotel' && !(restoCat.includes('hotel') || combinedText.includes('hotel') || combinedText.includes('h\u00f4tel') || combinedText.includes('residence') || combinedText.includes('chambre'))) return false;
+                      if (agentCatalogCategory === 'patisserie' && !(restoCat.includes('patisserie') || combinedText.includes('patisserie') || combinedText.includes('p\u00e2tisserie') || combinedText.includes('dessert') || combinedText.includes('gateau') || combinedText.includes('glace'))) return false;
 
                       if (!searchLow) return true;
                       const titleMatch = item.title?.toLowerCase().includes(searchLow);
-                      const restoMatch = (item.restaurant || item.restaurants?.name)?.toLowerCase().includes(searchLow);
-                      const addressMatch = (item.address || item.restaurants?.address)?.toLowerCase().includes(searchLow);
-                      return titleMatch || restoMatch || addressMatch;
+                      const restoMatch = (item.restaurant || restoObj.name || item.restaurants?.name)?.toLowerCase().includes(searchLow);
+                      const addressMatch = (item.address || restoObj.address || item.restaurants?.address)?.toLowerCase().includes(searchLow);
+                      const categoryMatch = combinedText.includes(searchLow);
+                      return titleMatch || restoMatch || addressMatch || categoryMatch;
                     });
 
                     if (filtered.length === 0) {
