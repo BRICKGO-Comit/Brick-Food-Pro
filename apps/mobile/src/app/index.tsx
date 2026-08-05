@@ -3705,51 +3705,160 @@ const getCategoryLabel = (cat?: string) => {
                 return (
                   <TouchableOpacity
                     key={order.id}
-                    activeOpacity={0.85}
-                    style={[styles.orderListItem, { gap: 8, padding: 16, borderRadius: 16, borderWidth: 1, borderColor: '#E5E7EB', marginBottom: 12, backgroundColor: 'white' }]}
+                    activeOpacity={0.88}
+                    style={{
+                      backgroundColor: 'white',
+                      borderRadius: 22,
+                      padding: 18,
+                      marginBottom: 14,
+                      borderWidth: 1.5,
+                      borderColor: '#E2E8F0',
+                      elevation: 4,
+                      shadowColor: '#0F172A',
+                      shadowOffset: { width: 0, height: 4 },
+                      shadowOpacity: 0.08,
+                      shadowRadius: 12,
+                      gap: 12
+                    }}
                     onPress={() => setSelectedClientOrder(order)}
                   >
-                    <View style={styles.orderListHeader}>
-                      <Text style={styles.orderListResto}>{order.restaurants?.name ?? 'Restaurant'}</Text>
-                      <View style={[
-                        styles.statusBadge,
-                        {
-                          backgroundColor:
-                            order.status === 'terminee' || order.status === 'livree' ? '#ECFDF5' :
-                            order.status === 'prete' ? '#EFF6FF' :
-                            order.status === 'en_preparation' ? '#FFF7ED' : '#F3F4F6'
-                        }
-                      ]}>
-                        <Text style={[
-                          styles.statusText,
-                          {
-                            color:
-                              order.status === 'terminee' || order.status === 'livree' ? '#047857' :
-                              order.status === 'prete' ? '#1D4ED8' :
-                              order.status === 'en_preparation' ? '#C2410C' : '#4B5563'
-                          }
-                        ]}>
+                    {/* Header Row: Resto Icon + Name & Status Pill */}
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1, marginRight: 8 }}>
+                        <View style={{
+                          width: 40,
+                          height: 40,
+                          borderRadius: 14,
+                          backgroundColor: '#FFF1F2',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          borderWidth: 1,
+                          borderColor: '#FFE4E6'
+                        }}>
+                          <Ionicons name="restaurant" size={20} color={Colors.primary} />
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <Text style={{ fontSize: 15, fontWeight: '900', color: '#0F172A' }} numberOfLines={1}>
+                            {order.restaurants?.name ?? 'Établissement'}
+                          </Text>
+                          <Text style={{ fontSize: 11, fontWeight: '600', color: '#64748B', marginTop: 1 }}>
+                            🕒 {formattedDateTime}
+                          </Text>
+                        </View>
+                      </View>
+
+                      {/* Status Badge */}
+                      <View style={{
+                        paddingHorizontal: 12,
+                        paddingVertical: 6,
+                        borderRadius: 20,
+                        backgroundColor:
+                          order.status === 'terminee' || order.status === 'livree' ? '#ECFDF5' :
+                          order.status === 'prete' ? '#EFF6FF' :
+                          order.status === 'en_preparation' ? '#FFF7ED' : '#F8FAFC',
+                        borderWidth: 1,
+                        borderColor:
+                          order.status === 'terminee' || order.status === 'livree' ? '#A7F3D0' :
+                          order.status === 'prete' ? '#BFDBFE' :
+                          order.status === 'en_preparation' ? '#FED7AA' : '#E2E8F0'
+                      }}>
+                        <Text style={{
+                          fontSize: 12,
+                          fontWeight: '800',
+                          color:
+                            order.status === 'terminee' || order.status === 'livree' ? '#047857' :
+                            order.status === 'prete' ? '#1D4ED8' :
+                            order.status === 'en_preparation' ? '#C2410C' : '#475569'
+                        }}>
                           {order.status === 'nouvelle' ? '🟢 Nouvelle' : order.status === 'en_preparation' ? '🍳 En préparation' : order.status === 'prete' ? '🛍️ Prête' : order.status === 'terminee' ? '✅ Terminée' : order.status}
                         </Text>
                       </View>
                     </View>
 
-                    <Text style={styles.orderListDetail}>
-                      {order.offers?.title ?? 'Offre'} • 🕒 {formattedDateTime}
-                    </Text>
-                    <Text style={styles.orderListTotal}>
-                      Montant payé : {Number(order.total_amount).toLocaleString('fr-FR')} FCFA (Pass: {order.reservation_code})
-                    </Text>
+                    {/* Divider */}
+                    <View style={{ height: 1, backgroundColor: '#F1F5F9' }} />
 
-                    {/* Mode de consommation / Adresse */}
-                    {(order.dining_option || order.delivery_mode) && (
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#F8FAFC', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, marginTop: 2 }}>
-                        <Ionicons name={order.dining_option === 'livraison' || order.delivery_mode === 'livraison' ? 'location-outline' : 'restaurant-outline'} size={14} color={Colors.primary} />
-                        <Text style={{ fontSize: 11, fontWeight: '700', color: Colors.textPrimary }} numberOfLines={1}>
+                    {/* Offer Title & Details Row */}
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <View style={{ flex: 1, marginRight: 10 }}>
+                        <Text style={{ fontSize: 14, fontWeight: '800', color: '#1E293B' }} numberOfLines={1}>
+                          {order.offers?.title ?? 'Formule Gourmande'}
+                        </Text>
+                        <Text style={{ fontSize: 12, fontWeight: '600', color: '#64748B', marginTop: 2 }}>
+                          Qté : {order.quantity || 1} personne(s)
+                        </Text>
+                      </View>
+                      <View style={{ alignItems: 'flex-end' }}>
+                        <Text style={{ fontSize: 17, fontWeight: '900', color: Colors.primary }}>
+                          {Number(order.total_amount).toLocaleString('fr-FR')} FCFA
+                        </Text>
+                        <Text style={{ fontSize: 10, fontWeight: '800', color: '#10B981', marginTop: 1 }}>
+                          Paiement effectué ✓
+                        </Text>
+                      </View>
+                    </View>
+
+                    {/* Pass Code & Dining Mode Row */}
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 2 }}>
+                      <View style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 6,
+                        backgroundColor: '#F8FAFC',
+                        paddingHorizontal: 10,
+                        paddingVertical: 6,
+                        borderRadius: 10,
+                        borderWidth: 1,
+                        borderColor: '#E2E8F0',
+                        flex: 1,
+                        marginRight: 8
+                      }}>
+                        <Ionicons name={order.dining_option === 'livraison' || order.delivery_mode === 'livraison' ? 'bicycle-outline' : 'restaurant-outline'} size={14} color={Colors.primary} />
+                        <Text style={{ fontSize: 11, fontWeight: '700', color: '#334155' }} numberOfLines={1}>
                           {order.dining_option === 'livraison' || order.delivery_mode === 'livraison' ? `📦 Livraison : ${order.delivery_address || 'À domicile'}` : '🍽️ Sur place (au restaurant)'}
                         </Text>
                       </View>
-                    )}
+
+                      {/* Pass Code Tag Pill */}
+                      <View style={{
+                        backgroundColor: '#FEF2F2',
+                        paddingHorizontal: 10,
+                        paddingVertical: 6,
+                        borderRadius: 10,
+                        borderWidth: 1,
+                        borderColor: '#FECDD3',
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 4
+                      }}>
+                        <Ionicons name="qr-code" size={13} color={Colors.primary} />
+                        <Text style={{ fontSize: 11, fontWeight: '900', color: Colors.primary }}>
+                          Pass {order.reservation_code || 'QR'}
+                        </Text>
+                      </View>
+                    </View>
+
+                    {/* Action Bar Indicator */}
+                    <View style={{
+                      backgroundColor: '#F8FAFC',
+                      marginTop: 4,
+                      paddingVertical: 8,
+                      paddingHorizontal: 12,
+                      borderRadius: 12,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      borderWidth: 1,
+                      borderColor: '#F1F5F9'
+                    }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <Ionicons name="scan-outline" size={14} color={Colors.primary} />
+                        <Text style={{ fontSize: 11, fontWeight: '800', color: Colors.primary }}>
+                          Afficher le Pass QR & Détails
+                        </Text>
+                      </View>
+                      <Ionicons name="chevron-forward" size={16} color={Colors.primary} />
+                    </View>
                   </TouchableOpacity>
                 );
               })}
