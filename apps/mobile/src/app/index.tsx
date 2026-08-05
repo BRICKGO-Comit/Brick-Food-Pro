@@ -3702,6 +3702,12 @@ const getCategoryLabel = (cat?: string) => {
                     })
                   : 'Date inconnue';
 
+                const restoLogo = order.restaurants?.logo_url ||
+                  order.restaurants?.cover_url ||
+                  order.offers?.photos?.[0] ||
+                  order.offers?.image ||
+                  'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=500';
+
                 return (
                   <TouchableOpacity
                     key={order.id}
@@ -3722,21 +3728,21 @@ const getCategoryLabel = (cat?: string) => {
                     }}
                     onPress={() => setSelectedClientOrder(order)}
                   >
-                    {/* Header Row: Resto Icon + Name & Status Pill */}
+                    {/* Header Row: Resto Logo + Name & Status Pill */}
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1, marginRight: 8 }}>
-                        <View style={{
-                          width: 40,
-                          height: 40,
-                          borderRadius: 14,
-                          backgroundColor: '#FFF1F2',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          borderWidth: 1,
-                          borderColor: '#FFE4E6'
-                        }}>
-                          <Ionicons name="restaurant" size={20} color={Colors.primary} />
-                        </View>
+                        <Image
+                          source={{ uri: restoLogo }}
+                          style={{
+                            width: 44,
+                            height: 44,
+                            borderRadius: 14,
+                            backgroundColor: '#F1F5F9',
+                            borderWidth: 1.5,
+                            borderColor: '#E2E8F0',
+                            resizeMode: 'cover'
+                          }}
+                        />
                         <View style={{ flex: 1 }}>
                           <Text style={{ fontSize: 15, fontWeight: '900', color: '#0F172A' }} numberOfLines={1}>
                             {order.restaurants?.name ?? 'Établissement'}
@@ -6902,16 +6908,28 @@ const getCategoryLabel = (cat?: string) => {
 
               <ScrollView style={{ flex: 1, marginTop: 10 }} showsVerticalScrollIndicator={false}>
                 {/* Restaurant Info Header */}
-                <View style={{ backgroundColor: '#FFF5F5', padding: 14, borderRadius: 16, borderWidth: 1, borderColor: '#FFEBEB', gap: 4 }}>
-                  <Text style={{ fontSize: 16, fontWeight: '900', color: Colors.primary }}>
-                    🏢 {selectedClientOrder.restaurants?.name || 'Restaurant Partenaire'}
-                  </Text>
-                  <Text style={{ fontSize: 12, color: '#4B5563' }}>📍 {selectedClientOrder.restaurants?.address}</Text>
-                  <Text style={{ fontSize: 12, color: '#4B5563' }}>📞 {selectedClientOrder.restaurants?.phone}</Text>
+                <View style={{ backgroundColor: '#FFF1F2', padding: 16, borderRadius: 20, borderWidth: 1, borderColor: '#FFE4E6', flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+                  <Image
+                    source={{
+                      uri: selectedClientOrder.restaurants?.logo_url ||
+                        selectedClientOrder.restaurants?.cover_url ||
+                        selectedClientOrder.offers?.photos?.[0] ||
+                        selectedClientOrder.offers?.image ||
+                        'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=500'
+                    }}
+                    style={{ width: 60, height: 60, borderRadius: 16, borderWidth: 1.5, borderColor: '#FFE4E6', backgroundColor: 'white', resizeMode: 'cover' }}
+                  />
+                  <View style={{ flex: 1, gap: 2 }}>
+                    <Text style={{ fontSize: 16, fontWeight: '900', color: '#0F172A' }}>
+                      {selectedClientOrder.restaurants?.name || 'Restaurant Partenaire'}
+                    </Text>
+                    <Text style={{ fontSize: 12, fontWeight: '600', color: '#64748B' }}>📍 {selectedClientOrder.restaurants?.address || 'Abidjan, Côte d\'Ivoire'}</Text>
+                    <Text style={{ fontSize: 12, fontWeight: '600', color: '#64748B' }}>📞 {selectedClientOrder.restaurants?.phone || '+225 01 00 00 00 00'}</Text>
+                  </View>
                 </View>
 
                 {/* Real-time Order Progress Stepper */}
-                <View style={{ backgroundColor: '#F9FAFB', padding: 16, borderRadius: 16, borderWidth: 1, borderColor: '#E5E7EB', marginVertical: 14 }}>
+                <View style={{ backgroundColor: '#F8FAFC', padding: 16, borderRadius: 18, borderWidth: 1, borderColor: '#E2E8F0', marginVertical: 14 }}>
                   <Text style={{ fontSize: 14, fontWeight: '800', color: '#111827', marginBottom: 14 }}>
                     ⚡ Évolution du statut en direct
                   </Text>
@@ -6992,14 +7010,28 @@ const getCategoryLabel = (cat?: string) => {
                 </View>
 
                 {/* QR Code Pass Widget */}
-                <View style={{ backgroundColor: '#111827', borderRadius: 16, padding: 16, alignItems: 'center', gap: 10 }}>
-                  <Text style={{ color: Colors.primary, fontSize: 12, fontWeight: '800', letterSpacing: 0.5 }}>PASS DE RÉSERVATION ACCUEIL</Text>
-                  <View style={{ width: 110, height: 110, backgroundColor: 'white', borderRadius: 12, alignItems: 'center', justifyContent: 'center' }}>
-                    <Ionicons name="qr-code-outline" size={90} color="#111827" />
+                <View style={{ backgroundColor: '#0F172A', borderRadius: 20, padding: 20, alignItems: 'center', gap: 12, marginVertical: 4 }}>
+                  <Text style={{ color: Colors.primary, fontSize: 12, fontWeight: '900', letterSpacing: 1 }}>PASS DE RÉSERVATION OFFICIEL</Text>
+                  <View style={{ padding: 12, backgroundColor: 'white', borderRadius: 18 }}>
+                    <Image
+                      source={{ uri: `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(selectedClientOrder.reservation_code || 'BD-100200')}` }}
+                      style={{ width: 150, height: 150, resizeMode: 'contain' }}
+                    />
                   </View>
-                  <Text style={{ color: 'white', fontSize: 18, fontWeight: '900', letterSpacing: 1 }}>{selectedClientOrder.reservation_code}</Text>
-                  <Text style={{ color: '#9CA3AF', fontSize: 11, textAlign: 'center' }}>Montrez cet écran à la caisse du restaurant.</Text>
+                  <Text style={{ color: 'white', fontSize: 22, fontWeight: '900', letterSpacing: 2 }}>{selectedClientOrder.reservation_code}</Text>
+                  <Text style={{ color: '#94A3B8', fontSize: 12, textAlign: 'center' }}>Montrez ce QR Code au restaurant pour valider votre formule.</Text>
                 </View>
+
+                {/* PDF Download Pass Button */}
+                <TouchableOpacity
+                  style={{ backgroundColor: Colors.primary, borderRadius: 16, paddingVertical: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 12 }}
+                  onPress={() => handleDownloadPassPDF(selectedClientOrder)}
+                >
+                  <Ionicons name="document-text" size={18} color="white" />
+                  <Text style={{ color: 'white', fontWeight: '900', fontSize: 15 }}>
+                    {isExportingPass ? 'Génération du PDF...' : '📄 Télécharger le Pass QR en PDF'}
+                  </Text>
+                </TouchableOpacity>
 
                 {/* Contact Action Buttons */}
                 <View style={{ flexDirection: 'row', gap: 10, marginVertical: 16 }}>
