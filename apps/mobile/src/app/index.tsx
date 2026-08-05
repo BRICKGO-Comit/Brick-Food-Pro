@@ -311,11 +311,26 @@ export default function MobileApp() {
         created_at: new Date().toISOString()
       };
 
-      const { data } = await supabase
+      let { data, error } = await supabase
         .from('orders')
         .insert([newOrderPayload])
         .select('*, restaurants!left(name, address, phone), offers!left(title, type)')
         .single();
+
+      if (error && (error.message?.includes('delivery_address') || error.message?.includes('dining_option') || error.message?.includes('schema cache') || error.message?.includes('column'))) {
+        delete (newOrderPayload as any).dining_option;
+        delete (newOrderPayload as any).delivery_address;
+        delete (newOrderPayload as any).client_name;
+        delete (newOrderPayload as any).client_phone;
+        delete (newOrderPayload as any).payment_method;
+        const retry = await supabase
+          .from('orders')
+          .insert([newOrderPayload])
+          .select('*, restaurants!left(name, address, phone), offers!left(title, type)')
+          .single();
+        data = retry.data;
+        error = retry.error;
+      }
 
       const createdOrder = data || {
         ...newOrderPayload,
@@ -1523,25 +1538,39 @@ const getCategoryLabel = (cat?: string) => {
     const commissionAmount = Math.round((totalAmount * (offer.commissionRate || 10)) / 100);
     const code = reservationId || ('BD' + Math.floor(100000 + Math.random() * 900000));
 
-    const { data, error } = await supabase
+    const insertPayload: any = {
+      client_id: clientId,
+      restaurant_id: offer.restaurantId,
+      offer_id: offer.id,
+      agent_id: agentId,
+      status: 'nouvelle',
+      delivery_mode: deliveryMode === 'livraison' ? 'livraison' : 'retrait',
+      dining_option: deliveryMode === 'sur_place' ? 'sur_place' : 'livraison',
+      delivery_address: deliveryMode === 'livraison' ? (clientDeliveryAddressInput.trim() || 'Livraison à domicile') : (deliveryMode === 'retrait' ? 'À emporter (Retrait)' : 'Sur place (au restaurant)'),
+      quantity: bookingQty,
+      total_amount: totalAmount,
+      commission_amount: commissionAmount,
+      payment_status: 'paid',
+      reservation_code: code,
+    };
+
+    let { data, error } = await supabase
       .from('orders')
-      .insert({
-        client_id: clientId,
-        restaurant_id: offer.restaurantId,
-        offer_id: offer.id,
-        agent_id: agentId,
-        status: 'nouvelle',
-        delivery_mode: deliveryMode,
-        dining_option: deliveryMode === 'sur_place' ? 'sur_place' : 'livraison',
-        delivery_address: deliveryMode === 'livraison' ? (clientDeliveryAddressInput.trim() || 'Livraison à domicile') : (deliveryMode === 'retrait' ? 'À emporter (Retrait)' : 'Sur place (au restaurant)'),
-        quantity: bookingQty,
-        total_amount: totalAmount,
-        commission_amount: commissionAmount,
-        payment_status: 'paid',
-        reservation_code: code,
-      })
+      .insert(insertPayload)
       .select('id')
       .single();
+
+    if (error && (error.message?.includes('delivery_address') || error.message?.includes('dining_option') || error.message?.includes('schema cache') || error.message?.includes('column'))) {
+      delete insertPayload.dining_option;
+      delete insertPayload.delivery_address;
+      const retry = await supabase
+        .from('orders')
+        .insert(insertPayload)
+        .select('id')
+        .single();
+      data = retry.data;
+      error = retry.error;
+    }
 
     if (error) {
       Alert.alert('Erreur', `Impossible de créer la commande: ${error.message}`);
