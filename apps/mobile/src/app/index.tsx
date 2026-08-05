@@ -1558,7 +1558,7 @@ const getCategoryLabel = (cat?: string) => {
     }
 
     // --- NOTIFICATIONS ---
-    const offerType = selectedFlash ? 'Flash ⚡' : 'Deal ❤️';
+    const offerType = selectedFlash ? 'Flash ⚡' : 'Deal 🏷️';
     const notifTitle = `Nouvelle commande ${offerType}`;
     const notifBody = `${offer.title} — ${totalAmount.toLocaleString('fr-FR')} FCFA (${bookingQty} pers.) par ${profile?.full_name || 'Client'}`;
     const notificationsToInsert: any[] = [];
@@ -2438,7 +2438,7 @@ const getCategoryLabel = (cat?: string) => {
                     <View style={{ backgroundColor: 'rgba(17, 24, 39, 0.85)', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 12, flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                       <Ionicons name={selectedFlash ? 'flash' : 'flame'} size={12} color={selectedFlash ? '#F5A623' : Colors.primary} />
                       <Text style={{ color: 'white', fontSize: 11, fontWeight: '800' }}>
-                        {selectedFlash ? 'OFFRE FLASH ⚡' : 'DEAL SPÉCIAL ❤️'}
+                        {selectedFlash ? 'OFFRE FLASH ⚡' : 'DEAL SPÉCIAL 🏷️'}
                       </Text>
                     </View>
                   </View>
@@ -2638,7 +2638,7 @@ const getCategoryLabel = (cat?: string) => {
                     }}
                   >
                     <Text style={{ color: 'white', fontSize: 15, fontWeight: '900' }}>
-                      {selectedFlash ? '⚡ J\'en profite' : '❤️ Je réserve'}
+                      {selectedFlash ? '⚡ J\'en profite' : '🏷️ Je réserve'}
                     </Text>
                     <Ionicons name="arrow-forward" size={16} color="white" />
                   </TouchableOpacity>
@@ -3444,7 +3444,7 @@ const getCategoryLabel = (cat?: string) => {
             {/* DEAL Section */}
             <View style={styles.sectionHeaderRow}>
               <View>
-                <Text style={styles.sectionTitleText}>❤️ DEAL</Text>
+                <Text style={styles.sectionTitleText}>🏷️ DEAL</Text>
                 <Text style={styles.sectionSubtitleText}>Expériences et formules de groupe</Text>
               </View>
               <TouchableOpacity>
@@ -3480,7 +3480,7 @@ const getCategoryLabel = (cat?: string) => {
                       </View>
                       <Text style={styles.cardMeta}>👥 Pour {item.persons} pers  •  📅 {item.validity}</Text>
                       <View style={[styles.cardBtn, { backgroundColor: Colors.primary }]}>
-                        <Text style={styles.cardBtnText}>❤️ Je réserve</Text>
+                        <Text style={styles.cardBtnText}>🏷️ Je réserve</Text>
                       </View>
                     </View>
                   </TouchableOpacity>
@@ -3951,7 +3951,7 @@ const getCategoryLabel = (cat?: string) => {
                         const pNew = Number(item.price_promo || item.priceNew || item.price || 5000);
                         const pOld = Number(item.price_normal || item.priceOld || Math.round(pNew * 1.25));
                         const discountStr = item.discount || (pOld > pNew ? `-${Math.round((1 - (pNew / pOld)) * 100)}%` : '-20%');
-                        const typeStr = (item.type === 'deal' || item.proposal_type === 'deal') ? '❤️ DEAL' : '⚡ FLASH';
+                        const typeStr = (item.type === 'deal' || item.proposal_type === 'deal') ? '🏷️ DEAL' : '⚡ FLASH';
                         const descStr = item.description || item.details || 'Offre promotionnelle exclusive BRICK DEAL.';
 
                         const fullItem = {
@@ -4470,7 +4470,7 @@ const getCategoryLabel = (cat?: string) => {
                       <View style={{ flex: 1 }}>
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
                           <Text style={{ fontSize: 10, fontWeight: '900', color: prop.type === 'flash' ? Colors.primary : '#D97706', backgroundColor: prop.type === 'flash' ? '#FFF1F2' : '#FFFBEB', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 }}>
-                            {prop.type === 'flash' ? '⚡ FLASH' : '❤️ DEAL'}
+                            {prop.type === 'flash' ? '⚡ FLASH' : '🏷️ DEAL'}
                           </Text>
                           <Text style={{ fontSize: 11, color: Colors.textSecondary }} numberOfLines={1}>
                             🏢 {restoName}
@@ -4653,7 +4653,7 @@ const getCategoryLabel = (cat?: string) => {
                     {[
                       { id: 'all', label: '🌐 Toutes les offres' },
                       { id: 'flash', label: '⚡ Flash' },
-                      { id: 'deal', label: '❤️ Deals' },
+                      { id: 'deal', label: '🏷️ Deals' },
                       { id: 'restaurant', label: '🍽️ Restaurants' },
                       { id: 'fast_food', label: '🍔 Fast Food' },
                       { id: 'maquis', label: '🍺 Maquis' },
@@ -4732,7 +4732,7 @@ const getCategoryLabel = (cat?: string) => {
                       const pNew = Number(item.price_promo || item.priceNew || item.price || 5000);
                       const pOld = Number(item.price_normal || item.priceOld || Math.round(pNew * 1.25));
                       const discountStr = item.discount || (pOld > pNew ? `-${Math.round((1 - (pNew / pOld)) * 100)}%` : '-20%');
-                      const typeStr = (item.type === 'deal' || item.proposal_type === 'deal') ? '❤️ DEAL' : '⚡ FLASH';
+                      const typeStr = (item.type === 'deal' || item.proposal_type === 'deal') ? '🏷️ DEAL' : '⚡ FLASH';
 
                       return (
                         <View
@@ -5526,7 +5526,7 @@ const getCategoryLabel = (cat?: string) => {
                   <Text style={[styles.tabSelectorText, proposalType === 'flash' && { color: 'white' }]}>⚡ Flash</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={[styles.tabSelectorBtn, proposalType === 'deal' && styles.tabSelectorActive]} onPress={() => setProposalType('deal')}>
-                  <Text style={[styles.tabSelectorText, proposalType === 'deal' && { color: 'white' }]}>❤️ Deal</Text>
+                  <Text style={[styles.tabSelectorText, proposalType === 'deal' && { color: 'white' }]}>🏷️ Deal</Text>
                 </TouchableOpacity>
               </View>
 
@@ -5998,7 +5998,7 @@ const getCategoryLabel = (cat?: string) => {
                         const pNew = Number(item.price_promo || item.priceNew || item.price || 5000);
                         const pOld = Number(item.price_normal || item.priceOld || Math.round(pNew * 1.25));
                         const discountStr = item.discount || (pOld > pNew ? `-${Math.round((1 - (pNew / pOld)) * 100)}%` : '-20%');
-                        const typeStr = (item.type === 'deal' || item.proposal_type === 'deal') ? '❤️ DEAL' : '⚡ FLASH';
+                        const typeStr = (item.type === 'deal' || item.proposal_type === 'deal') ? '🏷️ DEAL' : '⚡ FLASH';
                         const descStr = item.description || item.details || 'Offre promotionnelle exclusive BRICK DEAL.';
 
                         const fullItem = {
@@ -6199,7 +6199,7 @@ const getCategoryLabel = (cat?: string) => {
                     <View style={{ flex: 1 }}>
                       <Text style={styles.partnerName}>{prop.title}</Text>
                       <Text style={styles.partnerSub}>
-                        {prop.type === 'flash' ? '⚡ Flash' : '❤️ Deal'} • {prop.type === 'flash' ? `${Number(prop.price_promo).toLocaleString('fr-FR')} F (Promo)` : `${Number(prop.price).toLocaleString('fr-FR')} F`}
+                        {prop.type === 'flash' ? '⚡ Flash' : '🏷️ Deal'} • {prop.type === 'flash' ? `${Number(prop.price_promo).toLocaleString('fr-FR')} F (Promo)` : `${Number(prop.price).toLocaleString('fr-FR')} F`}
                       </Text>
                     </View>
                     <View style={[
@@ -6424,7 +6424,7 @@ const getCategoryLabel = (cat?: string) => {
                   <Text style={[styles.tabSelectorText, restoPropType === 'flash' && { color: 'white' }]}>⚡ Flash</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={[styles.tabSelectorBtn, restoPropType === 'deal' && styles.tabSelectorActive]} onPress={() => setRestoPropType('deal')}>
-                  <Text style={[styles.tabSelectorText, restoPropType === 'deal' && { color: 'white' }]}>❤️ Deal</Text>
+                  <Text style={[styles.tabSelectorText, restoPropType === 'deal' && { color: 'white' }]}>🏷️ Deal</Text>
                 </TouchableOpacity>
               </View>
 
