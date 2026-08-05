@@ -159,6 +159,8 @@ export default function MobileApp() {
     quantity: 1,
     clientName: '',
     clientPhone: '',
+    diningOption: 'sur_place' as 'sur_place' | 'livraison',
+    deliveryAddress: '',
     paymentMethod: 'cash' as 'cash' | 'wave' | 'orange' | 'mtn' | 'moov'
   });
   const [selectedAgentOrder, setSelectedAgentOrder] = useState<any | null>(null);
@@ -301,6 +303,8 @@ export default function MobileApp() {
         commission_amount: commissionAmt,
         client_name: agentOrderForm.clientName.trim(),
         client_phone: agentOrderForm.clientPhone.trim() || 'Non renseigné',
+        dining_option: agentOrderForm.diningOption,
+        delivery_address: agentOrderForm.diningOption === 'livraison' ? (agentOrderForm.deliveryAddress.trim() || 'À emporter / Livraison') : 'Sur place (au restaurant)',
         reservation_code: randCode,
         status: 'nouvelle',
         payment_method: agentOrderForm.paymentMethod,
@@ -337,6 +341,8 @@ export default function MobileApp() {
         clientName: '',
         clientPhone: '',
         quantity: 1,
+        diningOption: 'sur_place',
+        deliveryAddress: '',
         paymentMethod: 'wave'
       });
       setGeneratedPassOrder(createdOrder);
@@ -979,7 +985,8 @@ const getCategoryLabel = (cat?: string) => {
   const [pickerHour, setPickerHour] = useState(14);
   const [pickerMinute, setPickerMinute] = useState(0);
   const [bookingQty, setBookingQty] = useState<number>(1);
-  const [deliveryMode, setDeliveryMode] = useState<'retrait' | 'livraison'>('retrait');
+  const [deliveryMode, setDeliveryMode] = useState<'sur_place' | 'retrait' | 'livraison'>('sur_place');
+  const [clientDeliveryAddressInput, setClientDeliveryAddressInput] = useState<string>('');
   const [paymentMethod, setPaymentMethod] = useState<'wave' | 'orange' | 'mtn' | 'moov' | 'cb'>('wave');
 
   // Real-time details state variables
@@ -1525,6 +1532,8 @@ const getCategoryLabel = (cat?: string) => {
         agent_id: agentId,
         status: 'nouvelle',
         delivery_mode: deliveryMode,
+        dining_option: deliveryMode === 'sur_place' ? 'sur_place' : 'livraison',
+        delivery_address: deliveryMode === 'livraison' ? (clientDeliveryAddressInput.trim() || 'Livraison à domicile') : (deliveryMode === 'retrait' ? 'À emporter (Retrait)' : 'Sur place (au restaurant)'),
         quantity: bookingQty,
         total_amount: totalAmount,
         commission_amount: commissionAmount,
@@ -2833,24 +2842,41 @@ const getCategoryLabel = (cat?: string) => {
                       <TouchableOpacity style={styles.qtyBtn} onPress={() => setBookingQty(q => q + 1)}><Text>+</Text></TouchableOpacity>
                     </View>
                     
-                    <Text style={styles.formTitle}>4. Comment récupérer ?</Text>
-                    <View style={{ marginVertical: 8 }}>
-                      <TouchableOpacity style={[styles.deliveryOptionRow, deliveryMode === 'retrait' && styles.deliveryOptionActive]} onPress={() => setDeliveryMode('retrait')}>
+                    <Text style={styles.formTitle}>4. Mode de consommation</Text>
+                    <View style={{ marginVertical: 8, gap: 8 }}>
+                      <TouchableOpacity style={[styles.deliveryOptionRow, deliveryMode === 'sur_place' && styles.deliveryOptionActive]} onPress={() => setDeliveryMode('sur_place')}>
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                          <View style={styles.radioOutlineSmall}>
-                            {deliveryMode === 'retrait' && <View style={styles.radioDotSmall} />}
-                          </View>
-                          <Text style={styles.deliveryOptionLabel}>Je récupère au restaurant</Text>
+                          <Text style={{ fontSize: 18 }}>🍽️</Text>
+                          <Text style={styles.deliveryOptionLabel}>Sur place (manger au restaurant)</Text>
                         </View>
                       </TouchableOpacity>
+
+                      <TouchableOpacity style={[styles.deliveryOptionRow, deliveryMode === 'retrait' && styles.deliveryOptionActive]} onPress={() => setDeliveryMode('retrait')}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                          <Text style={{ fontSize: 18 }}>🛍️</Text>
+                          <Text style={styles.deliveryOptionLabel}>À emporter (retrait au restaurant)</Text>
+                        </View>
+                      </TouchableOpacity>
+
                       <TouchableOpacity style={[styles.deliveryOptionRow, deliveryMode === 'livraison' && styles.deliveryOptionActive]} onPress={() => setDeliveryMode('livraison')}>
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                          <View style={styles.radioOutlineSmall}>
-                            {deliveryMode === 'livraison' && <View style={styles.radioDotSmall} />}
-                          </View>
+                          <Text style={{ fontSize: 18 }}>🚚</Text>
                           <Text style={styles.deliveryOptionLabel}>Livraison à domicile</Text>
                         </View>
                       </TouchableOpacity>
+
+                      {deliveryMode === 'livraison' && (
+                        <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#F8FAFC', borderWidth: 1.5, borderColor: Colors.primary, borderRadius: 14, paddingHorizontal: 12, height: 48, marginTop: 4 }}>
+                          <Ionicons name="location-outline" size={18} color={Colors.primary} style={{ marginRight: 10 }} />
+                          <TextInput
+                            style={{ flex: 1, fontSize: 13, fontWeight: '600', color: '#0F172A' }}
+                            placeholder="Adresse de livraison (ex: Cocody Rue C8)"
+                            placeholderTextColor="#94A3B8"
+                            value={clientDeliveryAddressInput}
+                            onChangeText={setClientDeliveryAddressInput}
+                          />
+                        </View>
+                      )}
                     </View>
                   </>
                 )}
@@ -4169,6 +4195,8 @@ const getCategoryLabel = (cat?: string) => {
                 clientName: '',
                 clientPhone: '',
                 quantity: 1,
+                diningOption: 'sur_place',
+                deliveryAddress: '',
                 paymentMethod: 'wave'
               });
               setAgentTab('orders');
@@ -4892,6 +4920,8 @@ const getCategoryLabel = (cat?: string) => {
                                   clientName: '',
                                   clientPhone: '',
                                   quantity: 1,
+                                  diningOption: 'sur_place',
+                                  deliveryAddress: '',
                                   paymentMethod: 'wave'
                                 });
                                 setAgentOrderStep(1);
@@ -4962,6 +4992,60 @@ const getCategoryLabel = (cat?: string) => {
                           onChangeText={t => setAgentOrderForm(prev => ({ ...prev, clientPhone: t }))}
                         />
                       </View>
+                    </View>
+
+                    {/* Step 2: Mode de Consommation (Sur Place vs Livraison) */}
+                    <View style={{ backgroundColor: 'white', padding: 16, borderRadius: 18, marginBottom: 16, borderWidth: 1, borderColor: '#E2E8F0', elevation: 2 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                        <View style={{ width: 28, height: 28, borderRadius: 8, backgroundColor: '#EFF6FF', alignItems: 'center', justifyContent: 'center' }}>
+                          <Ionicons name="restaurant" size={16} color="#2563EB" />
+                        </View>
+                        <Text style={{ fontSize: 14, fontWeight: '800', color: '#0F172A' }}>2. Mode de Consommation</Text>
+                      </View>
+
+                      <View style={{ flexDirection: 'row', gap: 10, marginBottom: agentOrderForm.diningOption === 'livraison' ? 12 : 0 }}>
+                        <TouchableOpacity
+                          style={[
+                            { flex: 1, paddingVertical: 12, paddingHorizontal: 10, borderRadius: 14, borderWidth: 2, borderColor: '#CBD5E1', alignItems: 'center', backgroundColor: '#F8FAFC', gap: 4 },
+                            agentOrderForm.diningOption === 'sur_place' && { borderColor: Colors.primary, backgroundColor: '#FFF1F2' }
+                          ]}
+                          onPress={() => setAgentOrderForm(prev => ({ ...prev, diningOption: 'sur_place' }))}
+                        >
+                          <Text style={{ fontSize: 20 }}>🍽️</Text>
+                          <Text style={[{ fontSize: 13, fontWeight: '800', color: '#475569' }, agentOrderForm.diningOption === 'sur_place' && { color: Colors.primary }]}>
+                            Sur Place
+                          </Text>
+                          <Text style={{ fontSize: 10, color: '#64748B' }}>Manger au resto</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                          style={[
+                            { flex: 1, paddingVertical: 12, paddingHorizontal: 10, borderRadius: 14, borderWidth: 2, borderColor: '#CBD5E1', alignItems: 'center', backgroundColor: '#F8FAFC', gap: 4 },
+                            agentOrderForm.diningOption === 'livraison' && { borderColor: Colors.primary, backgroundColor: '#FFF1F2' }
+                          ]}
+                          onPress={() => setAgentOrderForm(prev => ({ ...prev, diningOption: 'livraison' }))}
+                        >
+                          <Text style={{ fontSize: 20 }}>📦</Text>
+                          <Text style={[{ fontSize: 13, fontWeight: '800', color: '#475569' }, agentOrderForm.diningOption === 'livraison' && { color: Colors.primary }]}>
+                            À emporter / Livraison
+                          </Text>
+                          <Text style={{ fontSize: 10, color: '#64748B' }}>Livrer ou emporter</Text>
+                        </TouchableOpacity>
+                      </View>
+
+                      {/* Delivery Address Input if Livraison selected */}
+                      {agentOrderForm.diningOption === 'livraison' && (
+                        <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#F8FAFC', borderWidth: 1.5, borderColor: Colors.primary, borderRadius: 14, paddingHorizontal: 12, height: 48, marginTop: 4 }}>
+                          <Ionicons name="location-outline" size={18} color={Colors.primary} style={{ marginRight: 10 }} />
+                          <TextInput
+                            style={{ flex: 1, fontSize: 13, fontWeight: '600', color: '#0F172A' }}
+                            placeholder="Adresse de livraison (ex: Cocody Rue C8)"
+                            placeholderTextColor="#94A3B8"
+                            value={agentOrderForm.deliveryAddress}
+                            onChangeText={t => setAgentOrderForm(prev => ({ ...prev, deliveryAddress: t }))}
+                          />
+                        </View>
+                      )}
                     </View>
                   </View>
 
@@ -5132,6 +5216,15 @@ const getCategoryLabel = (cat?: string) => {
                             <Text style={{ fontSize: 13, fontWeight: '700', color: '#64748B' }}>👤 Client Lambda</Text>
                             <Text style={{ fontSize: 13, fontWeight: '800', color: '#0F172A' }}>
                               {agentOrderForm.clientName || 'Client'}
+                            </Text>
+                          </View>
+
+                          <View style={{ height: 1, backgroundColor: '#E2E8F0' }} />
+
+                          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <Text style={{ fontSize: 13, fontWeight: '700', color: '#64748B' }}>🍽️ Option</Text>
+                            <Text style={{ fontSize: 13, fontWeight: '800', color: Colors.primary }}>
+                              {agentOrderForm.diningOption === 'sur_place' ? 'Sur place (au restaurant)' : '📦 À emporter / Livraison'}
                             </Text>
                           </View>
 
