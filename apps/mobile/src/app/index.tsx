@@ -1666,10 +1666,15 @@ const getCategoryLabel = (cat?: string) => {
 
         // Explicitly update profiles table with phone and full_name
         if (signUpData?.user?.id) {
-          await supabase.from('profiles').update({
-            phone: clientPhone ? clientPhone.trim() : null,
-            full_name: clientName ? clientName.trim() : null,
-          }).eq('id', signUpData.user.id);
+          const cleanPhone = clientPhone ? clientPhone.trim() : null;
+          const cleanName = clientName ? clientName.trim() : null;
+          await supabase.from('profiles').upsert({
+            id: signUpData.user.id,
+            email: clientEmail.trim(),
+            full_name: cleanName || clientEmail.split('@')[0],
+            phone: cleanPhone,
+            role: 'client'
+          }, { onConflict: 'id' });
           await refreshProfile(signUpData.user.id);
         }
       } else {
@@ -3766,7 +3771,7 @@ const getCategoryLabel = (cat?: string) => {
                   <Text style={styles.profileEmail}>{profile?.email ?? ''}</Text>
                   
                   <Text style={{ fontSize: 11, fontWeight: '700', color: Colors.primary, marginTop: 12 }}>TÉLÉPHONE</Text>
-                  <Text style={styles.profilePhone}>{profile?.phone ?? 'Non renseigné'}</Text>
+                  <Text style={styles.profilePhone}>{profile?.phone || user?.user_metadata?.phone || user?.phone || 'Non renseigné'}</Text>
                   
                   <TouchableOpacity 
                     style={[styles.actionBtn, { marginTop: 16, backgroundColor: 'white', borderWidth: 1, borderColor: Colors.textPrimary }]} 
@@ -5334,7 +5339,7 @@ const getCategoryLabel = (cat?: string) => {
               <Text style={styles.profileEmail}>{profile?.email ?? ''}</Text>
               
               <Text style={{ fontSize: 11, fontWeight: '700', color: Colors.primary, marginTop: 12 }}>TÉLÉPHONE</Text>
-              <Text style={styles.profilePhone}>{profile?.phone ?? 'Non renseigné'}</Text>
+              <Text style={styles.profilePhone}>{profile?.phone || user?.user_metadata?.phone || user?.phone || 'Non renseigné'}</Text>
 
               <View style={{ marginTop: 16, backgroundColor: '#F3F4F6', borderRadius: 10, padding: 12, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                 <Ionicons name="lock-closed-outline" size={16} color={Colors.textSecondary} />
@@ -6447,7 +6452,7 @@ const getCategoryLabel = (cat?: string) => {
                 <Text style={styles.profileEmail}>{profile?.email ?? ''}</Text>
                 
                 <Text style={{ fontSize: 11, fontWeight: '700', color: Colors.primary, marginTop: 12 }}>TÉLÉPHONE</Text>
-                <Text style={styles.profilePhone}>{profile?.phone ?? 'Non renseigné'}</Text>
+                <Text style={styles.profilePhone}>{profile?.phone || user?.user_metadata?.phone || user?.phone || 'Non renseigné'}</Text>
                 
                 <TouchableOpacity 
                   style={[styles.actionBtn, { marginTop: 16, backgroundColor: 'white', borderWidth: 1, borderColor: Colors.textPrimary }]} 

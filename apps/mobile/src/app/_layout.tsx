@@ -55,10 +55,12 @@ export default function RootLayout() {
       return;
     }
     const { data, error } = await supabase.from('profiles').select('*').eq('id', targetId).single();
-    if (error) {
-      console.error('[refreshProfile] Error:', error.message);
-    } else {
-      console.log('[refreshProfile] Success:', data);
+    if (data) {
+      const metaPhone = user?.user_metadata?.phone || session?.user?.user_metadata?.phone;
+      if ((!data.phone || data.phone === 'Non renseigné') && metaPhone) {
+        data.phone = metaPhone;
+        await supabase.from('profiles').update({ phone: metaPhone }).eq('id', targetId);
+      }
     }
     setProfile(data as Profile | null);
   };
@@ -75,8 +77,13 @@ export default function RootLayout() {
           .eq('id', session.user.id)
           .single()
           .then(({ data, error }) => {
-            if (error) console.error('[getSession] Error fetching profile:', error.message);
-            else console.log('[getSession] Profile fetched:', data);
+            if (data) {
+              const metaPhone = session.user.user_metadata?.phone;
+              if ((!data.phone || data.phone === 'Non renseigné') && metaPhone) {
+                data.phone = metaPhone;
+                supabase.from('profiles').update({ phone: metaPhone }).eq('id', session.user.id);
+              }
+            }
             setProfile(data as Profile | null);
             setLoading(false);
           });
