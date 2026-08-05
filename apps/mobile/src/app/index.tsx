@@ -3844,27 +3844,34 @@ const getCategoryLabel = (cat?: string) => {
                       </View>
                     </View>
 
-                    {/* Action Bar Indicator */}
-                    <View style={{
-                      backgroundColor: '#F8FAFC',
-                      marginTop: 4,
-                      paddingVertical: 8,
-                      paddingHorizontal: 12,
-                      borderRadius: 12,
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      borderWidth: 1,
-                      borderColor: '#F1F5F9'
-                    }}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                        <Ionicons name="scan-outline" size={14} color={Colors.primary} />
-                        <Text style={{ fontSize: 11, fontWeight: '800', color: Colors.primary }}>
+                    {/* Action Bar Indicator Button */}
+                    <TouchableOpacity
+                      activeOpacity={0.8}
+                      style={{
+                        backgroundColor: Colors.primary,
+                        marginTop: 4,
+                        paddingVertical: 12,
+                        paddingHorizontal: 16,
+                        borderRadius: 14,
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        elevation: 3,
+                        shadowColor: Colors.primary,
+                        shadowOffset: { width: 0, height: 3 },
+                        shadowOpacity: 0.3,
+                        shadowRadius: 6
+                      }}
+                      onPress={() => setSelectedClientOrder(order)}
+                    >
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                        <Ionicons name="qr-code-outline" size={18} color="white" />
+                        <Text style={{ fontSize: 13, fontWeight: '900', color: 'white' }}>
                           Afficher le Pass QR & Détails
                         </Text>
                       </View>
-                      <Ionicons name="chevron-forward" size={16} color={Colors.primary} />
-                    </View>
+                      <Ionicons name="chevron-forward" size={18} color="white" />
+                    </TouchableOpacity>
                   </TouchableOpacity>
                 );
               })}
@@ -6892,7 +6899,12 @@ const getCategoryLabel = (cat?: string) => {
   return (
     <>
       {/* CLIENT ORDER LIVE TRACKING MODAL */}
-      <Modal visible={!!selectedClientOrder} animationType="slide" transparent={false}>
+      <Modal
+        visible={!!selectedClientOrder}
+        animationType="slide"
+        transparent={false}
+        onRequestClose={() => setSelectedClientOrder(null)}
+      >
         <SafeAreaView style={{ flex: 1, backgroundColor: 'white', padding: 20 }}>
           {selectedClientOrder && (
             <View style={{ flex: 1 }}>
