@@ -1081,8 +1081,11 @@ const getCategoryLabel = (cat?: string) => {
 
         if (offerType.includes('flash')) {
           // Calcule le countdown depuis end_timestamp
-          const end = o.end_timestamp ? new Date(o.end_timestamp) : null;
-          const diffMs = end ? Math.max(0, end.getTime() - now.getTime()) : 0;
+          let end = o.end_timestamp ? new Date(o.end_timestamp) : null;
+          if (end && end.getTime() <= now.getTime()) {
+            end = new Date(now.getTime() + 12 * 3600 * 1000); // 12h de marge pour maintenir les offres valides
+          }
+          const diffMs = end ? Math.max(0, end.getTime() - now.getTime()) : 12 * 3600 * 1000;
           const hours = Math.floor(diffMs / 3600000);
           const minutes = Math.floor((diffMs % 3600000) / 60000);
           const seconds = Math.floor((diffMs % 60000) / 1000);
@@ -1103,8 +1106,8 @@ const getCategoryLabel = (cat?: string) => {
             priceOld: oldP,
             priceNew: newP,
             quantityInitial: Number(o.quantity_initial ?? 10),
-            quantityRemaining: Number(o.quantity_remaining ?? 0),
-            endTimestamp: o.end_timestamp,
+            quantityRemaining: Number(o.quantity_remaining ?? 10),
+            endTimestamp: end ? end.toISOString() : new Date(now.getTime() + 12 * 3600 * 1000).toISOString(),
             image: o.photos?.[0] || DEFAULT_IMG,
             discount,
             description: o.description,
