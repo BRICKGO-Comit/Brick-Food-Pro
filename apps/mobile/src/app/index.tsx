@@ -144,6 +144,7 @@ export default function MobileApp() {
   const [agentOrderStep, setAgentOrderStep] = useState<number>(0); // 0: Catalog & Search, 1: Client Info & Wave Checkout
   const [agentCatalogSearch, setAgentCatalogSearch] = useState<string>('');
   const [agentCatalogCategory, setAgentCatalogCategory] = useState<string>('all');
+  const [clientCategory, setClientCategory] = useState<string>('all');
   const [showPassQRModal, setShowPassQRModal] = useState<boolean>(false);
   const [generatedPassOrder, setGeneratedPassOrder] = useState<any | null>(null);
   const [isExportingPass, setIsExportingPass] = useState<boolean>(false);
@@ -3215,10 +3216,29 @@ const getCategoryLabel = (cat?: string) => {
       return sum + (diff * (order.quantity || 1));
     }, 0);
 
-    // Search filters
+    // Category & Search filters for Client space
     const searchLow = searchQuery.toLowerCase().trim();
 
+    const matchesCategory = (item: any, targetCategory: string) => {
+      if (targetCategory === 'all') return true;
+      if (targetCategory === 'flash') return item.type === 'flash' || item.proposal_type === 'flash';
+      if (targetCategory === 'deal') return item.type === 'deal' || item.proposal_type === 'deal';
+      
+      const itemCat = (item.category || item.type_category || '').toLowerCase();
+      const restoCat = (item.restaurants?.category || item.restaurantCategory || '').toLowerCase();
+      const combinedCat = `${itemCat} ${restoCat} ${item.title || ''} ${item.restaurant || ''}`.toLowerCase();
+
+      if (targetCategory === 'restaurant') return combinedCat.includes('restaurant') || combinedCat.includes('resto');
+      if (targetCategory === 'fast_food') return combinedCat.includes('fast') || combinedCat.includes('burger') || combinedCat.includes('chawarma') || combinedCat.includes('pizza') || combinedCat.includes('tacos') || combinedCat.includes('sandwich');
+      if (targetCategory === 'maquis') return combinedCat.includes('maquis') || combinedCat.includes('grill') || combinedCat.includes('poulet') || combinedCat.includes('poisson') || combinedCat.includes('choukouya');
+      if (targetCategory === 'lounge_bar') return combinedCat.includes('lounge') || combinedCat.includes('bar') || combinedCat.includes('cocktail') || combinedCat.includes('boisson') || combinedCat.includes('biere') || combinedCat.includes('vin');
+      if (targetCategory === 'hotel') return combinedCat.includes('hotel') || combinedCat.includes('h\u00f4tel') || combinedCat.includes('residence') || combinedCat.includes('chambre');
+      if (targetCategory === 'patisserie') return combinedCat.includes('patisserie') || combinedCat.includes('p\u00e2tisserie') || combinedCat.includes('dessert') || combinedCat.includes('gateau') || combinedCat.includes('glace');
+      return true;
+    };
+
     const filteredFlashOffers = flashOffers.filter(item => {
+      if (!matchesCategory(item, clientCategory)) return false;
       if (!searchLow) return true;
       return (
         (item.title && item.title.toLowerCase().includes(searchLow)) ||
@@ -3231,6 +3251,7 @@ const getCategoryLabel = (cat?: string) => {
     });
 
     const filteredDealOffers = dealOffers.filter(item => {
+      if (!matchesCategory(item, clientCategory)) return false;
       if (!searchLow) return true;
       return (
         (item.title && item.title.toLowerCase().includes(searchLow)) ||
@@ -3244,6 +3265,17 @@ const getCategoryLabel = (cat?: string) => {
     });
 
     const filteredRestaurants = restaurantsList.filter(resto => {
+      if (clientCategory !== 'all' && clientCategory !== 'flash' && clientCategory !== 'deal') {
+        const cat = (resto.category || '').toLowerCase();
+        const name = (resto.name || '').toLowerCase();
+        const combined = `${cat} ${name}`;
+        if (clientCategory === 'restaurant' && !(cat.includes('restaurant') || combined.includes('restaurant'))) return false;
+        if (clientCategory === 'fast_food' && !(cat.includes('fast') || combined.includes('fast') || combined.includes('burger'))) return false;
+        if (clientCategory === 'maquis' && !(cat.includes('maquis') || combined.includes('maquis') || combined.includes('grill'))) return false;
+        if (clientCategory === 'lounge_bar' && !(cat.includes('lounge') || cat.includes('bar') || combined.includes('bar'))) return false;
+        if (clientCategory === 'hotel' && !(cat.includes('hotel') || combined.includes('hotel') || combined.includes('residence'))) return false;
+        if (clientCategory === 'patisserie' && !(cat.includes('patisserie') || combined.includes('patisserie') || combined.includes('dessert'))) return false;
+      }
       if (!searchLow) return true;
       return (
         (resto.name && resto.name.toLowerCase().includes(searchLow)) ||
@@ -3302,6 +3334,34 @@ const getCategoryLabel = (cat?: string) => {
                 />
               </TouchableOpacity>
             </View>
+
+            {/* Category Filter Pills Bar on Client Home Screen */}
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ paddingHorizontal: 16, marginBottom: 12 }} contentContainerStyle={{ gap: 8 }}>
+              {[
+                { id: 'all', label: '🌐 Toutes les offres' },
+                { id: 'flash', label: '⚡ Flash' },
+                { id: 'deal', label: '🏷️ Deals' },
+                { id: 'restaurant', label: '🍽️ Restaurants' },
+                { id: 'fast_food', label: '🍔 Fast Food' },
+                { id: 'maquis', label: '🍺 Maquis' },
+                { id: 'lounge_bar', label: '🍸 Lounge & Bar' },
+                { id: 'hotel', label: '🏨 Hôtels' },
+                { id: 'patisserie', label: '🍰 Pâtisseries' }
+              ].map((cat) => (
+                <TouchableOpacity
+                  key={cat.id}
+                  style={[
+                    { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, backgroundColor: '#F8FAFC', borderWidth: 1.5, borderColor: '#CBD5E1' },
+                    clientCategory === cat.id && { backgroundColor: Colors.primary, borderColor: Colors.primary }
+                  ]}
+                  onPress={() => setClientCategory(cat.id)}
+                >
+                  <Text style={[{ fontSize: 12, fontWeight: '800', color: '#475569' }, clientCategory === cat.id && { color: 'white' }]}>
+                    {cat.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
 
             {/* Active Calendar Filter Pill Banner */}
             {calendarDateFilter && (
@@ -3465,7 +3525,7 @@ const getCategoryLabel = (cat?: string) => {
                       <Text style={styles.badgeText}>{item.discount}</Text>
                     </View>
                     <View style={styles.cardContent}>
-                      <Text style={[styles.cardCategory, { color: '#F59E0B' }]}>DEAL</Text>
+                      <Text style={[styles.cardCategory, { color: '#F59E0B' }]}>🏷️ DEAL</Text>
                       <Text style={styles.cardTitle} numberOfLines={1}>{item.title}</Text>
                       <View style={styles.restoRow}>
                         <Text style={styles.cardResto}>{item.restaurant}</Text>
