@@ -3691,46 +3691,68 @@ const getCategoryLabel = (cat?: string) => {
                 if (orderFilter === 'terminees') return o.status === 'terminee' || o.status === 'livree';
                 if (orderFilter === 'en_cours') return o.status !== 'terminee' && o.status !== 'annulee' && o.status !== 'refusee';
                 return true;
-              }).map((order) => (
-                <View key={order.id} style={[styles.orderListItem, { gap: 8, padding: 16, borderRadius: 16, borderWidth: 1, borderColor: '#E5E7EB', marginBottom: 12 }]}>
-                  <View style={styles.orderListHeader}>
-                    <Text style={styles.orderListResto}>{order.restaurants?.name ?? 'Restaurant'}</Text>
-                    <View style={[
-                      styles.statusBadge,
-                      {
-                        backgroundColor:
-                          order.status === 'terminee' || order.status === 'livree' ? '#ECFDF5' :
-                          order.status === 'prete' ? '#EFF6FF' :
-                          order.status === 'en_preparation' ? '#FFF7ED' : '#F3F4F6'
-                      }
-                    ]}>
-                      <Text style={[
-                        styles.statusText,
-                        {
-                          color:
-                            order.status === 'terminee' || order.status === 'livree' ? '#047857' :
-                            order.status === 'prete' ? '#1D4ED8' :
-                            order.status === 'en_preparation' ? '#C2410C' : '#4B5563'
-                        }
-                      ]}>
-                        {order.status === 'nouvelle' ? '🟢 Nouvelle' : order.status === 'en_preparation' ? '🍳 En préparation' : order.status === 'prete' ? '🛍️ Prête' : order.status === 'terminee' ? '✅ Terminée' : order.status}
-                      </Text>
-                    </View>
-                  </View>
+              }).map((order) => {
+                const formattedDateTime = order.created_at
+                  ? new Date(order.created_at).toLocaleString('fr-FR', {
+                      day: '2-digit',
+                      month: '2-digit',
+                      year: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })
+                  : 'Date inconnue';
 
-                  <Text style={styles.orderListDetail}>{order.offers?.title ?? 'Offre'} • {new Date(order.created_at).toLocaleDateString('fr-FR')}</Text>
-                  <Text style={styles.orderListTotal}>Montant payé : {Number(order.total_amount).toLocaleString('fr-FR')} FCFA (Pass: {order.reservation_code})</Text>
-
-                  {/* Direct Tracking Button */}
+                return (
                   <TouchableOpacity
-                    style={{ backgroundColor: Colors.primary, borderRadius: 12, paddingVertical: 10, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 4 }}
+                    key={order.id}
+                    activeOpacity={0.85}
+                    style={[styles.orderListItem, { gap: 8, padding: 16, borderRadius: 16, borderWidth: 1, borderColor: '#E5E7EB', marginBottom: 12, backgroundColor: 'white' }]}
                     onPress={() => setSelectedClientOrder(order)}
                   >
-                    <Ionicons name="time" size={16} color="white" />
-                    <Text style={{ color: 'white', fontWeight: '800', fontSize: 13 }}>⚡ Suivre la commande en direct</Text>
+                    <View style={styles.orderListHeader}>
+                      <Text style={styles.orderListResto}>{order.restaurants?.name ?? 'Restaurant'}</Text>
+                      <View style={[
+                        styles.statusBadge,
+                        {
+                          backgroundColor:
+                            order.status === 'terminee' || order.status === 'livree' ? '#ECFDF5' :
+                            order.status === 'prete' ? '#EFF6FF' :
+                            order.status === 'en_preparation' ? '#FFF7ED' : '#F3F4F6'
+                        }
+                      ]}>
+                        <Text style={[
+                          styles.statusText,
+                          {
+                            color:
+                              order.status === 'terminee' || order.status === 'livree' ? '#047857' :
+                              order.status === 'prete' ? '#1D4ED8' :
+                              order.status === 'en_preparation' ? '#C2410C' : '#4B5563'
+                          }
+                        ]}>
+                          {order.status === 'nouvelle' ? '🟢 Nouvelle' : order.status === 'en_preparation' ? '🍳 En préparation' : order.status === 'prete' ? '🛍️ Prête' : order.status === 'terminee' ? '✅ Terminée' : order.status}
+                        </Text>
+                      </View>
+                    </View>
+
+                    <Text style={styles.orderListDetail}>
+                      {order.offers?.title ?? 'Offre'} • 🕒 {formattedDateTime}
+                    </Text>
+                    <Text style={styles.orderListTotal}>
+                      Montant payé : {Number(order.total_amount).toLocaleString('fr-FR')} FCFA (Pass: {order.reservation_code})
+                    </Text>
+
+                    {/* Mode de consommation / Adresse */}
+                    {(order.dining_option || order.delivery_mode) && (
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#F8FAFC', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, marginTop: 2 }}>
+                        <Ionicons name={order.dining_option === 'livraison' || order.delivery_mode === 'livraison' ? 'location-outline' : 'restaurant-outline'} size={14} color={Colors.primary} />
+                        <Text style={{ fontSize: 11, fontWeight: '700', color: Colors.textPrimary }} numberOfLines={1}>
+                          {order.dining_option === 'livraison' || order.delivery_mode === 'livraison' ? `📦 Livraison : ${order.delivery_address || 'À domicile'}` : '🍽️ Sur place (au restaurant)'}
+                        </Text>
+                      </View>
+                    )}
                   </TouchableOpacity>
-                </View>
-              ))}
+                );
+              })}
             </ScrollView>
           ) : (
             <View style={[styles.scrollArea, { alignItems: 'center', justifyContent: 'center', gap: 16, flex: 1, paddingVertical: 80 }]}>
