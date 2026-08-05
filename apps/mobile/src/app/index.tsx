@@ -6385,6 +6385,7 @@ const getCategoryLabel = (cat?: string) => {
             )}
           </SafeAreaView>
         </Modal>
+        {renderSelectedClientOrderModal()}
       </SafeAreaView>
     );
   }
@@ -6886,17 +6887,18 @@ const getCategoryLabel = (cat?: string) => {
               <TouchableOpacity style={styles.actionBtn} onPress={handleCreateRestoProposal}>
                 <Text style={styles.actionBtnText}>Envoyer la proposition</Text>
               </TouchableOpacity>
-              <View style={{ height: 40 }} />
             </ScrollView>
           </SafeAreaView>
         </Modal>
+
+        {renderSelectedClientOrderModal()}
       </SafeAreaView>
     );
   }
 
-  return (
-    <>
-      {/* CLIENT ORDER LIVE TRACKING MODAL */}
+  function renderSelectedClientOrderModal() {
+    if (!selectedClientOrder) return null;
+    return (
       <Modal
         visible={!!selectedClientOrder}
         animationType="slide"
@@ -7066,7 +7068,12 @@ const getCategoryLabel = (cat?: string) => {
           )}
         </SafeAreaView>
       </Modal>
+    );
+  };
 
+  return (
+    <>
+      {renderSelectedClientOrderModal()}
       {/* AGENT READ-ONLY ORDER TRACKING MODAL */}
       <Modal visible={!!selectedAgentOrder} animationType="slide" transparent={false}>
         <SafeAreaView style={{ flex: 1, backgroundColor: 'white', padding: 20 }}>
