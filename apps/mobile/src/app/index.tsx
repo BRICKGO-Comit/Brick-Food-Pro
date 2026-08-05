@@ -291,6 +291,17 @@ export default function MobileApp() {
 
     try {
       setIsCreatingResto(true);
+      if (agentOrderForm.offerId) {
+        await supabase
+          .from('offers')
+          .update({
+            status: 'validee',
+            is_confirmed: true,
+            start_timestamp: new Date(Date.now() - 3600000).toISOString(),
+            end_timestamp: new Date(Date.now() + 7 * 86400000).toISOString(),
+          })
+          .eq('id', agentOrderForm.offerId);
+      }
       const totalAmt = agentOrderForm.price * agentOrderForm.quantity;
       const commissionAmt = totalAmt * (adminCommissionRate / 100);
       const randCode = `RES-${Math.floor(1000 + Math.random() * 9000)}-${agentZone.substring(0, 3).toUpperCase()}`;
@@ -1506,6 +1517,18 @@ const getCategoryLabel = (cat?: string) => {
   const handleCreateOrder = async () => {
     const offer = selectedFlash || selectedDeal;
     if (!offer) return;
+
+    if (offer.id) {
+      await supabase
+        .from('offers')
+        .update({
+          status: 'validee',
+          is_confirmed: true,
+          start_timestamp: new Date(Date.now() - 3600000).toISOString(),
+          end_timestamp: new Date(Date.now() + 7 * 86400000).toISOString(),
+        })
+        .eq('id', offer.id);
+    }
 
     let clientId = user?.id;
     if (!clientId) {
