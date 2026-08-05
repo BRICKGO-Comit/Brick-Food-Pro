@@ -7074,7 +7074,6 @@ const getCategoryLabel = (cat?: string) => {
   return (
     <>
       {renderSelectedClientOrderModal()}
-      {renderSelectedClientOrderModal()}
       {/* AGENT READ-ONLY ORDER TRACKING MODAL */}
       <Modal visible={!!selectedAgentOrder} animationType="slide" transparent={false}>
         <SafeAreaView style={{ flex: 1, backgroundColor: 'white', padding: 20 }}>
