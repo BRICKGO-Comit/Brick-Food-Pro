@@ -1054,7 +1054,9 @@ const getCategoryLabel = (cat?: string) => {
         const restoName = o.restaurants?.name ?? 'Restaurant';
         const restoAddress = o.restaurants?.address ?? '';
         const restoCategory = o.restaurants?.category ?? '';
-        if (o.type === 'flash') {
+        const offerType = (o.type || o.proposal_type || 'flash').toLowerCase();
+
+        if (offerType.includes('flash')) {
           // Calcule le countdown depuis end_timestamp
           const end = o.end_timestamp ? new Date(o.end_timestamp) : null;
           const diffMs = end ? Math.max(0, end.getTime() - now.getTime()) : 0;
@@ -1066,6 +1068,8 @@ const getCategoryLabel = (cat?: string) => {
           const discount = oldP > 0 ? `-${Math.round((1 - newP / oldP) * 100)}%` : '';
           flash.push({
             id: o.id,
+            type: 'flash',
+            proposal_type: 'flash',
             title: o.title,
             restaurant: restoName,
             address: restoAddress,
@@ -1088,12 +1092,14 @@ const getCategoryLabel = (cat?: string) => {
             countdownSeconds: seconds,
             commissionRate: Number(o.commission_rate ?? 10),
           });
-        } else if (o.type === 'deal') {
+        } else {
           const oldP = Number(o.price ?? 0) * 1.3; // estimation
           const newP = Number(o.price ?? 0);
           const discount = `-${Math.round((1 - newP / oldP) * 100)}%`;
           deals.push({
             id: o.id,
+            type: 'deal',
+            proposal_type: 'deal',
             title: o.title,
             restaurant: restoName,
             address: restoAddress,
