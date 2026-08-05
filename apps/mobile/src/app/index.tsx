@@ -3844,9 +3844,8 @@ const getCategoryLabel = (cat?: string) => {
                       </View>
                     </View>
 
-                    {/* Action Bar Indicator Button */}
-                    <TouchableOpacity
-                      activeOpacity={0.8}
+                    {/* Action Bar Indicator */}
+                    <View
                       style={{
                         backgroundColor: Colors.primary,
                         marginTop: 4,
@@ -3862,7 +3861,6 @@ const getCategoryLabel = (cat?: string) => {
                         shadowOpacity: 0.3,
                         shadowRadius: 6
                       }}
-                      onPress={() => setSelectedClientOrder(order)}
                     >
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                         <Ionicons name="qr-code-outline" size={18} color="white" />
@@ -3871,7 +3869,7 @@ const getCategoryLabel = (cat?: string) => {
                         </Text>
                       </View>
                       <Ionicons name="chevron-forward" size={18} color="white" />
-                    </TouchableOpacity>
+                    </View>
                   </TouchableOpacity>
                 );
               })}
