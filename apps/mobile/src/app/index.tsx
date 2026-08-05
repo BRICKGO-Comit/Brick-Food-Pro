@@ -3049,65 +3049,31 @@ const getCategoryLabel = (cat?: string) => {
                   </Text>
                 </View>
 
-                <Text style={styles.formTitle}>Choisissez votre moyen de paiement</Text>
+                <Text style={styles.formTitle}>Moyen de paiement exclusif</Text>
                 
-                <TouchableOpacity style={[styles.paymentRadioRow, paymentMethod === 'wave' && styles.paymentRadioActive]} onPress={() => setPaymentMethod('wave')}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                    <Image source={{ uri: 'https://cdn-icons-png.flaticon.com/512/10096/10096417.png' }} style={{ width: 36, height: 36, borderRadius: 8, resizeMode: 'contain' }} />
-                    <Text style={styles.paymentRadioLabel}>Wave Mobile Money</Text>
+                <View style={[
+                  styles.paymentRadioRow,
+                  styles.paymentRadioActive,
+                  { backgroundColor: '#E0F7FC', borderColor: '#1DC4E9', borderWidth: 2, paddingVertical: 14, borderRadius: 18 }
+                ]}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+                    <Image source={require('../../assets/wave icon.png')} style={{ width: 44, height: 44, resizeMode: 'contain' }} />
+                    <View>
+                      <Text style={{ fontSize: 16, fontWeight: '900', color: '#0F172A' }}>Wave Mobile Money</Text>
+                      <Text style={{ fontSize: 12, fontWeight: '600', color: '#0084A8', marginTop: 2 }}>Paiement instantané sans frais (0%)</Text>
+                    </View>
                   </View>
-                  <View style={styles.radioOutline}>
-                    {paymentMethod === 'wave' && <View style={styles.radioDot} />}
-                  </View>
-                </TouchableOpacity>
+                  <Ionicons name="checkmark-circle" size={24} color="#1DC4E9" />
+                </View>
 
-                <TouchableOpacity style={[styles.paymentRadioRow, paymentMethod === 'orange' && styles.paymentRadioActive]} onPress={() => setPaymentMethod('orange')}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                    <Image source={{ uri: 'https://cdn-icons-png.flaticon.com/512/888/888865.png' }} style={{ width: 36, height: 36, borderRadius: 8, resizeMode: 'contain' }} />
-                    <Text style={styles.paymentRadioLabel}>Orange Money</Text>
-                  </View>
-                  <View style={styles.radioOutline}>
-                    {paymentMethod === 'orange' && <View style={styles.radioDot} />}
-                  </View>
-                </TouchableOpacity>
-
-                <TouchableOpacity style={[styles.paymentRadioRow, paymentMethod === 'mtn' && styles.paymentRadioActive]} onPress={() => setPaymentMethod('mtn')}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                    <Image source={{ uri: 'https://cdn-icons-png.flaticon.com/512/888/888870.png' }} style={{ width: 36, height: 36, borderRadius: 8, resizeMode: 'contain' }} />
-                    <Text style={styles.paymentRadioLabel}>MTN Mobile Money</Text>
-                  </View>
-                  <View style={styles.radioOutline}>
-                    {paymentMethod === 'mtn' && <View style={styles.radioDot} />}
-                  </View>
-                </TouchableOpacity>
-
-                <TouchableOpacity style={[styles.paymentRadioRow, paymentMethod === 'moov' && styles.paymentRadioActive]} onPress={() => setPaymentMethod('moov')}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                    <Image source={{ uri: 'https://cdn-icons-png.flaticon.com/512/888/888874.png' }} style={{ width: 36, height: 36, borderRadius: 8, resizeMode: 'contain' }} />
-                    <Text style={styles.paymentRadioLabel}>Moov Money</Text>
-                  </View>
-                  <View style={styles.radioOutline}>
-                    {paymentMethod === 'moov' && <View style={styles.radioDot} />}
-                  </View>
-                </TouchableOpacity>
-
-                <TouchableOpacity style={[styles.paymentRadioRow, paymentMethod === 'cb' && styles.paymentRadioActive]} onPress={() => setPaymentMethod('cb')}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                    <Image source={{ uri: 'https://cdn-icons-png.flaticon.com/512/179/179457.png' }} style={{ width: 36, height: 36, borderRadius: 8, resizeMode: 'contain' }} />
-                    <Text style={styles.paymentRadioLabel}>Carte bancaire <Text style={{ fontSize: 10, color: Colors.textSecondary }}>(VISA / Mastercard)</Text></Text>
-                  </View>
-                  <View style={styles.radioOutline}>
-                    {paymentMethod === 'cb' && <View style={styles.radioDot} />}
-                  </View>
-                </TouchableOpacity>
-
-                <TouchableOpacity style={[styles.actionBtn, { marginTop: 32 }]} onPress={() => handleCreateOrder()}>
-                  <Text style={styles.actionBtnText}>Payer maintenant</Text>
+                <TouchableOpacity style={[styles.actionBtn, { marginTop: 24, backgroundColor: '#1DC4E9', borderRadius: 18, paddingVertical: 16, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 10 }]} onPress={() => handleCreateOrder()}>
+                  <Image source={require('../../assets/wave icon.png')} style={{ width: 24, height: 24, resizeMode: 'contain' }} />
+                  <Text style={[styles.actionBtnText, { fontSize: 16, fontWeight: '900' }]}>Payer par Wave Mobile Money</Text>
                 </TouchableOpacity>
 
                 <View style={styles.securePaymentFooter}>
-                  <Ionicons name="shield-checkmark" size={16} color={Colors.success} />
-                  <Text style={{ fontSize: 12, color: Colors.textSecondary, fontWeight: '500' }}>Paiement 100% sécurisé</Text>
+                  <Ionicons name="shield-checkmark" size={16} color="#1DC4E9" />
+                  <Text style={{ fontSize: 12, color: Colors.textSecondary, fontWeight: '600' }}>Paiement 100% sécurisé via Wave Mobile Money</Text>
                 </View>
               </ScrollView>
             </View>
