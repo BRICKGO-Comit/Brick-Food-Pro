@@ -108,16 +108,7 @@ export default function MobileApp() {
     return () => clearInterval(timer);
   }, []);
 
-  const formatLiveCountdown = (endIsoStr?: string) => {
-    if (!endIsoStr) return '02h : 45m : 30s';
-    const end = new Date(endIsoStr).getTime();
-    const diffMs = Math.max(0, end - Date.now());
-    const h = Math.floor(diffMs / 3600000);
-    const m = Math.floor((diffMs % 3600000) / 60000);
-    const s = Math.floor((diffMs % 60000) / 1000);
-    const pad = (n: number) => (n < 10 ? `0${n}` : `${n}`);
-    return `${pad(h)}h : ${pad(m)}m : ${pad(s)}s`;
-  };
+
 
   // Navigation tabs states for each role
   const [clientTab, setClientTab] = useState<'home' | 'reservations' | 'profile'>('home');
@@ -1568,6 +1559,9 @@ const getCategoryLabel = (cat?: string) => {
           const updatedOrder = payload.new;
           const oldOrder = payload.old;
 
+          // Update local state arrays for UI refresh
+          setClientOrders(prev => prev.map(o => o.id === updatedOrder.id ? { ...o, ...updatedOrder } : o));
+
           // 2. On UPDATE: Trigger system default notification sound alert for Clients when status changes (en_preparation, prete, terminee)
           if (role === 'client' || !role) {
             const isMyOrder = !updatedOrder.client_id || updatedOrder.client_id === user.id;
@@ -2825,11 +2819,11 @@ const getCategoryLabel = (cat?: string) => {
                     <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                         <Ionicons name="time-outline" size={16} color={Colors.primary} />
-                        <Text style={{ color: 'white', fontSize: 12, fontWeight: '700' }}>Temps restant</Text>
+                        <Text style={{ color: 'white', fontSize: 12, fontWeight: '700' }}>Valable jusqu'au</Text>
                       </View>
 
                       <Text style={{ color: Colors.primary, fontSize: 14, fontWeight: '900', letterSpacing: 0.5 }}>
-                        {selectedFlash ? formatLiveCountdown(selectedFlash.endTimestamp) : '04h : 12m : 45s'}
+                        {selectedFlash ? `${new Date(selectedFlash.endTimestamp).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })} à ${new Date(selectedFlash.endTimestamp).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}` : ''}
                       </Text>
                     </View>
 
@@ -3785,7 +3779,7 @@ const getCategoryLabel = (cat?: string) => {
                       {/* Live Urgency Countdown & Stock Bar */}
                       <View style={{ marginTop: 6, backgroundColor: '#FFF5F5', padding: 8, borderRadius: 8, borderWidth: 1, borderColor: '#FFEBEB' }}>
                         <Text style={{ fontSize: 11, fontWeight: '800', color: Colors.primary }}>
-                          ⏳ Fin dans : {formatLiveCountdown(item.endTimestamp)}
+                          ⏳ Valable jusqu'au {new Date(item.endTimestamp).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })} à {new Date(item.endTimestamp).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
                         </Text>
                         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 4 }}>
                           <Text style={{ fontSize: 10, color: Colors.textSecondary }}>
@@ -3974,6 +3968,7 @@ const getCategoryLabel = (cat?: string) => {
                   <TouchableOpacity
                     key={order.id}
                     activeOpacity={0.88}
+                    onPress={() => setSelectedClientOrder(order)}
                     style={{
                       backgroundColor: 'white',
                       borderRadius: 22,
@@ -3988,7 +3983,6 @@ const getCategoryLabel = (cat?: string) => {
                       shadowRadius: 12,
                       gap: 12
                     }}
-                    onPress={() => setSelectedClientOrder(order)}
                   >
                     {/* Header Row: Resto Logo + Name & Status Pill */}
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
