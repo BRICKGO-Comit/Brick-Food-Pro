@@ -1534,68 +1534,73 @@ const getCategoryLabel = (cat?: string) => {
       .channel('public-orders-realtime-alerts')
       .on(
         'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'orders' },
-        (payload: any) => {
-          const newOrder = payload.new;
-
-          // 1. On INSERT: Trigger system default notification sound alert ('🔔 Nouvelle Commande !') for Restaurants & Agents
-          if (role === 'restaurant' || role === 'agent') {
-            const isRestoMatch =
-              role === 'restaurant' &&
-              (!profile?.restaurant_id || newOrder.restaurant_id === profile?.restaurant_id);
-            const isAgentMatch =
-              role === 'agent' &&
-              (!newOrder.agent_id || newOrder.agent_id === user.id);
-
-            if (isRestoMatch || isAgentMatch || !role) {
-              const codeStr = newOrder.reservation_code ? ` (${newOrder.reservation_code})` : '';
-              const clientStr = newOrder.client_name ? ` de ${newOrder.client_name}` : '';
-              sendLocalNotification(
-                '🔔 Nouvelle Commande !',
-                `Une nouvelle commande a été passée${clientStr}${codeStr}.`,
-                { orderId: newOrder.id, event: 'INSERT' }
-              );
-            }
-          }
-        }
-      )
-      .on(
-        'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'orders' },
+        { event: '*', schema: 'public', table: 'orders' },
         (payload: any) => {
           const updatedOrder = payload.new;
-          const oldOrder = payload.old;
+          if (!updatedOrder) return;
 
-          // Update local state arrays for UI refresh
+          // 1. Instantly update clientOrders array for UI card status update
           setClientOrders(prev => prev.map(o => o.id === updatedOrder.id ? { ...o, ...updatedOrder } : o));
 
-          // 2. On UPDATE: Trigger system default notification sound alert for Clients when status changes (en_preparation, prete, terminee)
-          if (role === 'client' || !role) {
-            const isMyOrder = !updatedOrder.client_id || updatedOrder.client_id === user.id;
-            const statusChanged = !oldOrder || !oldOrder.status || oldOrder.status !== updatedOrder.status;
+          // 2. Instantly update selectedClientOrder modal view (Pass QR modal stepper)
+          setSelectedClientOrder((prev: any) => (prev && prev.id === updatedOrder.id ? { ...prev, ...updatedOrder } : prev));
 
-            if (isMyOrder && statusChanged) {
-              const status = updatedOrder.status;
-              let title = '';
-              let body = '';
+          // 3. Instantly update restaurantOrders and agentOrders arrays
+          setRestaurantOrders(prev => prev.map(o => o.id === updatedOrder.id ? { ...o, ...updatedOrder } : o));
+          setAgentOrders(prev => prev.map(o => o.id === updatedOrder.id ? { ...o, ...updatedOrder } : o));
 
-              if (status === 'en_preparation') {
-                title = '👨‍🍳 Commande en préparation';
-                body = 'Votre commande est en cours de préparation au restaurant.';
-              } else if (status === 'prete') {
-                title = '🎉 Commande prête !';
-                body = 'Votre commande est prête pour dégustation ou retrait !';
-              } else if (status === 'terminee') {
-                title = '✅ Commande terminée';
-                body = 'Votre commande a été servie et validée. Bon appétit !';
+          // Handle INSERT sound notification for Restaurants & Agents
+          if (payload.eventType === 'INSERT') {
+            if (role === 'restaurant' || role === 'agent') {
+              const isRestoMatch =
+                role === 'restaurant' &&
+                (!profile?.restaurant_id || updatedOrder.restaurant_id === profile?.restaurant_id);
+              const isAgentMatch =
+                role === 'agent' &&
+                (!updatedOrder.agent_id || updatedOrder.agent_id === user.id);
+
+              if (isRestoMatch || isAgentMatch || !role) {
+                const codeStr = updatedOrder.reservation_code ? ` (${updatedOrder.reservation_code})` : '';
+                const clientStr = updatedOrder.client_name ? ` de ${updatedOrder.client_name}` : '';
+                sendLocalNotification(
+                  '🔔 Nouvelle Commande !',
+                  `Une nouvelle commande a été passée${clientStr}${codeStr}.`,
+                  { orderId: updatedOrder.id, event: 'INSERT' }
+                );
               }
+            }
+          }
 
-              if (title && body) {
-                sendLocalNotification(title, body, {
-                  orderId: updatedOrder.id,
-                  status,
-                  event: 'UPDATE',
-                });
+          // Handle UPDATE sound notification for Clients
+          if (payload.eventType === 'UPDATE') {
+            const oldOrder = payload.old;
+            if (role === 'client' || !role) {
+              const isMyOrder = !updatedOrder.client_id || updatedOrder.client_id === user.id;
+              const statusChanged = !oldOrder || !oldOrder.status || oldOrder.status !== updatedOrder.status;
+
+              if (isMyOrder && statusChanged) {
+                const status = updatedOrder.status;
+                let title = '';
+                let body = '';
+
+                if (status === 'en_preparation') {
+                  title = '👨‍🍳 Commande en préparation';
+                  body = 'Votre commande est en cours de préparation au restaurant.';
+                } else if (status === 'prete') {
+                  title = '🎉 Commande prête !';
+                  body = 'Votre commande est prête pour dégustation ou retrait !';
+                } else if (status === 'terminee' || status === 'livree') {
+                  title = '✅ Commande terminée';
+                  body = 'Votre commande a été servie et validée. Bon appétit !';
+                }
+
+                if (title && body) {
+                  sendLocalNotification(title, body, {
+                    orderId: updatedOrder.id,
+                    status,
+                    event: 'UPDATE',
+                  });
+                }
               }
             }
           }
