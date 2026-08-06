@@ -115,6 +115,14 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
       return null;
     }
 
+    // Skip remote Expo push token registration when running inside Expo Go app (SDK 53+)
+    const executionEnv = (Constants as any).executionEnvironment;
+    const appOwnership = (Constants as any).appOwnership;
+    if (appOwnership === 'expo' || executionEnv === 'storeClient') {
+      console.log('[NotificationService] Expo Go environment detected. Local notifications & sound alerts enabled.');
+      return null;
+    }
+
     const projectId = Constants.expoConfig?.extra?.eas?.projectId ?? Constants.easConfig?.projectId;
     const pushTokenData = await Notifications.getExpoPushTokenAsync(
       projectId ? { projectId } : undefined
