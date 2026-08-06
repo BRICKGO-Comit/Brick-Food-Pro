@@ -12,7 +12,8 @@ import {
   Modal,
   Alert,
   Linking,
-  ActivityIndicator
+  ActivityIndicator,
+  LogBox
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -28,6 +29,12 @@ import * as FileSystem from 'expo-file-system/legacy';
 import { decode } from 'base64-arraybuffer';
 import OnboardingScreen from '../components/OnboardingScreen';
 import { sendLocalNotification, initNotificationService } from '../services/notificationService';
+
+// Suppress Expo Go push token warning (SDK 53+) — local notifications & sounds still work perfectly
+LogBox.ignoreLogs([
+  'expo-notifications: Android Push notifications',
+  'expo-notifications',
+]);
 
 const supabaseSignUpClient = createClient(
   process.env.EXPO_PUBLIC_SUPABASE_URL!,
