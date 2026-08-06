@@ -29,7 +29,8 @@
       "favicon": "./assets/Icone.png"
     },
     "plugins": [
-      "expo-router"
+      "expo-router",
+      "expo-notifications"
     ],
     "extra": {
       "eas": {

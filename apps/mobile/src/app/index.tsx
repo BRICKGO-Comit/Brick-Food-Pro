@@ -27,6 +27,7 @@ import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system/legacy';
 import { decode } from 'base64-arraybuffer';
 import OnboardingScreen from '../components/OnboardingScreen';
+import { sendLocalNotification, initNotificationService } from '../services/notificationService';
 
 const supabaseSignUpClient = createClient(
   process.env.EXPO_PUBLIC_SUPABASE_URL!,
@@ -1518,7 +1519,93 @@ const getCategoryLabel = (cat?: string) => {
     loadRestaurantProposals();
   }, [isLoggedIn, role, profile]);
 
-  // --- REALTIME SUBSCRIPTIONS ---
+  // --- REALTIME SUBSCRIPTIONS & NOTIFICATIONS ---
+
+  // Initialize Notification Service on app load
+  useEffect(() => {
+    initNotificationService().catch(err => {
+      console.warn('[initNotificationService] Initialization error:', err);
+    });
+  }, []);
+
+  // Realtime channel listening to public.orders table for sound alerts (INSERT & UPDATE)
+  useEffect(() => {
+    if (!isLoggedIn || !user) return;
+
+    const ordersChannel = supabase
+      .channel('public-orders-realtime-alerts')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'orders' },
+        (payload: any) => {
+          const newOrder = payload.new;
+
+          // 1. On INSERT: Trigger system default notification sound alert ('🔔 Nouvelle Commande !') for Restaurants & Agents
+          if (role === 'restaurant' || role === 'agent') {
+            const isRestoMatch =
+              role === 'restaurant' &&
+              (!profile?.restaurant_id || newOrder.restaurant_id === profile?.restaurant_id);
+            const isAgentMatch =
+              role === 'agent' &&
+              (!newOrder.agent_id || newOrder.agent_id === user.id);
+
+            if (isRestoMatch || isAgentMatch || !role) {
+              const codeStr = newOrder.reservation_code ? ` (${newOrder.reservation_code})` : '';
+              const clientStr = newOrder.client_name ? ` de ${newOrder.client_name}` : '';
+              sendLocalNotification(
+                '🔔 Nouvelle Commande !',
+                `Une nouvelle commande a été passée${clientStr}${codeStr}.`,
+                { orderId: newOrder.id, event: 'INSERT' }
+              );
+            }
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'orders' },
+        (payload: any) => {
+          const updatedOrder = payload.new;
+          const oldOrder = payload.old;
+
+          // 2. On UPDATE: Trigger system default notification sound alert for Clients when status changes (en_preparation, prete, terminee)
+          if (role === 'client' || !role) {
+            const isMyOrder = !updatedOrder.client_id || updatedOrder.client_id === user.id;
+            const statusChanged = !oldOrder || !oldOrder.status || oldOrder.status !== updatedOrder.status;
+
+            if (isMyOrder && statusChanged) {
+              const status = updatedOrder.status;
+              let title = '';
+              let body = '';
+
+              if (status === 'en_preparation') {
+                title = '👨‍🍳 Commande en préparation';
+                body = 'Votre commande est en cours de préparation au restaurant.';
+              } else if (status === 'prete') {
+                title = '🎉 Commande prête !';
+                body = 'Votre commande est prête pour dégustation ou retrait !';
+              } else if (status === 'terminee') {
+                title = '✅ Commande terminée';
+                body = 'Votre commande a été servie et validée. Bon appétit !';
+              }
+
+              if (title && body) {
+                sendLocalNotification(title, body, {
+                  orderId: updatedOrder.id,
+                  status,
+                  event: 'UPDATE',
+                });
+              }
+            }
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(ordersChannel);
+    };
+  }, [isLoggedIn, user, role, profile?.restaurant_id]);
 
   // Listen for notifications (all roles)
   useEffect(() => {
