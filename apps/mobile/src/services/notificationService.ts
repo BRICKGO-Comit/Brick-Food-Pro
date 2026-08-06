@@ -8,6 +8,8 @@ import Constants from 'expo-constants';
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowAlert: true,
+    shouldShowBanner: true,
+    shouldShowList: true,
     shouldPlaySound: true,
     shouldSetBadge: true,
     priority: Notifications.AndroidNotificationPriority.HIGH,
@@ -83,7 +85,6 @@ export async function requestNotificationPermissions(): Promise<NotificationPerm
         allowAlert: true,
         allowBadge: true,
         allowSound: true,
-        allowAnnounce: true,
       },
     });
 
