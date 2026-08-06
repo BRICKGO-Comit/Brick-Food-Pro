@@ -4094,26 +4094,32 @@ const getCategoryLabel = (cat?: string) => {
                       </View>
 
                       {/* Pass Code Tag Pill */}
-                      <View style={{
-                        backgroundColor: '#FEF2F2',
-                        paddingHorizontal: 10,
-                        paddingVertical: 6,
-                        borderRadius: 10,
-                        borderWidth: 1,
-                        borderColor: '#FECDD3',
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        gap: 4
-                      }}>
+                      <TouchableOpacity
+                        activeOpacity={0.8}
+                        onPress={() => setSelectedClientOrder(order)}
+                        style={{
+                          backgroundColor: '#FEF2F2',
+                          paddingHorizontal: 10,
+                          paddingVertical: 6,
+                          borderRadius: 10,
+                          borderWidth: 1,
+                          borderColor: '#FECDD3',
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: 4
+                        }}
+                      >
                         <Ionicons name="qr-code" size={13} color={Colors.primary} />
                         <Text style={{ fontSize: 11, fontWeight: '900', color: Colors.primary }}>
                           Pass {order.reservation_code || 'QR'}
                         </Text>
-                      </View>
+                      </TouchableOpacity>
                     </View>
 
-                    {/* Action Bar Indicator */}
-                    <View
+                    {/* Action Bar Indicator Button */}
+                    <TouchableOpacity
+                      activeOpacity={0.8}
+                      onPress={() => setSelectedClientOrder(order)}
                       style={{
                         backgroundColor: Colors.primary,
                         marginTop: 4,
@@ -4137,7 +4143,7 @@ const getCategoryLabel = (cat?: string) => {
                         </Text>
                       </View>
                       <Ionicons name="chevron-forward" size={18} color="white" />
-                    </View>
+                    </TouchableOpacity>
                   </TouchableOpacity>
                 );
               })}
