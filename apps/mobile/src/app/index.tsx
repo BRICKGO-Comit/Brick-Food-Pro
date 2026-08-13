@@ -139,6 +139,7 @@ export default function MobileApp() {
   const [agentZone, setAgentZone] = useState<string>('Cocody');
   const [customZoneInput, setCustomZoneInput] = useState<string>('');
   const [adminCommissionRate, setAdminCommissionRate] = useState<number>(10);
+  const [adminAgentShare, setAdminAgentShare] = useState<number>(20);
   const [showZoneModal, setShowZoneModal] = useState<boolean>(false);
   const [showAgentOrderModal, setShowAgentOrderModal] = useState<boolean>(false);
   const [agentOrderStep, setAgentOrderStep] = useState<number>(0); // 0: Catalog & Search, 1: Client Info & Wave Checkout
@@ -478,7 +479,8 @@ export default function MobileApp() {
           .eq('id', agentOrderForm.offerId);
       }
       const totalAmt = agentOrderForm.price * agentOrderForm.quantity;
-      const commissionAmt = totalAmt * (adminCommissionRate / 100);
+      const platformGain = totalAmt * (adminCommissionRate / 100);
+      const commissionAmt = platformGain * (adminAgentShare / 100);
       const randCode = `RES-${Math.floor(1000 + Math.random() * 9000)}-${agentZone.substring(0, 3).toUpperCase()}`;
 
       const newOrderPayload = {
@@ -5783,7 +5785,7 @@ const getCategoryLabel = (cat?: string) => {
                         <View style={{ backgroundColor: '#ECFDF5', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 14, borderWidth: 1, borderColor: '#A7F3D0', marginTop: 16, width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
                           <Ionicons name="gift" size={16} color="#047857" />
                           <Text style={{ fontSize: 12, fontWeight: '800', color: '#047857' }}>
-                            Votre commission (+{adminCommissionRate}%) : +{((agentOrderForm.price * agentOrderForm.quantity) * (adminCommissionRate / 100)).toLocaleString('fr-FR')} FCFA
+                            Votre commission ({adminAgentShare}% du gain plateforme) : +{((agentOrderForm.price * agentOrderForm.quantity) * (adminCommissionRate / 100)).toLocaleString('fr-FR')} FCFA
                           </Text>
                         </View>
                       </View>

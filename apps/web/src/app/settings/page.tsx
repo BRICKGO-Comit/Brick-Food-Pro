@@ -25,6 +25,7 @@ export default function GeneralSettings() {
 
   // Settings State
   const [commissionRate, setCommissionRate] = useState<string>('10');
+  const [agentCommissionShare, setAgentCommissionShare] = useState<string>('20');
   const [appName, setAppName] = useState<string>('BRICK DEAL');
   const [contactEmail, setContactEmail] = useState<string>('contact@brickdeal.ci');
   const [savingSettings, setSavingSettings] = useState<boolean>(false);
@@ -63,6 +64,7 @@ export default function GeneralSettings() {
       if (data && data.length > 0) {
         data.forEach((item: any) => {
           if (item.key === 'default_commission_rate') setCommissionRate(item.value);
+          if (item.key === 'default_agent_commission_share') setAgentCommissionShare(item.value);
           if (item.key === 'app_name') setAppName(item.value);
           if (item.key === 'contact_email') setContactEmail(item.value);
         });
@@ -97,7 +99,8 @@ export default function GeneralSettings() {
     setSavingSettings(true);
 
     const settingsToSave = [
-      { key: 'default_commission_rate', value: commissionRate, description: 'Taux de commission par défaut (%)' },
+      { key: 'default_commission_rate', value: commissionRate, description: 'Taux de commission plateforme par défaut (%)' },
+      { key: 'default_agent_commission_share', value: agentCommissionShare, description: 'Part de commission agent (% sur les gains de la plateforme)' },
       { key: 'app_name', value: appName, description: 'Nom officiel de la plateforme' },
       { key: 'contact_email', value: contactEmail, description: 'Email officiel de contact' },
     ];
@@ -257,13 +260,13 @@ export default function GeneralSettings() {
 
         <form onSubmit={handleSaveSettings} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' }}>
           
-          {/* Default Commission Percentage Rate Input */}
+          {/* Default Platform Commission Percentage Rate Input */}
           <div className="form-group" style={{ backgroundColor: '#F9FAFB', padding: '18px', borderRadius: '16px', border: '1px solid #E5E7EB' }}>
             <label className="form-label" style={{ fontWeight: '800', color: '#111827', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span>💰 Taux de Commission par Défaut (%)</span>
+              <span>💰 Taux de Commission Plateforme (%)</span>
             </label>
             <p style={{ fontSize: '12px', color: '#6B7280', marginTop: '2px', marginBottom: '12px' }}>
-              Appliqué automatiquement lors de la création d'une nouvelle offre par un agent commercial.
+              Pourcentage prélevé par la plateforme sur chaque vente d'offre.
             </p>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <input
@@ -278,6 +281,30 @@ export default function GeneralSettings() {
                 required
               />
               <span style={{ fontSize: '18px', fontWeight: '900', color: '#059669' }}>%</span>
+            </div>
+          </div>
+
+          {/* Default Agent Share Percentage Input */}
+          <div className="form-group" style={{ backgroundColor: '#F0FDF4', padding: '18px', borderRadius: '16px', border: '1px solid #BBF7D0' }}>
+            <label className="form-label" style={{ fontWeight: '800', color: '#065F46', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span>🤝 Part / Rétrocession Agent (%)</span>
+            </label>
+            <p style={{ fontSize: '12px', color: '#047857', marginTop: '2px', marginBottom: '12px' }}>
+              Pourcentage des gains de la plateforme reversé à l'agent commercial.
+            </p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <input
+                type="number"
+                step="0.1"
+                min="0"
+                max="100"
+                className="form-input"
+                style={{ borderRadius: '12px', padding: '12px 16px', fontSize: '16px', fontWeight: '800', color: '#047857', width: '120px', borderColor: '#86EFAC' }}
+                value={agentCommissionShare}
+                onChange={(e) => setAgentCommissionShare(e.target.value)}
+                required
+              />
+              <span style={{ fontSize: '18px', fontWeight: '900', color: '#047857' }}>% des gains</span>
             </div>
           </div>
 
