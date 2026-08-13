@@ -24,6 +24,7 @@ interface AgentRow extends Profile {
   restaurantsCount: number;
   proposalsCount: number;
   commissions: number;
+  commission_rate?: number;
 }
 
 export default function AgentsManagement() {
@@ -33,7 +34,7 @@ export default function AgentsManagement() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingAgent, setEditingAgent] = useState<any | null>(null);
   const [notification, setNotification] = useState<string | null>(null);
-  const [newAgent, setNewAgent] = useState({ name: '', email: '', password: '', phone: '' });
+  const [newAgent, setNewAgent] = useState({ name: '', email: '', password: '', phone: '', commissionRate: '20' });
 
   useEffect(() => {
     if (!authLoading && !user) router.replace('/login');
@@ -101,7 +102,7 @@ export default function AgentsManagement() {
     }
 
     showNotification(`Agent "${newAgent.name}" recruté !`);
-    setNewAgent({ name: '', email: '', password: '', phone: '' });
+    setNewAgent({ name: '', email: '', password: '', phone: '', commissionRate: '20' });
     setShowAddModal(false);
     fetchAgents();
   };
@@ -111,7 +112,7 @@ export default function AgentsManagement() {
     if (!editingAgent) return;
     const { error } = await supabase
       .from('profiles')
-      .update({ full_name: editingAgent.full_name, phone: editingAgent.phone })
+      .update({ full_name: editingAgent.full_name, phone: editingAgent.phone, commission_rate: editingAgent.commission_rate ? Number(editingAgent.commission_rate) : null })
       .eq('id', editingAgent.id);
     if (error) {
       showNotification(`Erreur: ${error.message}`);
@@ -211,8 +212,13 @@ export default function AgentsManagement() {
                       <div style={{ fontWeight: '500' }}>✉️ {agent.email}</div>
                       <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>📞 {agent.phone ?? '—'}</div>
                     </td>
-                    <td style={{ fontWeight: '700', paddingLeft: '24px' }}>{agent.restaurantsCount}</td>
-                    <td style={{ fontWeight: '700', paddingLeft: '24px' }}>{agent.proposalsCount}</td>
+                    <td style={{ fontWeight: '700' }}>{agent.restaurantsCount}</td>
+                    <td style={{ fontWeight: '700' }}>{agent.proposalsCount}</td>
+                    <td>
+                      <span style={{ fontWeight: '800', color: agent.commission_rate ? '#047857' : '#475569', backgroundColor: agent.commission_rate ? '#ECFDF5' : '#F1F5F9', padding: '4px 8px', borderRadius: '8px', fontSize: '13px' }}>
+                        {agent.commission_rate ? `${agent.commission_rate}% (Personnalisé)` : '20% (Par défaut)'}
+                      </span>
+                    </td>
                     <td style={{ fontWeight: '800', color: 'var(--success)' }}>{formatFCFA(agent.commissions)}</td>
                     <td>
                       <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
@@ -250,6 +256,11 @@ export default function AgentsManagement() {
                 <label className="form-label">Téléphone</label>
                 <input type="text" className="form-input" value={editingAgent.phone ?? ''} onChange={(e) => setEditingAgent({ ...editingAgent, phone: e.target.value })} />
               </div>
+              <div className="form-group">
+                <label className="form-label" style={{ fontWeight: '700', color: '#047857' }}>🤝 Taux de Commission Personnalisé Agent (%)</label>
+                <input type="number" step="1" min="0" max="100" className="form-input" placeholder="ex: 25 (Laissez vide pour le taux par défaut 20%)" value={editingAgent.commission_rate ?? ''} onChange={(e) => setEditingAgent({ ...editingAgent, commission_rate: e.target.value ? Number(e.target.value) : undefined })} style={{ borderColor: '#86EFAC', fontWeight: '800' }} />
+                <span style={{ fontSize: '11px', color: '#64748B' }}>Si configuré, remplace le pourcentage par défaut sur les gains de la plateforme.</span>
+              </div>
               <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
                 <button type="submit" className="btn btn-primary" style={{ flex: '1' }}>Enregistrer</button>
                 <button type="button" className="btn btn-outline" style={{ flex: '1' }} onClick={() => setEditingAgent(null)}>Annuler</button>
@@ -282,6 +293,10 @@ export default function AgentsManagement() {
               <div className="form-group">
                 <label className="form-label">Téléphone</label>
                 <input type="text" className="form-input" placeholder="ex: 07 45 89 12 36" value={newAgent.phone} onChange={(e) => setNewAgent({ ...newAgent, phone: e.target.value })} />
+              </div>
+              <div className="form-group">
+                <label className="form-label" style={{ fontWeight: '700', color: '#047857' }}>🤝 Part de Commission Agent (%)</label>
+                <input type="number" step="1" min="0" max="100" className="form-input" placeholder="ex: 20" value={newAgent.commissionRate} onChange={(e) => setNewAgent({ ...newAgent, commissionRate: e.target.value })} style={{ borderColor: '#86EFAC', fontWeight: '800' }} />
               </div>
               <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
                 <button type="submit" className="btn btn-primary" style={{ flex: '1' }}>Ajouter</button>
