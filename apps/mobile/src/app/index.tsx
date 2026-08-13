@@ -27,6 +27,7 @@ import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system/legacy';
 import { decode } from 'base64-arraybuffer';
+import * as WebBrowser from 'expo-web-browser';
 import OnboardingScreen from '../components/OnboardingScreen';
 import { sendLocalNotification, initNotificationService } from '../services/notificationService';
 
@@ -1782,6 +1783,93 @@ const getCategoryLabel = (cat?: string) => {
   };
 
   // Crée une commande en base (checkout final)
+
+  // Fonction de paiement Wave réelle via Supabase Edge Function & WebBrowser
+  const triggerWaveCheckout = async (amount: number, orderId: string): Promise<boolean> => {
+    try {
+      // 1. Appelle la fonction Edge Supabase wave-checkout
+      const { data: edgeData, error: edgeErr } = await supabase.functions.invoke('wave-checkout', {
+        body: {
+          amount: Math.round(amount),
+          orderId: orderId,
+          success_url: 'https://brickdeal.app/payment/success',
+          error_url: 'https://brickdeal.app/payment/error',
+        }
+      });
+
+      let checkoutUrl = edgeData?.wave_launch_url || edgeData?.wave_checkout_url || edgeData?.checkout_url;
+
+      // 2. Repli vers le serveur API NestJS si Edge Function non disponible
+      if (!checkoutUrl && edgeErr) {
+        try {
+          const apiUrl = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000';
+          const resp = await fetch(`${apiUrl}/payment/wave/checkout`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              amount: Math.round(amount).toString(),
+              orderId: orderId,
+              success_url: 'https://brickdeal.app/payment/success',
+              error_url: 'https://brickdeal.app/payment/error',
+            })
+          });
+          const apiData = await resp.json();
+          checkoutUrl = apiData?.wave_launch_url || apiData?.checkout_url;
+        } catch (e) {
+          console.warn('[WaveAPI Fallback Error]:', e);
+        }
+      }
+
+      if (checkoutUrl) {
+        // Ouvre la vraie session de paiement Wave Mobile Money dans le navigateur sécurisé
+        console.log('[WaveCheckout] Opening URL:', checkoutUrl);
+        await WebBrowser.openBrowserAsync(checkoutUrl);
+
+        // Vérifie si le statut de la commande a été mis à jour par le webhook
+        const { data: verifiedOrder } = await supabase
+          .from('orders')
+          .select('payment_status')
+          .eq('id', orderId)
+          .maybeSingle();
+
+        if (verifiedOrder?.payment_status === 'paid' || verifiedOrder?.payment_status === 'payee') {
+          return true;
+        }
+
+        // Demande de confirmation à l'utilisateur
+        return new Promise<boolean>((resolve) => {
+          Alert.alert(
+            '📱 Confirmation Paiement Wave',
+            "Avez-vous complété le transfert dans l'application Wave ?",
+            [
+              {
+                text: '❌ Non, Annuler',
+                style: 'cancel',
+                onPress: () => resolve(false),
+              },
+              {
+                text: '✅ Oui, Paiement Validé',
+                onPress: async () => {
+                  await supabase.from('orders').update({ payment_status: 'paid' }).eq('id', orderId);
+                  resolve(true);
+                },
+              },
+            ]
+          );
+        });
+      } else {
+        Alert.alert(
+          '⚠️ Clé API Wave Requise',
+          "La clé secret Wave \"WAVE_SECRET_KEY\" n'est pas encore configurée sur le serveur backend/Edge Function.\\n\\nVeuillez renseigner votre clé secret Wave dans les variables Supabase Edge Functions pour activer les redirections vers l'application Wave en production."
+        );
+        return false;
+      }
+    } catch (err: any) {
+      Alert.alert('Erreur Wave', err.message || 'Impossible de lancer le paiement Wave.');
+      return false;
+    }
+  };
+
   const handleCreateOrder = async () => {
     const offer = selectedFlash || selectedDeal;
     if (!offer) return;
@@ -1844,7 +1932,7 @@ const getCategoryLabel = (cat?: string) => {
       quantity: bookingQty,
       total_amount: totalAmount,
       commission_amount: commissionAmount,
-      payment_status: 'paid',
+      payment_status: 'pending',
       reservation_code: code,
     };
 
