@@ -155,6 +155,33 @@ export default function AgentsManagement() {
         </div>
       )}
 
+      {/* Summary KPI Banner for Commissions & Agents */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
+        <div className="panel" style={{ padding: '18px 20px', backgroundColor: '#ECFDF5', borderColor: '#A7F3D0' }}>
+          <div style={{ fontSize: '12px', fontWeight: '700', color: '#047857', textTransform: 'uppercase', letterSpacing: '0.5px' }}>💰 Total Commissions Générées</div>
+          <div style={{ fontSize: '24px', fontWeight: '900', color: '#065F46', marginTop: '4px' }}>
+            {formatFCFA(agents.reduce((sum, a) => sum + a.commissions, 0))}
+          </div>
+          <div style={{ fontSize: '12px', color: '#047857', marginTop: '2px' }}>Gain cumulé par l'équipe commerciale</div>
+        </div>
+
+        <div className="panel" style={{ padding: '18px 20px', backgroundColor: '#F0F9FF', borderColor: '#BAE6FD' }}>
+          <div style={{ fontSize: '12px', fontWeight: '700', color: '#0369A1', textTransform: 'uppercase', letterSpacing: '0.5px' }}>👔 Équipe Commerciale Active</div>
+          <div style={{ fontSize: '24px', fontWeight: '900', color: '#075985', marginTop: '4px' }}>
+            {agents.length} agent(s)
+          </div>
+          <div style={{ fontSize: '12px', color: '#0369A1', marginTop: '2px' }}>Agents inscrits et actifs</div>
+        </div>
+
+        <div className="panel" style={{ padding: '18px 20px', backgroundColor: '#FFFBEB', borderColor: '#FDE68A' }}>
+          <div style={{ fontSize: '12px', fontWeight: '700', color: '#B45309', textTransform: 'uppercase', letterSpacing: '0.5px' }}>🏢 Établissements Rattachés</div>
+          <div style={{ fontSize: '24px', fontWeight: '900', color: '#92400E', marginTop: '4px' }}>
+            {agents.reduce((sum, a) => sum + a.restaurantsCount, 0)} établissement(s)
+          </div>
+          <div style={{ fontSize: '12px', color: '#B45309', marginTop: '2px' }}>Portefeuille d'établissements partenaires</div>
+        </div>
+      </div>
+
       <div style={{ display: 'grid', gridTemplateColumns: editingAgent ? '2fr 1fr' : '1fr', gap: '24px', transition: 'var(--transition)' }}>
         <div className="panel">
           {agents.length === 0 ? (
@@ -167,7 +194,7 @@ export default function AgentsManagement() {
                 <tr>
                   <th>Agent</th>
                   <th>Contact</th>
-                  <th>Restaurants attribués</th>
+                  <th>Établissements attribués</th>
                   <th>Propositions soumises</th>
                   <th>Commissions générées</th>
                   <th style={{ textAlign: 'right' }}>Actions</th>

@@ -14,12 +14,26 @@
       "resizeMode": "contain",
       "backgroundColor": "#D60309"
     },
+    "notification": {
+      "icon": "./assets/icon_notification.png",
+      "color": "#D60309"
+    },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.brickfood.brickdeal"
+      "bundleIdentifier": "com.brickfood.brickdeal",
+      "infoPlist": {
+        "NSCameraUsageDescription": "BrickDeal a besoin d'accéder à votre caméra pour scanner les QR codes des réservations."
+      }
     },
     "android": {
       "package": "com.brickfood.brickdeal",
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.CAMERA"
+      ],
+      "blockedPermissions": [
+        "android.permission.RECORD_AUDIO"
+      ],
       "adaptiveIcon": {
         "foregroundImage": "./assets/Icone.png",
         "backgroundColor": "#D60309"
@@ -30,12 +44,27 @@
     },
     "plugins": [
       "expo-router",
-      "expo-notifications"
+      "expo-notifications",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "BrickDeal a besoin d'accéder à votre caméra pour scanner les QR codes des réservations.",
+          "microphonePermission": false,
+          "recordAudioAndroid": false
+        }
+      ],
+      "expo-font"
     ],
     "extra": {
       "eas": {
         "projectId": "290b1fcf-922d-46a2-8ff9-1e5148233da6"
       }
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/290b1fcf-922d-46a2-8ff9-1e5148233da6"
     }
   }
 }

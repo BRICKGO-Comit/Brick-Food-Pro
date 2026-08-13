@@ -9,6 +9,7 @@ import type { OrderWithRelations } from '@/types/database';
 interface DashboardStats {
   totalRestaurants: number;
   totalAgents: number;
+  totalClients: number;
   totalOrders: number;
   totalCA: number;
   salesDistribution: { flash: number; deals: number; classic: number };
@@ -20,6 +21,7 @@ export default function AdminDashboard() {
   const [stats, setStats] = useState<DashboardStats>({
     totalRestaurants: 0,
     totalAgents: 0,
+    totalClients: 0,
     totalOrders: 0,
     totalCA: 0,
     salesDistribution: { flash: 0, deals: 0, classic: 0 },
@@ -35,9 +37,10 @@ export default function AdminDashboard() {
 
   // Charge les statistiques depuis la base
   const fetchStats = async () => {
-    const [{ count: totalRestaurants }, { count: totalAgents }, { count: totalOrders }] = await Promise.all([
+    const [{ count: totalRestaurants }, { count: totalAgents }, { count: totalClients }, { count: totalOrders }] = await Promise.all([
       supabase.from('restaurants').select('*', { count: 'exact', head: true }),
       supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'agent'),
+      supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'client'),
       supabase.from('orders').select('*', { count: 'exact', head: true }),
     ]);
 
@@ -65,6 +68,7 @@ export default function AdminDashboard() {
     setStats({
       totalRestaurants: totalRestaurants ?? 0,
       totalAgents: totalAgents ?? 0,
+      totalClients: totalClients ?? 0,
       totalOrders: totalOrders ?? 0,
       totalCA,
       salesDistribution: {
@@ -115,8 +119,8 @@ export default function AdminDashboard() {
       <div className="metrics-grid">
         <div className="metric-card">
           <div className="metric-header">
-            <span>Restaurants partenaires</span>
-            <span style={{ fontSize: '18px' }}>🏪</span>
+            <span>Établissements partenaires</span>
+            <span style={{ fontSize: '18px' }}>🏢</span>
           </div>
           <div className="metric-value">{stats.totalRestaurants}</div>
           <div className="metric-sub">Données en direct</div>
@@ -125,10 +129,19 @@ export default function AdminDashboard() {
         <div className="metric-card">
           <div className="metric-header">
             <span>Agents commerciaux</span>
-            <span style={{ fontSize: '18px' }}>👤</span>
+            <span style={{ fontSize: '18px' }}>👔</span>
           </div>
           <div className="metric-value">{stats.totalAgents}</div>
           <div className="metric-sub">Données en direct</div>
+        </div>
+
+        <div className="metric-card">
+          <div className="metric-header">
+            <span>Clients inscrits</span>
+            <span style={{ fontSize: '18px' }}>📱</span>
+          </div>
+          <div className="metric-value">{stats.totalClients}</div>
+          <div className="metric-sub">Comptes mobiles créés</div>
         </div>
 
         <div className="metric-card">

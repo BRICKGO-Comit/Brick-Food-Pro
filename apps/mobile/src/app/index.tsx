@@ -181,7 +181,7 @@ export default function MobileApp() {
       setIsExportingPass(true);
       const code = order.reservation_code || `RES-${order.id?.substring(0, 6)?.toUpperCase() || '7892'}`;
       const total = Number(order.total_amount || order.price || 0).toLocaleString('fr-FR');
-      const restoName = order.restaurants?.name || order.restaurantName || 'Restaurant Partenaire';
+      const restoName = order.restaurants?.name || order.restaurantName || 'Établissement Partenaire';
       const offerTitle = order.offers?.title || order.offerTitle || 'Offre Spéciale';
       const clientName = order.client_name || order.profiles?.full_name || 'Client Lambda';
       const clientPhone = order.client_phone || order.profiles?.phone || 'Non renseigné';
@@ -312,7 +312,7 @@ export default function MobileApp() {
                   />
                   <View style={{ flex: 1, gap: 2 }}>
                     <Text style={{ fontSize: 16, fontWeight: '900', color: '#0F172A' }}>
-                      {selectedClientOrder.restaurants?.name || 'Restaurant Partenaire'}
+                      {selectedClientOrder.restaurants?.name || 'Établissement Partenaire'}
                     </Text>
                     <Text style={{ fontSize: 12, fontWeight: '600', color: '#64748B' }}>📍 {selectedClientOrder.restaurants?.address || 'Abidjan, Côte d\'Ivoire'}</Text>
                     <Text style={{ fontSize: 12, fontWeight: '600', color: '#64748B' }}>📞 {selectedClientOrder.restaurants?.phone || '+225 01 00 00 00 00'}</Text>
@@ -1386,7 +1386,7 @@ const getCategoryLabel = (cat?: string) => {
       setClientOrders(data ?? []);
     };
     loadClientOrders();
-  }, [isLoggedIn, role, user]);
+  }, [isLoggedIn, role, user?.id]);
 
   // Charge les données de l'agent (restaurants, commandes et propositions)
   useEffect(() => {
@@ -1460,7 +1460,7 @@ const getCategoryLabel = (cat?: string) => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [isLoggedIn, role, user]);
+  }, [isLoggedIn, role, user?.id]);
 
   // Charge les commandes du restaurant
   useEffect(() => {
@@ -1477,7 +1477,7 @@ const getCategoryLabel = (cat?: string) => {
       setRestaurantOrders(data ?? []);
     };
     loadRestaurantOrders();
-  }, [isLoggedIn, role, profile]);
+  }, [isLoggedIn, role, profile?.restaurant_id]);
 
   // Charge les détails du restaurant (pour le propriétaire connecté)
   useEffect(() => {
@@ -1498,7 +1498,7 @@ const getCategoryLabel = (cat?: string) => {
       }
     };
     loadRestaurantDetail();
-  }, [isLoggedIn, role, profile]);
+  }, [isLoggedIn, role, profile?.restaurant_id]);
 
   // Charge les propositions du restaurant
   useEffect(() => {
@@ -1515,7 +1515,7 @@ const getCategoryLabel = (cat?: string) => {
       setRestaurantProposals(data ?? []);
     };
     loadRestaurantProposals();
-  }, [isLoggedIn, role, profile]);
+  }, [isLoggedIn, role, profile?.restaurant_id]);
 
   // --- REALTIME SUBSCRIPTIONS & NOTIFICATIONS ---
 
@@ -1611,7 +1611,7 @@ const getCategoryLabel = (cat?: string) => {
     return () => {
       supabase.removeChannel(ordersChannel);
     };
-  }, [isLoggedIn, user, role, profile?.restaurant_id]);
+  }, [isLoggedIn, user?.id, role, profile?.restaurant_id]);
 
   // Listen for notifications (all roles)
   useEffect(() => {
@@ -1648,7 +1648,7 @@ const getCategoryLabel = (cat?: string) => {
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, [isLoggedIn, user, role]);
+  }, [isLoggedIn, user?.id, role]);
 
   // Realtime tracking for a specific order (client side)
   useEffect(() => {
@@ -2084,7 +2084,7 @@ const getCategoryLabel = (cat?: string) => {
         setRestaurantTab('home');
       }
       await refreshProfile(data.user.id);
-      Alert.alert('Connexion Réussie', `Bienvenue dans votre espace ${role === 'agent' ? 'Agent Commercial' : 'Restaurant Partenaire'}.`);
+      Alert.alert('Connexion Réussie', `Bienvenue dans votre espace ${role === 'agent' ? 'Agent Commercial' : 'Établissement Partenaire'}.`);
     } catch (err: any) {
       console.error('[ProLogin] Erreur:', err.message);
       Alert.alert('Erreur de connexion', err.message || 'Identifiants incorrects');
@@ -4545,6 +4545,7 @@ const getCategoryLabel = (cat?: string) => {
             )}
           </SafeAreaView>
         </Modal>
+        {renderSelectedClientOrderModal()}
       </SafeAreaView>
     );
   }
@@ -4670,7 +4671,7 @@ const getCategoryLabel = (cat?: string) => {
               <View style={{ flexDirection: 'row', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.08)', paddingBottom: 16, marginBottom: 16 }}>
                 {/* Col 1: Restaurants */}
                 <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 11, fontWeight: '600', color: '#94A3B8' }}>Restaurants</Text>
+                  <Text style={{ fontSize: 11, fontWeight: '600', color: '#94A3B8' }}>Établissements</Text>
                   <Text style={{ fontSize: 24, fontWeight: '900', color: '#10B981', marginVertical: 2 }}>
                     {countRestaurants}
                   </Text>
@@ -4885,7 +4886,7 @@ const getCategoryLabel = (cat?: string) => {
                 setNewRestoOwnerPassword('');
                 setShowAddRestoModal(true);
               }}>
-                <Text style={styles.headerActionBtnText}>➕ Inscrire un resto</Text>
+                <Text style={styles.headerActionBtnText}>➕ Inscrire un établissement</Text>
               </TouchableOpacity>
             </View>
 
@@ -5798,7 +5799,7 @@ const getCategoryLabel = (cat?: string) => {
           </TouchableOpacity>
           <TouchableOpacity style={styles.navBtn} onPress={() => setAgentTab('restaurants')}>
             <Ionicons name={agentTab === 'restaurants' ? 'business' : 'business-outline'} size={22} color={agentTab === 'restaurants' ? Colors.primary : Colors.textSecondary} />
-            <Text style={[styles.navBtnText, agentTab === 'restaurants' && styles.activeNavText]}>Restaurants</Text>
+            <Text style={[styles.navBtnText, agentTab === 'restaurants' && styles.activeNavText]}>Établissements</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.navBtn} onPress={() => setAgentTab('proposals')}>
             <Ionicons name={agentTab === 'proposals' ? 'document-text' : 'document-text-outline'} size={22} color={agentTab === 'proposals' ? Colors.primary : Colors.textSecondary} />
@@ -6021,7 +6022,7 @@ const getCategoryLabel = (cat?: string) => {
                 
                 {/* Restaurant */}
                 <Text style={{ fontSize: 15, fontWeight: '700', color: '#64748B', marginBottom: 20, textAlign: 'center' }}>
-                  🏢 {generatedPassOrder?.restaurants?.name || generatedPassOrder?.restaurantName || 'Restaurant Partenaire'}
+                  🏢 {generatedPassOrder?.restaurants?.name || generatedPassOrder?.restaurantName || 'Établissement Partenaire'}
                 </Text>
 
                 {/* ===== CODE BOX - VERY LARGE ===== */}
@@ -7200,7 +7201,7 @@ const getCategoryLabel = (cat?: string) => {
                 {/* Restaurant & Client Details */}
                 <View style={{ backgroundColor: '#F9FAFB', padding: 16, borderRadius: 16, borderWidth: 1, borderColor: '#E5E7EB', gap: 10, marginBottom: 16 }}>
                   <Text style={{ fontSize: 16, fontWeight: '800', color: '#111827' }}>
-                    🏢 {selectedAgentOrder.restaurants?.name || 'Restaurant Partenaire'}
+                    🏢 {selectedAgentOrder.restaurants?.name || 'Établissement Partenaire'}
                   </Text>
                   <Text style={{ fontSize: 12, color: '#4B5563' }}>📍 {selectedAgentOrder.restaurants?.address}</Text>
                   <Text style={{ fontSize: 12, color: '#4B5563' }}>📞 {selectedAgentOrder.restaurants?.phone}</Text>

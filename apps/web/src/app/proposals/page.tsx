@@ -106,6 +106,46 @@ export default function ProposalsModerator() {
       } else {
         showNotification(`Proposition "${prop.title}" renvoyée pour MODIFICATION.`);
       }
+
+      // Send notification to agent and/or restaurant owner
+      try {
+        const notifTitle = newStatus === 'validee'
+          ? '🎉 Proposition Validée !'
+          : newStatus === 'refusee'
+          ? '❌ Proposition Refusée'
+          : '✏️ Modification Demandée';
+        const notifBody = newStatus === 'validee'
+          ? `Votre offre "${prop.title}" a été approuvée par l'admin et est maintenant en ligne sur l'application.`
+          : newStatus === 'refusee'
+          ? `Votre proposition d'offre "${prop.title}" a été refusée par le comité d'administration.`
+          : `L'administrateur a demandé des ajustements pour votre offre "${prop.title}".`;
+
+        const notifsToInsert: any[] = [];
+        if (prop.agent_id) {
+          notifsToInsert.push({
+            user_id: prop.agent_id,
+            title: notifTitle,
+            body: notifBody,
+            is_read: false,
+          });
+        }
+        if (prop.restaurant_id) {
+          const { data: resto } = await supabase.from('restaurants').select('agent_id, name').eq('id', prop.restaurant_id).maybeSingle();
+          if (resto?.agent_id && resto.agent_id !== prop.agent_id) {
+            notifsToInsert.push({
+              user_id: resto.agent_id,
+              title: notifTitle,
+              body: notifBody,
+              is_read: false,
+            });
+          }
+        }
+        if (notifsToInsert.length > 0) {
+          await supabase.from('notifications').insert(notifsToInsert);
+        }
+      } catch (e) {
+        console.warn('[ProposalNotification] Error sending notification:', e);
+      }
     }
     if (previewProp && previewProp.id === id) {
       setPreviewProp({ ...previewProp, status: newStatus });

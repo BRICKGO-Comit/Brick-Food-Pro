@@ -6,6 +6,11 @@ import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import type { Profile, UserRole } from '../types/database';
 
+import * as SplashScreen from 'expo-splash-screen';
+
+// Prevent splash screen from auto-hiding before initial render & auth check complete
+SplashScreen.preventAutoHideAsync().catch(() => {});
+
 interface AuthContextType {
   user: User | null;
   session: Session | null;
@@ -34,19 +39,23 @@ export default function RootLayout() {
   const [showSplashOverlay, setShowSplashOverlay] = useState(true);
   const fadeAnim = useRef(new Animated.Value(1)).current;
 
+  // Smoothly hide splash screen ONLY after initial auth loading completes
   useEffect(() => {
-    const timer = setTimeout(() => {
-      Animated.timing(fadeAnim, {
-        toValue: 0,
-        duration: 500,
-        useNativeDriver: true,
-      }).start(() => {
-        setShowSplashOverlay(false);
-      });
-    }, 2200);
+    if (!loading) {
+      const timer = setTimeout(() => {
+        SplashScreen.hideAsync().catch(() => {});
+        Animated.timing(fadeAnim, {
+          toValue: 0,
+          duration: 400,
+          useNativeDriver: true,
+        }).start(() => {
+          setShowSplashOverlay(false);
+        });
+      }, 800);
 
-    return () => clearTimeout(timer);
-  }, []);
+      return () => clearTimeout(timer);
+    }
+  }, [loading]);
 
   const refreshProfile = async (userId?: string) => {
     const targetId = userId ?? user?.id;
@@ -143,7 +152,7 @@ export default function RootLayout() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: '#D60309',
   },
   splashOverlay: {
     ...StyleSheet.absoluteFillObject,
