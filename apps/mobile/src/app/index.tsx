@@ -3520,22 +3520,15 @@ const getCategoryLabel = (cat?: string) => {
                   </View>
                 </View>
 
-                {/* QR Code premium mock box */}
+                {/* REAL DYNAMIC QR CODE */}
                 <View style={styles.qrCodeBox}>
-                  <View style={{ width: 140, height: 140, padding: 8, backgroundColor: 'white', borderWidth: 1, borderColor: '#DDD', alignItems: 'center', justifyContent: 'center' }}>
-                    <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap', width: 120, height: 120 }}>
-                      <View style={{ width: 30, height: 30, borderWidth: 4, borderColor: 'black', backgroundColor: 'transparent' }} />
-                      <View style={{ width: 30, height: 30, backgroundColor: 'black' }} />
-                      <View style={{ width: 30, height: 30, borderWidth: 4, borderColor: 'black', backgroundColor: 'transparent' }} />
-                      <View style={{ width: 30, height: 30, backgroundColor: 'black' }} />
-                      <View style={{ width: 30, height: 30, borderWidth: 4, borderColor: 'black', backgroundColor: 'transparent' }} />
-                      <View style={{ width: 30, height: 30, backgroundColor: 'black' }} />
-                      <View style={{ width: 30, height: 30, backgroundColor: 'black' }} />
-                      <View style={{ width: 30, height: 30, backgroundColor: 'black' }} />
-                      <View style={{ width: 30, height: 30, borderWidth: 4, borderColor: 'black', backgroundColor: 'transparent' }} />
-                    </View>
+                  <View style={{ padding: 12, backgroundColor: 'white', borderRadius: 16, borderWidth: 1, borderColor: '#E2E8F0', elevation: 3, alignItems: 'center', justifyContent: 'center' }}>
+                    <Image 
+                      source={{ uri: `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(reservationId || 'BD-100200')}` }} 
+                      style={{ width: 160, height: 160, resizeMode: 'contain' }} 
+                    />
                   </View>
-                  <Text style={[styles.qrCodeVal, { fontSize: 13, letterSpacing: 1, marginTop: 12, color: Colors.textSecondary }]}>{reservationId}</Text>
+                  <Text style={[styles.qrCodeVal, { fontSize: 14, letterSpacing: 2, marginTop: 12, fontWeight: '900', color: Colors.primary }]}>{reservationId}</Text>
                 </View>
 
                 {/* Action Buttons for Receipt Download and Order Tracking */}
@@ -6126,10 +6119,16 @@ const getCategoryLabel = (cat?: string) => {
                   🏢 {generatedPassOrder?.restaurants?.name || generatedPassOrder?.restaurantName || 'Établissement Partenaire'}
                 </Text>
 
-                {/* ===== CODE BOX - VERY LARGE ===== */}
+                {/* ===== CODE BOX - VERY LARGE WITH REAL QR CODE ===== */}
                 <View style={{ width: '100%', backgroundColor: '#0F172A', borderRadius: 20, paddingVertical: 24, paddingHorizontal: 20, alignItems: 'center', marginBottom: 24 }}>
+                  <View style={{ padding: 12, backgroundColor: 'white', borderRadius: 16, marginBottom: 16, elevation: 4 }}>
+                    <Image 
+                      source={{ uri: `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(generatedPassOrder?.reservation_code || 'RES-7892-AZ')}` }} 
+                      style={{ width: 160, height: 160, resizeMode: 'contain' }} 
+                    />
+                  </View>
                   <Text style={{ fontSize: 12, fontWeight: '800', color: '#94A3B8', textTransform: 'uppercase', letterSpacing: 2 }}>CODE DE RÉSERVATION</Text>
-                  <Text style={{ fontSize: 36, fontWeight: '900', color: '#10B981', letterSpacing: 4, marginTop: 8 }}>
+                  <Text style={{ fontSize: 32, fontWeight: '900', color: '#10B981', letterSpacing: 3, marginTop: 6 }}>
                     {generatedPassOrder?.reservation_code || 'RES-7892-AZ'}
                   </Text>
                 </View>
