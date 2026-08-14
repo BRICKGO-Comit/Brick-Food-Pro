@@ -548,6 +548,18 @@ export default function MobileApp() {
         deliveryAddress: '',
         paymentMethod: 'wave'
       });
+      // Declenche le VRAI paiement Wave si mode de paiement Wave
+      if (agentOrderForm.paymentMethod === 'wave' && createdOrder.id) {
+        const wavePaid = await triggerWaveCheckout(totalAmt, createdOrder.id);
+        if (!wavePaid) {
+          Alert.alert(
+            '⚠️ Encaissement Wave Non Validé',
+            'La session de paiement Wave n\'a pas été complétée. Le Pass QR n\'a pas été généré.'
+          );
+          return;
+        }
+      }
+
       setGeneratedPassOrder(createdOrder);
       setShowPassQRModal(true);
     } catch (err: any) {
@@ -2030,6 +2042,18 @@ const getCategoryLabel = (cat?: string) => {
 
     if (notificationsToInsert.length > 0) {
       await supabase.from('notifications').insert(notificationsToInsert);
+    }
+
+    // Declenche le VRAI paiement Wave Mobile Money
+    if (data?.id) {
+      const wavePaid = await triggerWaveCheckout(totalAmount, data.id);
+      if (!wavePaid) {
+        Alert.alert(
+          '⚠️ Paiement Wave Non Validé',
+          'La session de paiement Wave n\'a pas été complétée. Votre Pass QR n\'a pas été généré.'
+        );
+        return;
+      }
     }
 
     // Passe à l'écran de succès
