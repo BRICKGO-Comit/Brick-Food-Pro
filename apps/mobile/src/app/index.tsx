@@ -28,6 +28,7 @@ import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system/legacy';
 import { decode } from 'base64-arraybuffer';
 import * as WebBrowser from 'expo-web-browser';
+import * as ExpoLinking from 'expo-linking';
 import OnboardingScreen from '../components/OnboardingScreen';
 import { sendLocalNotification, initNotificationService } from '../services/notificationService';
 
@@ -1798,16 +1799,84 @@ const getCategoryLabel = (cat?: string) => {
 
   // Crée une commande en base (checkout final)
 
-  // Fonction de paiement Wave réelle via Supabase Edge Function & WebBrowser
+  // Helper : Attente et détection en temps réel (Polling + Realtime) du Webhook Wave
+  const waitForPaymentValidation = async (orderId: string, maxWaitMs: number = 25000): Promise<boolean> => {
+    return new Promise((resolve) => {
+      let isDone = false;
+      const startTime = Date.now();
+
+      // 1. Écoute temps réel Supabase Postgres Changes sur la commande
+      const channel = supabase
+        .channel(`wave-pay-check-${orderId}`)
+        .on(
+          'postgres_changes',
+          { event: 'UPDATE', schema: 'public', table: 'orders', filter: `id=eq.${orderId}` },
+          (payload: any) => {
+            const status = payload?.new?.payment_status;
+            if (status === 'paid' || status === 'payee') {
+              if (!isDone) {
+                isDone = true;
+                supabase.removeChannel(channel);
+                resolve(true);
+              }
+            }
+          }
+        )
+        .subscribe();
+
+      // 2. Polling régulier toutes les 1.5s (filet de sécurité si la socket WebSocket est en pause)
+      const pollInterval = setInterval(async () => {
+        if (isDone) {
+          clearInterval(pollInterval);
+          return;
+        }
+
+        try {
+          const { data: order } = await supabase
+            .from('orders')
+            .select('payment_status')
+            .eq('id', orderId)
+            .maybeSingle();
+
+          if (order?.payment_status === 'paid' || order?.payment_status === 'payee') {
+            if (!isDone) {
+              isDone = true;
+              clearInterval(pollInterval);
+              supabase.removeChannel(channel);
+              resolve(true);
+            }
+          }
+        } catch (e) {
+          console.warn('[WavePolling] Error:', e);
+        }
+
+        // Timeout max (ex: 25s)
+        if (Date.now() - startTime >= maxWaitMs) {
+          if (!isDone) {
+            isDone = true;
+            clearInterval(pollInterval);
+            supabase.removeChannel(channel);
+            resolve(false);
+          }
+        }
+      }, 1500);
+    });
+  };
+
+  // Fonction de paiement Wave réelle via Supabase Edge Function & Deep Linking + Realtime Polling
   const triggerWaveCheckout = async (amount: number, orderId: string): Promise<boolean> => {
     try {
-      // 1. Appelle la fonction Edge Supabase wave-checkout
+      // Génère l'URL de Deep Link mobile retour (ex: brickdeal://payment/success)
+      const redirectUrl = ExpoLinking.createURL('payment/success');
+      const errorRedirectUrl = ExpoLinking.createURL('payment/error');
+
+      // 1. Appelle la fonction Edge Supabase wave-checkout avec le Deep Link mobile
       const { data: edgeData, error: edgeErr } = await supabase.functions.invoke('wave-checkout', {
         body: {
           amount: Math.round(amount),
           orderId: orderId,
-          success_url: 'https://brickdeal.app/payment/success',
-          error_url: 'https://brickdeal.app/payment/error',
+          success_url: redirectUrl,
+          error_url: errorRedirectUrl,
         }
       });
 
@@ -1823,8 +1892,8 @@ const getCategoryLabel = (cat?: string) => {
             body: JSON.stringify({
               amount: Math.round(amount).toString(),
               orderId: orderId,
-              success_url: 'https://brickdeal.app/payment/success',
-              error_url: 'https://brickdeal.app/payment/error',
+              success_url: redirectUrl,
+              error_url: errorRedirectUrl,
             })
           });
           const apiData = await resp.json();
@@ -1835,22 +1904,22 @@ const getCategoryLabel = (cat?: string) => {
       }
 
       if (checkoutUrl) {
-        // Ouvre la vraie session de paiement Wave Mobile Money dans le navigateur sécurisé
-        console.log('[WaveCheckout] Opening URL:', checkoutUrl);
-        await WebBrowser.openBrowserAsync(checkoutUrl);
+        console.log('[WaveCheckout] Opening Session with DeepLink redirect:', checkoutUrl, 'redirectUrl:', redirectUrl);
 
-        // Vérification stricte en base de données (Webhook Wave serveur uniquement)
-        const { data: verifiedOrder } = await supabase
-          .from('orders')
-          .select('payment_status')
-          .eq('id', orderId)
-          .maybeSingle();
+        // Ouvre le navigateur sécurisé in-app avec interception automatique de redirection
+        try {
+          await WebBrowser.openAuthSessionAsync(checkoutUrl, redirectUrl);
+        } catch (e) {
+          // Fallback sur openBrowserAsync si openAuthSessionAsync n'est pas supporté sur la plateforme
+          await WebBrowser.openBrowserAsync(checkoutUrl);
+        }
 
-        if (verifiedOrder?.payment_status === 'paid' || verifiedOrder?.payment_status === 'payee') {
+        // Détecte automatiquement la confirmation en base via Polling 25s + Realtime
+        const isPaid = await waitForPaymentValidation(orderId, 25000);
+        if (isPaid) {
           return true;
         }
 
-        // Aucun popup déclaratif : Si le paiement n'est pas confirmé par le Webhook Wave en base, la transaction est refusée
         console.warn('[WaveCheckout] Paiement non confirmé en base pour la commande:', orderId);
         return false;
       } else {
