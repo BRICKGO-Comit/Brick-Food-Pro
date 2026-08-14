@@ -2136,6 +2136,11 @@ const getCategoryLabel = (cat?: string) => {
         setPendingOfferAfterAuth(null);
       } else if (selectedFlash || selectedDeal) {
         setBookingStep(3);
+      } else {
+        setSelectedFlash(null);
+        setSelectedDeal(null);
+        setBookingStep(1);
+        setClientTab('home');
       }
     } catch (err: any) {
       Alert.alert('Erreur', err.message || 'Échec de l\'authentification');
