@@ -1839,7 +1839,7 @@ const getCategoryLabel = (cat?: string) => {
         console.log('[WaveCheckout] Opening URL:', checkoutUrl);
         await WebBrowser.openBrowserAsync(checkoutUrl);
 
-        // Vérifie si le statut de la commande a été mis à jour par le webhook
+        // Vérification stricte en base de données (Webhook Wave serveur uniquement)
         const { data: verifiedOrder } = await supabase
           .from('orders')
           .select('payment_status')
@@ -1850,27 +1850,9 @@ const getCategoryLabel = (cat?: string) => {
           return true;
         }
 
-        // Demande de confirmation à l'utilisateur
-        return new Promise<boolean>((resolve) => {
-          Alert.alert(
-            '📱 Confirmation Paiement Wave',
-            "Avez-vous complété le transfert dans l'application Wave ?",
-            [
-              {
-                text: '❌ Non, Annuler',
-                style: 'cancel',
-                onPress: () => resolve(false),
-              },
-              {
-                text: '✅ Oui, Paiement Validé',
-                onPress: async () => {
-                  await supabase.from('orders').update({ payment_status: 'paid' }).eq('id', orderId);
-                  resolve(true);
-                },
-              },
-            ]
-          );
-        });
+        // Aucun popup déclaratif : Si le paiement n'est pas confirmé par le Webhook Wave en base, la transaction est refusée
+        console.warn('[WaveCheckout] Paiement non confirmé en base pour la commande:', orderId);
+        return false;
       } else {
         Alert.alert(
           '⚠️ Clé API Wave Requise',
