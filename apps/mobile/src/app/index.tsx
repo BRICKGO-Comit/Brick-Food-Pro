@@ -186,7 +186,7 @@ export default function MobileApp() {
       const total = Number(order.total_amount || order.price || 0).toLocaleString('fr-FR');
       const restoName = order.restaurants?.name || order.restaurantName || 'Établissement Partenaire';
       const offerTitle = order.offers?.title || order.offerTitle || 'Offre Spéciale';
-      const clientName = order.client_name || order.profiles?.full_name || 'Client Lambda';
+      const clientName = order.client_name || order.profiles?.full_name || 'Client';
       const clientPhone = order.client_phone || order.profiles?.phone || 'Non renseigné';
       const dateStr = new Date(order.created_at || Date.now()).toLocaleDateString('fr-FR', {
         day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit'
@@ -462,7 +462,7 @@ export default function MobileApp() {
       return;
     }
     if (!agentOrderForm.clientName.trim()) {
-      Alert.alert('Nom Client Requis', 'Veuillez saisir le nom du client lambda.');
+      Alert.alert('Nom Client Requis', 'Veuillez saisir le nom du client.');
       return;
     }
 
@@ -5572,7 +5572,7 @@ const getCategoryLabel = (cat?: string) => {
                       <View style={{ width: 28, height: 28, borderRadius: 8, backgroundColor: '#FFF1F2', alignItems: 'center', justifyContent: 'center' }}>
                         <Ionicons name="person" size={16} color={Colors.primary} />
                       </View>
-                      <Text style={{ fontSize: 14, fontWeight: '800', color: '#0F172A' }}>1. Coordonnées du Client Lambda</Text>
+                      <Text style={{ fontSize: 14, fontWeight: '800', color: '#0F172A' }}>1. Coordonnées du Client</Text>
                     </View>
 
                     <View style={{ gap: 10 }}>
@@ -5819,7 +5819,7 @@ const getCategoryLabel = (cat?: string) => {
                           <View style={{ height: 1, backgroundColor: '#E2E8F0' }} />
 
                           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <Text style={{ fontSize: 13, fontWeight: '700', color: '#64748B' }}>👤 Client Lambda</Text>
+                            <Text style={{ fontSize: 13, fontWeight: '700', color: '#64748B' }}>👤 Client</Text>
                             <Text style={{ fontSize: 13, fontWeight: '800', color: '#0F172A' }}>
                               {agentOrderForm.clientName || 'Client'}
                             </Text>
@@ -6209,7 +6209,7 @@ const getCategoryLabel = (cat?: string) => {
                 <View style={{ width: '100%', gap: 14 }}>
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                     <Text style={{ fontSize: 15, fontWeight: '700', color: '#94A3B8' }}>👤 Client</Text>
-                    <Text style={{ fontSize: 16, fontWeight: '900', color: '#0F172A' }}>{generatedPassOrder?.client_name || 'Client Lambda'}</Text>
+                    <Text style={{ fontSize: 16, fontWeight: '900', color: '#0F172A' }}>{generatedPassOrder?.client_name || 'Client'}</Text>
                   </View>
 
                   <View style={{ height: 1, backgroundColor: '#F1F5F9' }} />
