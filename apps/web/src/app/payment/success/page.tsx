@@ -14,24 +14,28 @@ export default function PaymentSuccessPage() {
   return (
     <div style={{
       fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      zIndex: 999999,
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      minHeight: '100vh',
-      backgroundColor: '#0F172A',
+      backgroundColor: '#0B0F19',
       color: 'white',
-      padding: '20px',
-      margin: 0
+      padding: '20px'
     }}>
       <div style={{
         backgroundColor: '#1E293B',
-        borderRadius: '24px',
-        padding: '36px 24px',
-        maxWidth: '380px',
+        borderRadius: '28px',
+        padding: '40px 28px',
+        maxWidth: '400px',
         width: '100%',
         textAlign: 'center',
-        boxShadow: '0 20px 30px rgba(0,0,0,0.5)',
-        border: '1px solid #334155'
+        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.7)',
+        border: '1.5px solid #334155'
       }}>
         <div style={{ fontSize: '64px', marginBottom: '16px' }}>✅</div>
         <h1 style={{ fontSize: '24px', fontWeight: 900, color: '#10B981', margin: '0 0 10px 0' }}>
