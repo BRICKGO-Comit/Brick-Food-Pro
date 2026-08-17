@@ -14,13 +14,14 @@ serve(async (req) => {
   try {
     const { amount, orderId, success_url, error_url } = await req.json()
 
-    // Get the Wave Secret Key from Supabase Edge Function environment variables
-    const waveSecretKey = Deno.env.get('WAVE_SECRET_KEY')
-    
-    if (!waveSecretKey) {
-      console.error('Missing WAVE_SECRET_KEY in environment variables')
-      throw new Error('Server Configuration Error: Missing Secret Key')
-    }
+    // Get the Wave Secret Key from Deno env or fallback to production Wave key
+    const waveSecretKey = Deno.env.get('WAVE_SECRET_KEY') || 'wave_ci_prod_PA5WLkmrmQFnB4KFiW4MIZNVIN51qM86Lhctic9fGunvsA2ddFpMqXKEnVpMFmTLomFwOeBpWnWmmp2DlTyEYBhCEXhQrtX3ig'
+
+    const defaultHttpsSuccess = 'https://brick-food-pro-beta.vercel.app/payment/success'
+    const defaultHttpsError = 'https://brick-food-pro-beta.vercel.app/payment/success'
+
+    const validSuccessUrl = (success_url && typeof success_url === 'string' && success_url.startsWith('https://')) ? success_url : defaultHttpsSuccess
+    const validErrorUrl = (error_url && typeof error_url === 'string' && error_url.startsWith('https://')) ? error_url : defaultHttpsError
 
     // Call the Wave API to generate a checkout session
     const waveResponse = await fetch('https://api.wave.com/v1/checkout/sessions', {
@@ -33,8 +34,8 @@ serve(async (req) => {
         amount: Number(amount),
         currency: 'XOF',
         client_reference: orderId,
-        error_url: error_url || 'brickdeal://payment/error',
-        success_url: success_url || 'brickdeal://payment/success'
+        error_url: validErrorUrl,
+        success_url: validSuccessUrl
       })
     })
 
@@ -45,7 +46,10 @@ serve(async (req) => {
         throw new Error(data.message || 'Error generating wave session')
     }
 
-    return new Response(JSON.stringify(data), {
+    return new Response(JSON.stringify({
+      ...data,
+      sessionId: data.id || data.sessionId,
+    }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
     })

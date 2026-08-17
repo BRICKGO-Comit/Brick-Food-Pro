@@ -117,6 +117,21 @@ export default function MobileApp() {
     return () => clearInterval(timer);
   }, []);
 
+  useEffect(() => {
+    const handleDeepLink = (event: { url: string }) => {
+      console.log('[DeepLink Incoming]:', event.url);
+      if (event.url.includes('payment/success') || event.url.includes('payment/error')) {
+        try {
+          WebBrowser.dismissBrowser();
+        } catch (e) {
+          // Ignore browser dismissal errors
+        }
+      }
+    };
+    const subscription = ExpoLinking.addEventListener('url', handleDeepLink);
+    return () => subscription.remove();
+  }, []);
+
 
 
   // Navigation tabs states for each role
@@ -144,6 +159,7 @@ export default function MobileApp() {
   const [showZoneModal, setShowZoneModal] = useState<boolean>(false);
   const [showAgentOrderModal, setShowAgentOrderModal] = useState<boolean>(false);
   const [agentOrderStep, setAgentOrderStep] = useState<number>(0); // 0: Catalog & Search, 1: Client Info & Wave Checkout
+  const [agentOrderSubTab, setAgentOrderSubTab] = useState<'new' | 'tracking'>('new');
   const [agentCatalogSearch, setAgentCatalogSearch] = useState<string>('');
   const [agentCatalogCategory, setAgentCatalogCategory] = useState<string>('all');
   const [clientCategory, setClientCategory] = useState<string>('all');
@@ -484,18 +500,22 @@ export default function MobileApp() {
       const commissionAmt = platformGain * (adminAgentShare / 100);
       const randCode = `RES-${Math.floor(1000 + Math.random() * 9000)}-${agentZone.substring(0, 3).toUpperCase()}`;
 
-      const newOrderPayload = {
+      const newOrderPayload: any = {
+        client_id: user?.id || '05fdf6ab-13e9-49f2-9cf9-8f4b501c3b76',
         agent_id: user?.id,
         restaurant_id: targetRestoId,
         offer_id: agentOrderForm.offerId,
+        quantity: agentOrderForm.quantity || 1,
         total_amount: totalAmt,
         commission_amount: commissionAmt,
-        client_name: agentOrderForm.clientName.trim(),
-        client_phone: agentOrderForm.clientPhone.trim() || 'Non renseigné',
+        delivery_mode: agentOrderForm.diningOption === 'livraison' ? 'livraison' : 'retrait',
         dining_option: agentOrderForm.diningOption,
         delivery_address: agentOrderForm.diningOption === 'livraison' ? (agentOrderForm.deliveryAddress.trim() || 'À emporter / Livraison') : 'Sur place (au restaurant)',
+        client_name: agentOrderForm.clientName.trim(),
+        client_phone: agentOrderForm.clientPhone.trim() || 'Non renseigné',
         reservation_code: randCode,
         status: 'nouvelle',
+        payment_status: 'pending',
         payment_method: agentOrderForm.paymentMethod,
         created_at: new Date().toISOString()
       };
@@ -521,12 +541,27 @@ export default function MobileApp() {
         error = retry.error;
       }
 
-      const createdOrder = data || {
-        ...newOrderPayload,
-        id: Math.random().toString(),
-        restaurantName: agentOrderForm.restaurantName,
-        offerTitle: agentOrderForm.offerTitle
-      };
+      if (error || !data) {
+        console.error('[CreateAgentOrder Insert Error]:', error);
+        Alert.alert('Erreur Enregistrement Commande', error?.message || 'Impossible de créer la commande en base.');
+        setIsCreatingResto(false);
+        return;
+      }
+
+      const createdOrder = data;
+
+      // Declenche le VRAI paiement Wave si mode de paiement Wave
+      if (agentOrderForm.paymentMethod === 'wave' && createdOrder.id) {
+        const wavePaid = await triggerWaveCheckout(totalAmt, createdOrder.id);
+        if (!wavePaid) {
+          Alert.alert(
+            '⚠️ Encaissement Wave Non Validé',
+            'La session de paiement Wave n\'a pas été complétée. Le Pass QR n\'a pas été généré.'
+          );
+          setIsCreatingResto(false);
+          return;
+        }
+      }
 
       setAgentOrders(prev => [createdOrder, ...prev]);
       setAgentStats(prev => ({
@@ -534,6 +569,10 @@ export default function MobileApp() {
         ordersCount: prev.ordersCount + 1
       }));
 
+      setGeneratedPassOrder(createdOrder);
+      setShowPassQRModal(true);
+
+      // Reinitialise l'etape et le formulaire seulement APRES succes du paiement
       setAgentOrderStep(0);
       setAgentOrderForm({
         restaurantId: '',
@@ -549,20 +588,6 @@ export default function MobileApp() {
         deliveryAddress: '',
         paymentMethod: 'wave'
       });
-      // Declenche le VRAI paiement Wave si mode de paiement Wave
-      if (agentOrderForm.paymentMethod === 'wave' && createdOrder.id) {
-        const wavePaid = await triggerWaveCheckout(totalAmt, createdOrder.id);
-        if (!wavePaid) {
-          Alert.alert(
-            '⚠️ Encaissement Wave Non Validé',
-            'La session de paiement Wave n\'a pas été complétée. Le Pass QR n\'a pas été généré.'
-          );
-          return;
-        }
-      }
-
-      setGeneratedPassOrder(createdOrder);
-      setShowPassQRModal(true);
     } catch (err: any) {
       Alert.alert('Erreur Commande', err.message || 'Impossible d\'enregistrer la commande terrain.');
     } finally {
@@ -1587,36 +1612,39 @@ const getCategoryLabel = (cat?: string) => {
             }
           }
 
-          // Handle UPDATE sound notification for Clients
+          // Handle UPDATE sound notification for Clients AND Agents
           if (payload.eventType === 'UPDATE') {
             const oldOrder = payload.old;
-            if (role === 'client' || !role) {
-              const isMyOrder = !updatedOrder.client_id || updatedOrder.client_id === user.id;
-              const statusChanged = !oldOrder || !oldOrder.status || oldOrder.status !== updatedOrder.status;
+            const isMyOrder =
+              (role === 'client' && (!updatedOrder.client_id || updatedOrder.client_id === user.id)) ||
+              (role === 'agent' && (!updatedOrder.agent_id || updatedOrder.agent_id === user.id)) ||
+              (role === 'restaurant' && (!updatedOrder.restaurant_id || updatedOrder.restaurant_id === profile?.restaurant_id));
 
-              if (isMyOrder && statusChanged) {
-                const status = updatedOrder.status;
-                let title = '';
-                let body = '';
+            const statusChanged = !oldOrder || !oldOrder.status || oldOrder.status !== updatedOrder.status;
 
-                if (status === 'en_preparation') {
-                  title = '👨‍🍳 Commande en préparation';
-                  body = 'Votre commande est en cours de préparation au restaurant.';
-                } else if (status === 'prete') {
-                  title = '🎉 Commande prête !';
-                  body = 'Votre commande est prête pour dégustation ou retrait !';
-                } else if (status === 'terminee' || status === 'livree') {
-                  title = '✅ Commande terminée';
-                  body = 'Votre commande a été servie et validée. Bon appétit !';
-                }
+            if (isMyOrder && statusChanged) {
+              const status = updatedOrder.status;
+              const codeStr = updatedOrder.reservation_code ? ` (${updatedOrder.reservation_code})` : '';
+              let title = '';
+              let body = '';
 
-                if (title && body) {
-                  sendLocalNotification(title, body, {
-                    orderId: updatedOrder.id,
-                    status,
-                    event: 'UPDATE',
-                  });
-                }
+              if (status === 'en_preparation') {
+                title = '👨‍🍳 Commande en préparation';
+                body = `La commande${codeStr} est en cours de préparation en cuisine.`;
+              } else if (status === 'prete') {
+                title = '🎉 Commande prête !';
+                body = `La commande${codeStr} est prête pour dégustation ou retrait !`;
+              } else if (status === 'terminee' || status === 'livree') {
+                title = '✅ Commande terminée';
+                body = `La commande${codeStr} a été servie et validée. Merci !`;
+              }
+
+              if (title && body) {
+                sendLocalNotification(title, body, {
+                  orderId: updatedOrder.id,
+                  status,
+                  event: 'UPDATE'
+                });
               }
             }
           }
@@ -1799,14 +1827,25 @@ const getCategoryLabel = (cat?: string) => {
 
   // Crée une commande en base (checkout final)
 
-  // Helper : Attente et détection en temps réel (Polling + Realtime) du Webhook Wave
-  const waitForPaymentValidation = async (orderId: string, maxWaitMs: number = 25000): Promise<boolean> => {
+  // Helper : Attente et détection active en temps réel (Active Polling + wave-verify + Realtime)
+  const waitForPaymentValidation = async (
+    orderId: string,
+    sessionId?: string,
+    maxWaitMs: number = 30000
+  ): Promise<boolean> => {
     return new Promise((resolve) => {
       let isDone = false;
       const startTime = Date.now();
+      let pollInterval: any = null;
+      let channel: any = null;
+
+      const cleanup = () => {
+        if (pollInterval) clearInterval(pollInterval);
+        if (channel) supabase.removeChannel(channel);
+      };
 
       // 1. Écoute temps réel Supabase Postgres Changes sur la commande
-      const channel = supabase
+      channel = supabase
         .channel(`wave-pay-check-${orderId}`)
         .on(
           'postgres_changes',
@@ -1816,7 +1855,7 @@ const getCategoryLabel = (cat?: string) => {
             if (status === 'paid' || status === 'payee') {
               if (!isDone) {
                 isDone = true;
-                supabase.removeChannel(channel);
+                cleanup();
                 resolve(true);
               }
             }
@@ -1824,14 +1863,12 @@ const getCategoryLabel = (cat?: string) => {
         )
         .subscribe();
 
-      // 2. Polling régulier toutes les 1.5s (filet de sécurité si la socket WebSocket est en pause)
-      const pollInterval = setInterval(async () => {
-        if (isDone) {
-          clearInterval(pollInterval);
-          return;
-        }
+      // 2. Polling actif toutes les 2s avec vérification directe Edge Function wave-verify
+      pollInterval = setInterval(async () => {
+        if (isDone) return;
 
         try {
+          // A. Vérification directe en base de données
           const { data: order } = await supabase
             .from('orders')
             .select('payment_status')
@@ -1841,29 +1878,43 @@ const getCategoryLabel = (cat?: string) => {
           if (order?.payment_status === 'paid' || order?.payment_status === 'payee') {
             if (!isDone) {
               isDone = true;
-              clearInterval(pollInterval);
-              supabase.removeChannel(channel);
+              cleanup();
               resolve(true);
+              return;
+            }
+          }
+
+          // B. Appel ACTIF de la fonction Edge wave-verify avec le sessionId Wave
+          if (sessionId) {
+            const { data: verifyData } = await supabase.functions.invoke('wave-verify', {
+              body: { sessionId, orderId }
+            });
+            if (verifyData?.isPaid || verifyData?.sessionData?.payment_status === 'succeeded') {
+              if (!isDone) {
+                isDone = true;
+                cleanup();
+                resolve(true);
+                return;
+              }
             }
           }
         } catch (e) {
-          console.warn('[WavePolling] Error:', e);
+          console.warn('[WaveActivePolling Error]:', e);
         }
 
-        // Timeout max (ex: 25s)
+        // Timeout max (30s)
         if (Date.now() - startTime >= maxWaitMs) {
           if (!isDone) {
             isDone = true;
-            clearInterval(pollInterval);
-            supabase.removeChannel(channel);
+            cleanup();
             resolve(false);
           }
         }
-      }, 1500);
+      }, 2000);
     });
   };
 
-  // Fonction de paiement Wave réelle via Supabase Edge Function & Deep Linking + Realtime Polling
+  // Fonction de paiement Wave réelle via Supabase Edge Function & Deep Linking + Active Verification
   const triggerWaveCheckout = async (amount: number, orderId: string): Promise<boolean> => {
     try {
       // Génère l'URL de Deep Link mobile retour (ex: brickdeal://payment/success)
@@ -1881,41 +1932,73 @@ const getCategoryLabel = (cat?: string) => {
       });
 
       let checkoutUrl = edgeData?.wave_launch_url || edgeData?.wave_checkout_url || edgeData?.checkout_url;
+      let sessionId = edgeData?.sessionId || edgeData?.id || edgeData?.session_id;
 
-      // 2. Repli vers le serveur API NestJS si Edge Function non disponible
-      if (!checkoutUrl && edgeErr) {
+      // 2. Appel DIRECT à l'API Wave avec la clé de production si Edge Function / API locale indisponible
+      if (!checkoutUrl) {
         try {
-          const apiUrl = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000';
-          const resp = await fetch(`${apiUrl}/payment/wave/checkout`, {
+          console.log('[WaveCheckout] Appel direct API Wave avec la clé de production...');
+          const waveKey = 'wave_ci_prod_PA5WLkmrmQFnB4KFiW4MIZNVIN51qM86Lhctic9fGunvsA2ddFpMqXKEnVpMFmTLomFwOeBpWnWmmp2DlTyEYBhCEXhQrtX3ig';
+          const resp = await fetch('https://api.wave.com/v1/checkout/sessions', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+              'Authorization': `Bearer ${waveKey}`,
+              'Content-Type': 'application/json'
+            },
             body: JSON.stringify({
               amount: Math.round(amount).toString(),
-              orderId: orderId,
-              success_url: redirectUrl,
-              error_url: errorRedirectUrl,
+              currency: 'XOF',
+              client_reference: orderId,
+              error_url: 'https://brick-food-pro-beta.vercel.app/payment/success',
+              success_url: 'https://brick-food-pro-beta.vercel.app/payment/success'
             })
           });
           const apiData = await resp.json();
-          checkoutUrl = apiData?.wave_launch_url || apiData?.checkout_url;
+          if (resp.ok && (apiData.wave_launch_url || apiData.wave_checkout_url)) {
+            checkoutUrl = apiData.wave_launch_url || apiData.wave_checkout_url;
+            sessionId = apiData.id;
+          } else {
+            console.error('[Direct Wave API Error]:', apiData);
+          }
         } catch (e) {
-          console.warn('[WaveAPI Fallback Error]:', e);
+          console.warn('[Direct Wave API Fallback Warning]:', e);
+        }
+
+        // Si toujours vide, fallback de test
+        if (!checkoutUrl) {
+          checkoutUrl = redirectUrl;
         }
       }
 
       if (checkoutUrl) {
-        console.log('[WaveCheckout] Opening Session with DeepLink redirect:', checkoutUrl, 'redirectUrl:', redirectUrl);
+        console.log('[WaveCheckout] Session active :', checkoutUrl, 'SessionID :', sessionId, 'RedirectUrl :', redirectUrl);
 
-        // Ouvre le navigateur sécurisé in-app avec interception automatique de redirection
+        // Lancer la vérification active en arrière-plan pendant que l'utilisateur est dans Wave
+        const verificationPromise = waitForPaymentValidation(orderId, sessionId, 40000);
+
+        // Ouvre la session dans le navigateur in-app (modal sécurisé qui se ferme automatiquement)
         try {
           await WebBrowser.openAuthSessionAsync(checkoutUrl, redirectUrl);
         } catch (e) {
-          // Fallback sur openBrowserAsync si openAuthSessionAsync n'est pas supporté sur la plateforme
           await WebBrowser.openBrowserAsync(checkoutUrl);
         }
 
-        // Détecte automatiquement la confirmation en base via Polling 25s + Realtime
-        const isPaid = await waitForPaymentValidation(orderId, 25000);
+        // Dès la fermeture du navigateur, forcer une vérification directe wave-verify instantanée
+        if (sessionId) {
+          try {
+            const { data: directCheck } = await supabase.functions.invoke('wave-verify', {
+              body: { sessionId, orderId }
+            });
+            if (directCheck?.isPaid) {
+              return true;
+            }
+          } catch (e) {
+            console.warn('[DirectVerifyOnBrowserReturn Error]:', e);
+          }
+        }
+
+        // Attendre la résolution de la promesse de vérification
+        const isPaid = await verificationPromise;
         if (isPaid) {
           return true;
         }
@@ -5320,7 +5403,133 @@ const getCategoryLabel = (cat?: string) => {
               </View>
             </View>
 
-            {/* --- STEP 0: CATALOGUE & RECHERCHE DE PACKS --- */}
+            {/* Sub-Tab Navigation Bar: Nouvelle Vente vs Suivi des Ventes */}
+            <View style={{ flexDirection: 'row', backgroundColor: 'white', borderBottomWidth: 1, borderBottomColor: '#E2E8F0', paddingHorizontal: 16, paddingTop: 10, paddingBottom: 10, gap: 10 }}>
+              <TouchableOpacity
+                style={[
+                  { flex: 1, paddingVertical: 10, borderRadius: 14, alignItems: 'center', backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0' },
+                  agentOrderSubTab === 'new' && { backgroundColor: '#0F172A', borderColor: '#0F172A' }
+                ]}
+                onPress={() => setAgentOrderSubTab('new')}
+              >
+                <Text style={[{ fontSize: 13, fontWeight: '800', color: '#475569' }, agentOrderSubTab === 'new' && { color: 'white' }]}>
+                  🛒 Nouvelle Vente
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  { flex: 1, paddingVertical: 10, borderRadius: 14, alignItems: 'center', backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0', flexDirection: 'row', justifyContent: 'center', gap: 6 },
+                  agentOrderSubTab === 'tracking' && { backgroundColor: Colors.primary, borderColor: Colors.primary }
+                ]}
+                onPress={() => setAgentOrderSubTab('tracking')}
+              >
+                <Text style={[{ fontSize: 13, fontWeight: '800', color: '#475569' }, agentOrderSubTab === 'tracking' && { color: 'white' }]}>
+                  📋 Suivi des Ventes ({agentOrders.length})
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {agentOrderSubTab === 'tracking' && (
+              <ScrollView style={{ flex: 1, padding: 16 }} contentContainerStyle={{ paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
+                {agentOrders.length === 0 ? (
+                  <View style={{ backgroundColor: 'white', padding: 32, borderRadius: 20, alignItems: 'center', marginVertical: 20, borderWidth: 1, borderColor: '#E2E8F0' }}>
+                    <Ionicons name="receipt-outline" size={48} color="#94A3B8" style={{ marginBottom: 12 }} />
+                    <Text style={{ fontSize: 16, fontWeight: '800', color: '#0F172A', textAlign: 'center' }}>
+                      Aucune vente enregistrée pour le moment
+                    </Text>
+                    <Text style={{ fontSize: 13, color: '#64748B', textAlign: 'center', marginTop: 4 }}>
+                      Utilisez l'onglet "Nouvelle Vente" pour encaisser un client sur le terrain.
+                    </Text>
+                  </View>
+                ) : (
+                  agentOrders.map((ord: any) => {
+                    const restoName = ord.restaurants?.name || ord.restaurantName || 'Établissement';
+                    const offerName = ord.offers?.title || ord.offerTitle || 'Offre Spéciale';
+                    return (
+                      <TouchableOpacity
+                        key={ord.id}
+                        activeOpacity={0.85}
+                        onPress={() => setSelectedClientOrder(ord)}
+                        style={{
+                          backgroundColor: 'white',
+                          borderRadius: 20,
+                          padding: 16,
+                          marginBottom: 12,
+                          borderWidth: 1.5,
+                          borderColor: '#E2E8F0',
+                          elevation: 3,
+                          gap: 10
+                        }}
+                      >
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <View style={{ flex: 1, marginRight: 8 }}>
+                            <Text style={{ fontSize: 15, fontWeight: '900', color: '#0F172A' }} numberOfLines={1}>
+                              🏢 {restoName}
+                            </Text>
+                            <Text style={{ fontSize: 12, fontWeight: '700', color: '#64748B', marginTop: 2 }} numberOfLines={1}>
+                              🛍️ {offerName}
+                            </Text>
+                          </View>
+
+                          <View style={{
+                            paddingHorizontal: 10,
+                            paddingVertical: 4,
+                            borderRadius: 16,
+                            backgroundColor:
+                              ord.status === 'terminee' || ord.status === 'livree' ? '#ECFDF5' :
+                              ord.status === 'prete' ? '#EFF6FF' :
+                              ord.status === 'en_preparation' ? '#FFF7ED' : '#F8FAFC',
+                            borderWidth: 1,
+                            borderColor:
+                              ord.status === 'terminee' || ord.status === 'livree' ? '#A7F3D0' :
+                              ord.status === 'prete' ? '#BFDBFE' :
+                              ord.status === 'en_preparation' ? '#FED7AA' : '#E2E8F0'
+                          }}>
+                            <Text style={{
+                              fontSize: 11,
+                              fontWeight: '800',
+                              color:
+                                ord.status === 'terminee' || ord.status === 'livree' ? '#047857' :
+                                ord.status === 'prete' ? '#1D4ED8' :
+                                ord.status === 'en_preparation' ? '#C2410C' : '#475569'
+                            }}>
+                              {ord.status === 'nouvelle' ? '🟢 Nouvelle' : ord.status === 'en_preparation' ? '🍳 En préparation' : ord.status === 'prete' ? '🛍️ Prête' : ord.status === 'terminee' ? '✅ Terminée' : ord.status}
+                            </Text>
+                          </View>
+                        </View>
+
+                        <View style={{ height: 1, backgroundColor: '#F1F5F9' }} />
+
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <View style={{ flex: 1 }}>
+                            <Text style={{ fontSize: 13, fontWeight: '800', color: '#334155' }}>
+                              👤 {ord.client_name || 'Client'} • {ord.client_phone || ''}
+                            </Text>
+                            <Text style={{ fontSize: 11, fontWeight: '600', color: '#94A3B8', marginTop: 2 }}>
+                              Pass : {ord.reservation_code || 'N/A'}
+                            </Text>
+                          </View>
+
+                          <View style={{ alignItems: 'flex-end' }}>
+                            <Text style={{ fontSize: 16, fontWeight: '900', color: Colors.primary }}>
+                              {Number(ord.total_amount || 0).toLocaleString('fr-FR')} FCFA
+                            </Text>
+                            <Text style={{ fontSize: 10, fontWeight: '800', color: '#10B981', marginTop: 1 }}>
+                              Suivre la commande →
+                            </Text>
+                          </View>
+                        </View>
+                      </TouchableOpacity>
+                    );
+                  })
+                )}
+              </ScrollView>
+            )}
+
+            {agentOrderSubTab === 'new' && (
+              <View style={{ flex: 1 }}>
+                {/* --- STEP 0: CATALOGUE & RECHERCHE DE PACKS --- */}
             {agentOrderStep === 0 && (
               <View style={{ flex: 1 }}>
                 {/* Search Bar & Category Filters Header */}
@@ -5904,6 +6113,8 @@ const getCategoryLabel = (cat?: string) => {
                     </View>
                   ) : null}
                 </ScrollView>
+              </View>
+            )}
               </View>
             )}
           </View>
