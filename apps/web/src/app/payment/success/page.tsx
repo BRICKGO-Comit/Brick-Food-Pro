@@ -3,10 +3,14 @@
 import React, { useEffect } from 'react';
 
 export default function PaymentSuccessPage() {
+  const triggerRedirection = () => {
+    window.location.href = 'brickdeal://payment/success';
+  };
+
   useEffect(() => {
     // Redirection automatique vers l'application APK mobile BRICK DEAL
     const timer = setTimeout(() => {
-      window.location.href = 'brickdeal://payment/success';
+      triggerRedirection();
     }, 300);
     return () => clearTimeout(timer);
   }, []);
@@ -46,7 +50,12 @@ export default function PaymentSuccessPage() {
         </p>
         <a
           href="brickdeal://payment/success"
+          onClick={(e) => {
+            e.preventDefault();
+            triggerRedirection();
+          }}
           style={{
+            cursor: 'pointer',
             display: 'block',
             backgroundColor: '#D60309',
             color: 'white',
