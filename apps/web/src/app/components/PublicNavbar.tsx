@@ -23,7 +23,7 @@ export default function PublicNavbar() {
         justifyContent: 'space-between',
       }}>
         {/* Logo */}
-        <Link href="/vitrine" style={{ display: 'flex', alignItems: 'center', gap: '12px', textDecoration: 'none' }}>
+        <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '12px', textDecoration: 'none' }}>
           <img src="/logo.png" alt="BRICK DEAL Logo" style={{ width: '44px', height: '44px', objectFit: 'contain' }} />
           <span style={{ fontSize: '22px', fontWeight: '900', color: '#0F172A', letterSpacing: '-0.5px' }}>
             BRICK<span style={{ color: '#E30613' }}>DEAL</span>
@@ -32,16 +32,16 @@ export default function PublicNavbar() {
 
         {/* Navigation Links */}
         <nav style={{ display: 'flex', alignItems: 'center', gap: '32px' }}>
-          <Link href="/vitrine#offres" style={{ color: '#475569', fontWeight: '600', fontSize: '14px', textDecoration: 'none', transition: 'color 0.2s' }}>
+          <Link href="/#offres" style={{ color: '#475569', fontWeight: '600', fontSize: '14px', textDecoration: 'none', transition: 'color 0.2s' }}>
             Offres & Deals
           </Link>
-          <Link href="/vitrine#partenaires" style={{ color: '#475569', fontWeight: '600', fontSize: '14px', textDecoration: 'none', transition: 'color 0.2s' }}>
+          <Link href="/#partenaires" style={{ color: '#475569', fontWeight: '600', fontSize: '14px', textDecoration: 'none', transition: 'color 0.2s' }}>
             Pour les Restaurants
           </Link>
-          <Link href="/vitrine#agents" style={{ color: '#475569', fontWeight: '600', fontSize: '14px', textDecoration: 'none', transition: 'color 0.2s' }}>
+          <Link href="/#agents" style={{ color: '#475569', fontWeight: '600', fontSize: '14px', textDecoration: 'none', transition: 'color 0.2s' }}>
             Pour les Agents
           </Link>
-          <Link href="/vitrine#download" style={{ color: '#475569', fontWeight: '600', fontSize: '14px', textDecoration: 'none', transition: 'color 0.2s' }}>
+          <Link href="/#download" style={{ color: '#475569', fontWeight: '600', fontSize: '14px', textDecoration: 'none', transition: 'color 0.2s' }}>
             Télécharger l'App
           </Link>
         </nav>
@@ -49,7 +49,7 @@ export default function PublicNavbar() {
         {/* Action Buttons */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <Link
-            href="/login"
+            href="/admin"
             style={{
               padding: '10px 18px',
               borderRadius: '10px',
@@ -62,10 +62,10 @@ export default function PublicNavbar() {
               transition: 'all 0.2s',
             }}
           >
-            Espace Admin
+            Espace Admin (/admin)
           </Link>
           <Link
-            href="/vitrine#download"
+            href="/#download"
             style={{
               padding: '10px 20px',
               borderRadius: '10px',

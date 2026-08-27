@@ -1,273 +1,278 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
-import { useAuth } from './components/AuthProvider';
-import type { OrderWithRelations } from '@/types/database';
+import React from 'react';
+import Link from 'next/link';
+import PublicNavbar from './components/PublicNavbar';
+import PublicFooter from './components/PublicFooter';
 
-interface DashboardStats {
-  totalRestaurants: number;
-  totalAgents: number;
-  totalClients: number;
-  totalOrders: number;
-  totalCA: number;
-  salesDistribution: { flash: number; deals: number; classic: number };
-}
-
-export default function AdminDashboard() {
-  const { user, loading: authLoading } = useAuth();
-  const router = useRouter();
-  const [stats, setStats] = useState<DashboardStats>({
-    totalRestaurants: 0,
-    totalAgents: 0,
-    totalClients: 0,
-    totalOrders: 0,
-    totalCA: 0,
-    salesDistribution: { flash: 0, deals: 0, classic: 0 },
-  });
-  const [orders, setOrders] = useState<OrderWithRelations[]>([]);
-
-  // Redirige vers /login si non authentifié
-  useEffect(() => {
-    if (!authLoading && !user) {
-      router.replace('/login');
-    }
-  }, [authLoading, user, router]);
-
-  // Charge les statistiques depuis la base
-  const fetchStats = async () => {
-    const [{ count: totalRestaurants }, { count: totalAgents }, { count: totalClients }, { count: totalOrders }] = await Promise.all([
-      supabase.from('restaurants').select('*', { count: 'exact', head: true }),
-      supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'agent'),
-      supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'client'),
-      supabase.from('orders').select('*', { count: 'exact', head: true }),
-    ]);
-
-    // CA total
-    const { data: caData } = await supabase.from('orders').select('total_amount');
-
-    // Répartition flash / deal via jointure offers
-    const { data: distData } = await supabase
-      .from('orders')
-      .select('offers(type)');
-
-    let flash = 0;
-    let deals = 0;
-    let classic = 0;
-    (distData ?? []).forEach((row: any) => {
-      const t = row.offers?.type;
-      if (t === 'flash') flash++;
-      else if (t === 'deal') deals++;
-      else classic++;
-    });
-    const total = flash + deals + classic || 1;
-
-    const totalCA = (caData ?? []).reduce((sum: number, r: any) => sum + Number(r.total_amount || 0), 0);
-
-    setStats({
-      totalRestaurants: totalRestaurants ?? 0,
-      totalAgents: totalAgents ?? 0,
-      totalClients: totalClients ?? 0,
-      totalOrders: totalOrders ?? 0,
-      totalCA,
-      salesDistribution: {
-        flash: Math.round((flash / total) * 100),
-        deals: Math.round((deals / total) * 100),
-        classic: Math.round((classic / total) * 100),
-      },
-    });
-  };
-
-  // Charge les commandes récentes
-  const fetchOrders = async () => {
-    const { data } = await supabase
-      .from('orders')
-      .select('*, profiles!client_id(*), restaurants(*), offers(*)')
-      .order('created_at', { ascending: false })
-      .limit(6);
-    setOrders((data ?? []) as unknown as OrderWithRelations[]);
-  };
-
-  useEffect(() => {
-    if (!user) return;
-    fetchStats();
-    fetchOrders();
-
-    // Realtime : nouvelles commandes
-    const channel = supabase
-      .channel('orders-realtime')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders' }, () => {
-        fetchOrders();
-        fetchStats();
-      })
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [user]);
-
-  const formatFCFA = (n: number) =>
-    new Intl.NumberFormat('fr-FR').format(Math.round(n)) + ' FCFA';
-
-  const dist = stats.salesDistribution;
-
+export default function VitrinePage() {
   return (
-    <>
-      {/* Metrics Cards */}
-      <div className="metrics-grid">
-        <div className="metric-card">
-          <div className="metric-header">
-            <span>Établissements partenaires</span>
-            <span style={{ fontSize: '18px' }}>🏢</span>
-          </div>
-          <div className="metric-value">{stats.totalRestaurants}</div>
-          <div className="metric-sub">Données en direct</div>
-        </div>
+    <div style={{ backgroundColor: '#F8FAFC', minHeight: '100vh', display: 'flex', flexDirection: 'column', color: '#0F172A', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+      <PublicNavbar />
 
-        <div className="metric-card">
-          <div className="metric-header">
-            <span>Agents commerciaux</span>
-            <span style={{ fontSize: '18px' }}>👔</span>
-          </div>
-          <div className="metric-value">{stats.totalAgents}</div>
-          <div className="metric-sub">Données en direct</div>
-        </div>
-
-        <div className="metric-card">
-          <div className="metric-header">
-            <span>Clients inscrits</span>
-            <span style={{ fontSize: '18px' }}>📱</span>
-          </div>
-          <div className="metric-value">{stats.totalClients}</div>
-          <div className="metric-sub">Comptes mobiles créés</div>
-        </div>
-
-        <div className="metric-card">
-          <div className="metric-header">
-            <span>Commandes totales</span>
-            <span style={{ fontSize: '18px' }}>🛍️</span>
-          </div>
-          <div className="metric-value">{stats.totalOrders}</div>
-          <div className="metric-sub">Données en direct</div>
-        </div>
-
-        <div className="metric-card" style={{ borderLeft: '4px solid var(--primary)' }}>
-          <div className="metric-header">
-            <span>Chiffre d'affaires global</span>
-            <span style={{ fontSize: '18px' }}>💰</span>
-          </div>
-          <div className="metric-value" style={{ color: 'var(--primary)' }}>{formatFCFA(stats.totalCA)}</div>
-          <div className="metric-sub">Données en direct</div>
-        </div>
-      </div>
-
-      {/* Panels Area */}
-      <div className="panels-grid">
-        {/* Real-time Orders */}
-        <div className="panel">
-          <div className="panel-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', backgroundColor: 'var(--primary)', animation: 'pulse 1.5s infinite' }}></span>
-            Commandes en temps réel
-          </div>
-
-          {orders.length === 0 ? (
-            <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text-secondary)' }}>
-              Aucune commande pour le moment
+      {/* Hero Section */}
+      <section style={{
+        background: 'linear-gradient(135deg, #0F172A 0%, #1E293B 100%)',
+        color: '#FFFFFF',
+        padding: '80px 24px 100px 24px',
+        position: 'relative',
+        overflow: 'hidden',
+      }}>
+        <div style={{
+          maxWidth: '1200px',
+          margin: '0 auto',
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+          gap: '48px',
+          alignItems: 'center',
+        }}>
+          <div>
+            <div style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px',
+              backgroundColor: 'rgba(227, 6, 19, 0.15)',
+              border: '1px solid rgba(227, 6, 19, 0.3)',
+              padding: '6px 14px',
+              borderRadius: '20px',
+              color: '#FF4D4D',
+              fontSize: '13px',
+              fontWeight: '700',
+              marginBottom: '20px',
+            }}>
+              🔥 L'application gourmande N°1 des bons plans
             </div>
-          ) : (
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Réf.</th>
-                  <th>Client</th>
-                  <th>Restaurant</th>
-                  <th>Type</th>
-                  <th>Montant</th>
-                  <th>Statut</th>
-                </tr>
-              </thead>
-              <tbody>
-                {orders.map((order) => (
-                  <tr key={order.id} style={{ transition: 'var(--transition)' }}>
-                    <td style={{ fontWeight: '600' }}>{order.reservation_code}</td>
-                    <td>{order.profiles?.full_name ?? '—'}</td>
-                    <td>{order.restaurants?.name ?? '—'}</td>
-                    <td style={{ fontWeight: '500' }}>
-                      {order.offers?.type === 'flash' ? 'Brick Flash' : 'Brick Deal'}
-                    </td>
-                    <td style={{ color: 'var(--primary)', fontWeight: '700' }}>{formatFCFA(Number(order.total_amount))}</td>
-                    <td>
-                      <span className={`badge ${order.status}`}>
-                        {order.status === 'nouvelle' && 'Nouvelle'}
-                        {order.status === 'en_preparation' && 'En préparation'}
-                        {order.status === 'prete' && 'Prête'}
-                        {order.status === 'terminee' && 'Terminée'}
-                        {order.status === 'livree' && 'Livrée'}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
+            <h1 style={{ fontSize: '46px', fontWeight: '900', lineHeight: '1.15', marginBottom: '20px', letterSpacing: '-1px' }}>
+              Vos offres flash & deals repas au meilleur prix
+            </h1>
+            <p style={{ fontSize: '18px', color: '#94A3B8', lineHeight: '1.6', marginBottom: '32px' }}>
+              Découvrez les promotions exclusives de vos restaurants préférés. Réservez en un clic, payez en toute sécurité via Wave Mobile Money et présentez votre Pass QR instantané.
+            </p>
 
-        {/* Sales distribution */}
-        <div className="panel" style={{ alignItems: 'center', justifyContent: 'space-between' }}>
-          <div className="panel-title" style={{ width: '100%', textAlign: 'left' }}>Répartition des ventes</div>
-
-          {/* Custom SVG Donut Chart */}
-          <div style={{ position: 'relative', width: '180px', height: '180px' }}>
-            <svg viewBox="0 0 36 36" style={{ transform: 'rotate(-90deg)', width: '100%', height: '100%' }}>
-              <circle cx="18" cy="18" r="15.915" fill="none" stroke="#EBEBEB" strokeWidth="3" />
-              <circle cx="18" cy="18" r="15.915" fill="none" stroke="var(--primary)" strokeWidth="3"
-                      strokeDasharray={`${dist.flash} ${100 - dist.flash}`} strokeDashoffset="0" />
-              <circle cx="18" cy="18" r="15.915" fill="none" stroke="#F59E0B" strokeWidth="3"
-                      strokeDasharray={`${dist.deals} ${100 - dist.deals}`} strokeDashoffset={`-${dist.flash}`} />
-              <circle cx="18" cy="18" r="15.915" fill="none" stroke="#3B82F6" strokeWidth="3"
-                      strokeDasharray={`${dist.classic} ${100 - dist.classic}`} strokeDashoffset={`-${dist.flash + dist.deals}`} />
-            </svg>
-            <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', lineHeight: '1' }}>
-              <span style={{ fontSize: '24px', fontWeight: '800' }}>{dist.flash}%</span>
-              <span style={{ fontSize: '10px', color: 'var(--text-secondary)', fontWeight: '600' }}>Brick Flash</span>
+            <div id="download" style={{ display: 'flex', flexWrap: 'wrap', gap: '16px' }}>
+              <a
+                href="#download"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  backgroundColor: '#E30613',
+                  color: '#FFFFFF',
+                  padding: '14px 28px',
+                  borderRadius: '12px',
+                  fontWeight: '800',
+                  fontSize: '15px',
+                  textDecoration: 'none',
+                  boxShadow: '0 8px 20px rgba(227, 6, 19, 0.35)',
+                }}
+              >
+                📱 Télécharger sur Android
+              </a>
+              <a
+                href="#download"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  color: '#FFFFFF',
+                  padding: '14px 28px',
+                  borderRadius: '12px',
+                  fontWeight: '700',
+                  fontSize: '15px',
+                  textDecoration: 'none',
+                }}
+              >
+                🍏 Télécharger sur iOS
+              </a>
             </div>
-          </div>
 
-          <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: 'var(--primary)' }}></span>
-                <span>Brick Flash</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '24px', marginTop: '36px', paddingTop: '24px', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+              <div>
+                <span style={{ display: 'block', fontSize: '22px', fontWeight: '900', color: '#FFFFFF' }}>+10 000</span>
+                <span style={{ fontSize: '12px', color: '#94A3B8' }}>Clients actifs</span>
               </div>
-              <span style={{ fontWeight: '700' }}>{dist.flash}%</span>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#F59E0B' }}></span>
-                <span>Brick Deals</span>
+              <div style={{ height: '30px', width: '1px', backgroundColor: 'rgba(255,255,255,0.1)' }} />
+              <div>
+                <span style={{ display: 'block', fontSize: '22px', fontWeight: '900', color: '#FFFFFF' }}>100%</span>
+                <span style={{ fontSize: '12px', color: '#94A3B8' }}>Paiement Wave Sécurisé</span>
               </div>
-              <span style={{ fontWeight: '700' }}>{dist.deals}%</span>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#3B82F6' }}></span>
-                <span>Autres</span>
+              <div style={{ height: '30px', width: '1px', backgroundColor: 'rgba(255,255,255,0.1)' }} />
+              <div>
+                <span style={{ display: 'block', fontSize: '22px', fontWeight: '900', color: '#10B981' }}>Pass QR</span>
+                <span style={{ fontSize: '12px', color: '#94A3B8' }}>Validation instantanée</span>
               </div>
-              <span style={{ fontWeight: '700' }}>{dist.classic}%</span>
+            </div>
+          </div>
+
+          {/* App Preview Card */}
+          <div style={{ display: 'flex', justifyContent: 'center' }}>
+            <div style={{
+              backgroundColor: '#1E293B',
+              borderRadius: '24px',
+              padding: '24px',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              boxShadow: '0 20px 50px rgba(0, 0, 0, 0.5)',
+              maxWidth: '380px',
+              width: '100%',
+            }}>
+              <div style={{ backgroundColor: '#0F172A', borderRadius: '16px', padding: '16px', marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ color: '#E30613', fontWeight: '900', fontSize: '16px' }}>⚡ BRICK FLASH DU JOUR</span>
+                <span style={{ backgroundColor: '#EF4444', color: '#FFF', fontSize: '11px', fontWeight: '800', padding: '4px 8px', borderRadius: '6px' }}>-35%</span>
+              </div>
+
+              <img
+                src="https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=600"
+                alt="Offre gourmande"
+                style={{ width: '100%', height: '180px', objectFit: 'cover', borderRadius: '12px', marginBottom: '16px' }}
+              />
+
+              <h3 style={{ color: '#FFF', fontSize: '18px', fontWeight: '800', marginBottom: '6px' }}>Menu Duo Gourmet & Boissons</h3>
+              <p style={{ color: '#94A3B8', fontSize: '13px', marginBottom: '14px' }}>🏢 Établissement Partenaire Privilège</p>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#0F172A', padding: '12px 16px', borderRadius: '12px' }}>
+                <div>
+                  <span style={{ fontSize: '11px', color: '#94A3B8', textDecoration: 'line-through', display: 'block' }}>12 000 FCFA</span>
+                  <span style={{ fontSize: '20px', fontWeight: '900', color: '#10B981' }}>7 800 FCFA</span>
+                </div>
+                <span style={{ backgroundColor: '#10B981', color: '#FFF', padding: '8px 14px', borderRadius: '8px', fontSize: '12px', fontWeight: '800' }}>
+                  Pass QR Prêt
+                </span>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      </section>
 
-      <style jsx global>{`
-        @keyframes pulse {
-          0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(227, 6, 19, 0.7); }
-          70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(227, 6, 19, 0); }
-          100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(227, 6, 19, 0); }
-        }
-      `}</style>
-    </>
+      {/* Section Offres & Fonctionnalités */}
+      <section id="offres" style={{ padding: '80px 24px', maxWidth: '1200px', margin: '0 auto', width: '100%' }}>
+        <div style={{ textAlign: 'center', marginBottom: '56px' }}>
+          <h2 style={{ fontSize: '36px', fontWeight: '900', marginBottom: '16px' }}>Comment ça marche ?</h2>
+          <p style={{ color: '#64748B', fontSize: '16px', maxWidth: '600px', margin: '0 auto' }}>
+            Une expérience fluide et 100% numérique pour profiter de vos repas préférés au meilleur prix.
+          </p>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '32px' }}>
+          <div style={{ backgroundColor: '#FFFFFF', padding: '32px', borderRadius: '20px', border: '1px solid #E2E8F0', boxShadow: '0 4px 12px rgba(0,0,0,0.03)' }}>
+            <div style={{ width: '48px', height: '48px', borderRadius: '12px', backgroundColor: '#FFEBEB', color: '#E30613', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', marginBottom: '20px' }}>
+              🔍
+            </div>
+            <h3 style={{ fontSize: '20px', fontWeight: '800', marginBottom: '12px' }}>1. Choisissez votre Deal</h3>
+            <p style={{ color: '#64748B', fontSize: '14px', lineHeight: '1.6' }}>
+              Parcourez les offres flash éphémères et les deals exclusifs proposés par les meilleurs restaurants partenaires.
+            </p>
+          </div>
+
+          <div style={{ backgroundColor: '#FFFFFF', padding: '32px', borderRadius: '20px', border: '1px solid #E2E8F0', boxShadow: '0 4px 12px rgba(0,0,0,0.03)' }}>
+            <div style={{ width: '48px', height: '48px', borderRadius: '12px', backgroundColor: '#E0F2FE', color: '#0284C7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', marginBottom: '20px' }}>
+              💳
+            </div>
+            <h3 style={{ fontSize: '20px', fontWeight: '800', marginBottom: '12px' }}>2. Payez via Wave</h3>
+            <p style={{ color: '#64748B', fontSize: '14px', lineHeight: '1.6' }}>
+              Réglez en toute sécurité directement sur l'application avec Wave Mobile Money. Validation instantanée par serveur Webhook.
+            </p>
+          </div>
+
+          <div style={{ backgroundColor: '#FFFFFF', padding: '32px', borderRadius: '20px', border: '1px solid #E2E8F0', boxShadow: '0 4px 12px rgba(0,0,0,0.03)' }}>
+            <div style={{ width: '48px', height: '48px', borderRadius: '12px', backgroundColor: '#D1FAE5', color: '#059669', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', marginBottom: '20px' }}>
+              🎟️
+            </div>
+            <h3 style={{ fontSize: '20px', fontWeight: '800', marginBottom: '12px' }}>3. Obtenez votre Pass QR</h3>
+            <p style={{ color: '#64748B', fontSize: '14px', lineHeight: '1.6' }}>
+              Votre Pass QR officiel est immédiatement généré. Téléchargez votre reçu PDF et suivez la préparation de votre commande en direct.
+            </p>
+          </div>
+
+          <div style={{ backgroundColor: '#FFFFFF', padding: '32px', borderRadius: '20px', border: '1px solid #E2E8F0', boxShadow: '0 4px 12px rgba(0,0,0,0.03)' }}>
+            <div style={{ width: '48px', height: '48px', borderRadius: '12px', backgroundColor: '#FEF3C7', color: '#D97706', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', marginBottom: '20px' }}>
+              🍽️
+            </div>
+            <h3 style={{ fontSize: '20px', fontWeight: '800', marginBottom: '12px' }}>4. Savourez sur place</h3>
+            <p style={{ color: '#64748B', fontSize: '14px', lineHeight: '1.6' }}>
+              Présentez simplement votre Pass QR ou votre code de réservation au restaurant pour consommer votre formule.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* Section Établissements Partenaires */}
+      <section id="partenaires" style={{ backgroundColor: '#FFFFFF', padding: '80px 24px', borderTop: '1px solid #E2E8F0', borderBottom: '1px solid #E2E8F0' }}>
+        <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '48px', alignItems: 'center' }}>
+          <div>
+            <span style={{ color: '#E30613', fontWeight: '800', fontSize: '14px', textTransform: 'uppercase', letterSpacing: '1px' }}>POUR LES RESTAURATEURS</span>
+            <h2 style={{ fontSize: '36px', fontWeight: '900', margin: '12px 0 20px 0', lineHeight: '1.2' }}>
+              Boostez votre fréquentation et vos ventes quotidiennes
+            </h2>
+            <p style={{ color: '#64748B', fontSize: '16px', lineHeight: '1.6', marginBottom: '24px' }}>
+              BRICK DEAL vous permet de publier des offres flash durant vos heures creuses, d'attirer de nouveaux clients et de gérer vos réservations en temps réel.
+            </p>
+
+            <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <li style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '15px', fontWeight: '600', color: '#0F172A' }}>
+                <span style={{ color: '#10B981', fontSize: '18px' }}>✅</span> Publication instantanée d'offres flash et de formules réduites
+              </li>
+              <li style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '15px', fontWeight: '600', color: '#0F172A' }}>
+                <span style={{ color: '#10B981', fontSize: '18px' }}>✅</span> Validation sécurisée des Pass QR par scan caméra ou code
+              </li>
+              <li style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '15px', fontWeight: '600', color: '#0F172A' }}>
+                <span style={{ color: '#10B981', fontSize: '18px' }}>✅</span> Suivi analytique des ventes et versements automatisés
+              </li>
+            </ul>
+          </div>
+
+          <div style={{ backgroundColor: '#F8FAFC', padding: '32px', borderRadius: '24px', border: '1px solid #E2E8F0', textAlign: 'center' }}>
+            <h3 style={{ fontSize: '24px', fontWeight: '900', marginBottom: '12px' }}>Devenez Établissement Partenaire</h3>
+            <p style={{ color: '#64748B', fontSize: '14px', marginBottom: '24px' }}>Rejoignez le réseau BRICK DEAL et développez votre chiffre d'affaires dès aujourd'hui.</p>
+            <Link
+              href="/admin"
+              style={{
+                display: 'inline-block',
+                backgroundColor: '#0F172A',
+                color: '#FFFFFF',
+                padding: '14px 28px',
+                borderRadius: '12px',
+                fontWeight: '800',
+                fontSize: '14px',
+                textDecoration: 'none',
+                width: '100%',
+              }}
+            >
+              🏢 Accès Espace Admin / Partenaire
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* Section Agents Commerciaux */}
+      <section id="agents" style={{ padding: '80px 24px', maxWidth: '1200px', margin: '0 auto', width: '100%' }}>
+        <div style={{ textAlign: 'center', marginBottom: '48px' }}>
+          <span style={{ color: '#E30613', fontWeight: '800', fontSize: '14px', textTransform: 'uppercase', letterSpacing: '1px' }}>RÉSEAU COMMERCIAL</span>
+          <h2 style={{ fontSize: '36px', fontWeight: '900', marginTop: '12px' }}>Devenez Agent Commercial BRICK DEAL</h2>
+          <p style={{ color: '#64748B', fontSize: '16px', maxWidth: '650px', margin: '12px auto 0 auto' }}>
+            Raccordez des établissements, proposez des offres et gagnez des commissions automatisées sur chaque commande réalisée.
+          </p>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px' }}>
+          <div style={{ backgroundColor: '#FFFFFF', padding: '28px', borderRadius: '16px', border: '1px solid #E2E8F0' }}>
+            <h4 style={{ fontSize: '18px', fontWeight: '800', marginBottom: '8px' }}>👔 Inscription d'Établissements</h4>
+            <p style={{ color: '#64748B', fontSize: '14px', lineHeight: '1.5' }}>Inscrivez et gérez votre portefeuille de restaurants partenaires directement depuis l'application mobile.</p>
+          </div>
+          <div style={{ backgroundColor: '#FFFFFF', padding: '28px', borderRadius: '16px', border: '1px solid #E2E8F0' }}>
+            <h4 style={{ fontSize: '18px', fontWeight: '800', marginBottom: '8px' }}>💰 Commissions Automatisées</h4>
+            <p style={{ color: '#64748B', fontSize: '14px', lineHeight: '1.5' }}>Percevez un pourcentage automatique sur chaque vente générée par vos établissements raccordés.</p>
+          </div>
+          <div style={{ backgroundColor: '#FFFFFF', padding: '28px', borderRadius: '16px', border: '1px solid #E2E8F0' }}>
+            <h4 style={{ fontSize: '18px', fontWeight: '800', marginBottom: '8px' }}>📱 Vente Assistée Terrain</h4>
+            <p style={{ color: '#64748B', fontSize: '14px', lineHeight: '1.5' }}>Aidez les clients sur le terrain à réserver leurs packs et générez leur Pass QR en direct.</p>
+          </div>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <PublicFooter />
+    </div>
   );
 }

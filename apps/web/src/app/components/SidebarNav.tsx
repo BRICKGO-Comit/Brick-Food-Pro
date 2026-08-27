@@ -7,7 +7,7 @@ export default function SidebarNav() {
   const pathname = usePathname();
 
   const navItems = [
-    { href: '/', label: 'Accueil', icon: '🏠' },
+    { href: '/admin', label: 'Accueil Admin', icon: '🏠' },
     { href: '/proposals', label: 'Propositions', icon: '📄' },
     { href: '/restaurants', label: 'Restaurants', icon: '🏪' },
     { href: '/agents', label: 'Agents', icon: '👤' },

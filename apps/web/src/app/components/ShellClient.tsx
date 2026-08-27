@@ -3,9 +3,19 @@
 import React from 'react';
 import SidebarNav from './SidebarNav';
 import { useAuth } from './AuthProvider';
+import { usePathname } from 'next/navigation';
 
 export default function ShellClient({ children }: { children: React.ReactNode }) {
   const { user, profile, loading, signOut } = useAuth();
+  const pathname = usePathname();
+
+  // Pages publiques (Vitrine sur `/`, pages légales sur `/legal/*`, login sur `/login`)
+  const isPublicPage = pathname === '/' || pathname === '/vitrine' || pathname.startsWith('/legal') || pathname === '/login';
+
+  // Si c'est une page publique, on affiche directement les enfants sans le Shell Admin
+  if (isPublicPage) {
+    return <>{children}</>;
+  }
 
   // Pendant le chargement de la session
   if (loading) {
@@ -16,12 +26,12 @@ export default function ShellClient({ children }: { children: React.ReactNode })
     );
   }
 
-  // Si non connecté, on affiche la page de login
+  // Si non connecté et tente d'accéder à une page admin
   if (!user) {
     return <>{children}</>;
   }
 
-  // Si connecté mais pas administrateur, on refuse l'accès et propose de se déconnecter
+  // Si connecté mais pas administrateur
   if (profile && profile.role !== 'admin') {
     return (
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0F0F10', padding: '24px' }}>
@@ -39,7 +49,7 @@ export default function ShellClient({ children }: { children: React.ReactNode })
     );
   }
 
-  // Utilisateur connecté — afficher le shell admin
+  // Utilisateur connecté admin — afficher le shell admin
   const displayName = profile?.full_name || user.email || 'Admin';
   const initials = displayName
     .split(' ')
