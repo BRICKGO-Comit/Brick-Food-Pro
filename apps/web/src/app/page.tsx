@@ -123,8 +123,8 @@ export default function VitrinePage() {
               </div>
 
               <img
-                src="https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=600"
-                alt="Offre gourmande"
+                src="https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=800"
+                alt="Offre gourmande Menu Duo"
                 style={{ width: '100%', height: '180px', objectFit: 'cover', borderRadius: '12px', marginBottom: '16px' }}
               />
 
