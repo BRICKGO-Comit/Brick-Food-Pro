@@ -95,6 +95,11 @@ export default function PublicFooter() {
                 </Link>
               </li>
               <li>
+                <Link href="/legal/suppression-compte" style={{ color: '#EF4444', fontWeight: '600', textDecoration: 'none', transition: 'color 0.2s' }}>
+                  🗑️ Demande de suppression de compte
+                </Link>
+              </li>
+              <li>
                 <Link href="/login" style={{ color: '#94A3B8', textDecoration: 'none', transition: 'color 0.2s' }}>
                   Espace Administration Centrale
                 </Link>

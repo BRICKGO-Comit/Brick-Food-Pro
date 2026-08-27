@@ -46,11 +46,17 @@ export default function PolitiqueConfidentialitePage() {
             </section>
 
             <section>
-              <h2 style={{ fontSize: '20px', fontWeight: '800', color: '#0F172A', marginBottom: '12px' }}>4. Vos Droits et Contact</h2>
+              <h2 style={{ fontSize: '20px', fontWeight: '800', color: '#0F172A', marginBottom: '12px' }}>4. Vos Droits & Suppression de Compte</h2>
               <p>
-                Conformément à la réglementation en vigueur, vous disposez d'un droit d'accès, de rectification, de suppression et de portabilité de vos données personnelles. Vous pouvez exercer ces droits à tout moment en écrivant à :
+                Conformément à la réglementation en vigueur, vous disposez d'un droit d'accès, de rectification, de suppression et de portabilité de vos données personnelles.
+              </p>
+              <p style={{ marginTop: '8px' }}>
+                Pour effectuer une demande officielle de suppression de votre compte et de vos données personnelles, vous pouvez utiliser notre formulaire en ligne dédié :
                 <br />
-                📧 <strong>privacy@brickdeal.app</strong>
+                🔗 <a href="/legal/suppression-compte" style={{ color: '#E30613', fontWeight: '700' }}>Formulaire de demande de suppression de compte</a>
+              </p>
+              <p style={{ marginTop: '8px' }}>
+                Ou nous contacter par email : 📧 <strong>privacy@brickdeal.app</strong>
               </p>
             </section>
           </div>
