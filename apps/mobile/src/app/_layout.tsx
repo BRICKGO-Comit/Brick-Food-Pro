@@ -75,31 +75,36 @@ export default function RootLayout() {
   };
 
   useEffect(() => {
-    // Session initiale
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', session.user.id)
-          .single()
-          .then(({ data, error }) => {
-            if (data) {
-              const metaPhone = session.user.user_metadata?.phone;
-              if ((!data.phone || data.phone === 'Non renseigné') && metaPhone) {
-                data.phone = metaPhone;
-                supabase.from('profiles').update({ phone: metaPhone }).eq('id', session.user.id);
+    // Session initiale avec sécurité de chargement
+    supabase.auth.getSession()
+      .then(({ data: { session } }) => {
+        setSession(session);
+        setUser(session?.user ?? null);
+        if (session?.user) {
+          supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', session.user.id)
+            .single()
+            .then(({ data, error }) => {
+              if (data) {
+                const metaPhone = session.user.user_metadata?.phone;
+                if ((!data.phone || data.phone === 'Non renseigné') && metaPhone) {
+                  data.phone = metaPhone;
+                  supabase.from('profiles').update({ phone: metaPhone }).eq('id', session.user.id);
+                }
               }
-            }
-            setProfile(data as Profile | null);
-            setLoading(false);
-          });
-      } else {
+              setProfile(data as Profile | null);
+              setLoading(false);
+            }, () => setLoading(false));
+        } else {
+          setLoading(false);
+        }
+      })
+      .catch((err) => {
+        console.warn('[Session Init Error]:', err);
         setLoading(false);
-      }
-    });
+      });
 
     // Écoute des changements d'auth
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
