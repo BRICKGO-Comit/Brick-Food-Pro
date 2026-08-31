@@ -18,25 +18,9 @@ const supabase = createClient(supabaseUrl, serviceKey, {
 });
 
 async function check() {
-  console.log('--- USERS IN AUTH ---');
-  const { data: usersData, error } = await supabase.auth.admin.listUsers();
-  if (error) {
-    console.error(error);
-  } else {
-    usersData.users.forEach(u => {
-      console.log(`Email: ${u.email}, ID: ${u.id}, Metadata:`, u.user_metadata);
-    });
-  }
-
-  console.log('--- PROFILES IN DB ---');
-  const { data: profiles, error: pError } = await supabase.from('profiles').select('*');
-  if (pError) {
-    console.error(pError);
-  } else {
-    profiles.forEach(p => {
-      console.log(`Email: ${p.email}, ID: ${p.id}, Role: ${p.role}, Name: ${p.full_name}`);
-    });
-  }
+  const { data: sampleOrder, error } = await supabase.from('orders').select('*').limit(1);
+  if (error) console.error('Orders error:', error);
+  else console.log('Orders sample keys:', Object.keys(sampleOrder[0] || {}));
 }
 
 check();

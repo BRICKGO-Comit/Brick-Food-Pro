@@ -81,7 +81,18 @@ export default function CheckoutPage() {
       const totalAmount = price * quantity;
       const commissionAmount = totalAmount * ((offer.commission_rate || 20) / 100);
       
-      // Insérer la commande
+      // Mettre à jour le profil client si nom ou téléphone renseigné
+      if (clientName.trim() || clientPhone.trim()) {
+        await supabase
+          .from('profiles')
+          .update({
+            full_name: clientName.trim(),
+            phone: clientPhone.trim() || null,
+          })
+          .eq('id', user.id);
+      }
+
+      // Insérer la commande avec les colonnes exactes de la base
       const { data: order, error: orderError } = await supabase.from('orders').insert({
         client_id: user.id,
         restaurant_id: offer.restaurant_id,
@@ -89,14 +100,10 @@ export default function CheckoutPage() {
         agent_id: offer.agent_id,
         status: 'nouvelle',
         delivery_mode: diningOption === 'livraison' ? 'livraison' : 'retrait',
-        dining_option: diningOption,
-        delivery_address: diningOption === 'livraison' ? (deliveryAddress.trim() || 'Livraison') : 'Sur place',
-        client_name: clientName.trim(),
-        client_phone: clientPhone.trim() || 'Non renseigné',
         quantity,
         total_amount: totalAmount,
         commission_amount: commissionAmount,
-        payment_status: 'paid', // Simulé paid via Wave
+        payment_status: 'paid',
         reservation_code: code
       }).select().single();
       

@@ -20,7 +20,7 @@ export default function ConfirmationPage() {
       try {
         const { data, error } = await supabase
           .from('orders')
-          .select('*, offer:offers(*), restaurant:restaurants(*)')
+          .select('*, offer:offers(*), restaurant:restaurants(*), client:profiles!client_id(full_name, phone)')
           .eq('id', orderId)
           .single();
           
@@ -72,9 +72,9 @@ export default function ConfirmationPage() {
     const restoName = order.restaurant?.name || 'Restaurant Partenaire';
     const restoAddress = order.restaurant?.address || 'Abidjan';
     const offerTitle = order.offer?.title || 'Formule Repas';
-    const clientName = order.client_name || 'Client';
-    const clientPhone = order.client_phone || 'Non renseigné';
-    const diningText = order.dining_option === 'livraison' ? '📦 À emporter / Livraison' : '🍽️ Sur place (au restaurant)';
+    const clientName = order.client?.full_name || order.profiles?.full_name || 'Client';
+    const clientPhone = order.client?.phone || order.profiles?.phone || 'Non renseigné';
+    const diningText = order.delivery_mode === 'livraison' ? '📦 À emporter / Livraison' : '🍽️ Sur place (au restaurant)';
     const dateStr = new Date(order.created_at || Date.now()).toLocaleDateString('fr-FR', {
       day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit'
     });
@@ -219,12 +219,12 @@ export default function ConfirmationPage() {
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
               <span style={{ color: '#64748B' }}>Bénéficiaire :</span>
-              <strong style={{ color: '#0F172A' }}>{order.client_name || 'Client'}</strong>
+              <strong style={{ color: '#0F172A' }}>{order.client?.full_name || order.profiles?.full_name || 'Client'}</strong>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
               <span style={{ color: '#64748B' }}>Option :</span>
               <span style={{ fontWeight: '700', color: '#0F172A' }}>
-                {order.dining_option === 'livraison' ? '📦 Livraison' : '🍽️ Sur place (au restaurant)'}
+                {order.delivery_mode === 'livraison' ? '📦 Livraison' : '🍽️ Sur place (au restaurant)'}
               </span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>

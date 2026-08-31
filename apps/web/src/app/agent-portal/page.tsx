@@ -161,18 +161,15 @@ export default function AgentDashboard() {
       const { data: newOrder, error: orderErr } = await supabase
         .from('orders')
         .insert({
+          client_id: profile.id,
           agent_id: profile.id,
           restaurant_id: orderForm.restaurantId,
           offer_id: orderForm.offerId,
-          client_name: orderForm.clientName.trim(),
-          client_phone: orderForm.clientPhone.trim() || 'Non renseigné',
           delivery_mode: orderForm.diningOption === 'livraison' ? 'livraison' : 'retrait',
-          dining_option: orderForm.diningOption,
-          delivery_address: orderForm.diningOption === 'livraison' ? (orderForm.deliveryAddress.trim() || 'Livraison') : 'Sur place',
           quantity: orderForm.quantity,
           total_amount: currentTotal,
           commission_amount: currentCommission,
-          payment_status: 'paid', // Vente terrain encaissée
+          payment_status: 'paid',
           status: 'nouvelle',
           reservation_code: code
         })
