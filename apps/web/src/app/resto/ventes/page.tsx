@@ -36,7 +36,7 @@ export default function RestoVentes() {
       const { data, error } = await supabase
         .from('orders')
         .select(`
-          id, reservation_code, total_amount, commission_amount, status, payment_status, created_at, quantity,
+          id, reservation_code, total_amount, commission_amount, status, payment_status, created_at, quantity, client_name, dining_option,
           client:profiles!client_id(full_name),
           offer:offers!offer_id(title, type)
         `)
@@ -80,8 +80,8 @@ export default function RestoVentes() {
     let comms = 0;
     
     filteredOrders.forEach(o => {
-      ventes += (o.total_amount || 0);
-      comms += (o.commission_amount || 0);
+      ventes += (Number(o.total_amount) || 0);
+      comms += (Number(o.commission_amount) || 0);
     });
     
     setTotalVentes(ventes);
@@ -99,15 +99,15 @@ export default function RestoVentes() {
       <div className="metrics-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
         <div className="metric-card panel" style={{ padding: '1.5rem', backgroundColor: 'var(--bg-card)', borderRadius: 'var(--radius-md)', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
           <div className="metric-header" style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', marginBottom: '0.5rem' }}>Total des Ventes (Brut)</div>
-          <div className="metric-value" style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--text-primary)' }}>{totalVentes.toFixed(2)}€</div>
+          <div className="metric-value" style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--text-primary)' }}>{Math.round(totalVentes).toLocaleString('fr-FR')} FCFA</div>
         </div>
         <div className="metric-card panel" style={{ padding: '1.5rem', backgroundColor: 'var(--bg-card)', borderRadius: 'var(--radius-md)', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
           <div className="metric-header" style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', marginBottom: '0.5rem' }}>Total Commissions BRICK</div>
-          <div className="metric-value" style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--warning)' }}>- {totalCommissions.toFixed(2)}€</div>
+          <div className="metric-value" style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--warning)' }}>- {Math.round(totalCommissions).toLocaleString('fr-FR')} FCFA</div>
         </div>
         <div className="metric-card panel" style={{ padding: '1.5rem', backgroundColor: 'var(--success-bg)', borderRadius: 'var(--radius-md)', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
-          <div className="metric-header" style={{ color: 'var(--success)', fontSize: '0.875rem', marginBottom: '0.5rem' }}>Net à Percevoir</div>
-          <div className="metric-value" style={{ fontSize: '2.5rem', fontWeight: 'bold', color: 'var(--success)' }}>{netAPercevoir.toFixed(2)}€</div>
+          <div className="metric-header" style={{ color: 'var(--success)', fontSize: '0.875rem', marginBottom: '0.5rem' }}>Net à Percevoir (Restaurant)</div>
+          <div className="metric-value" style={{ fontSize: '2.5rem', fontWeight: 'bold', color: 'var(--success)' }}>{Math.round(netAPercevoir).toLocaleString('fr-FR')} FCFA</div>
         </div>
       </div>
 
@@ -157,7 +157,7 @@ export default function RestoVentes() {
               </thead>
               <tbody>
                 {filteredOrders.map((order) => {
-                  const clientName = Array.isArray(order.client) ? order.client[0]?.full_name : order.client?.full_name;
+                  const clientName = order.client_name || (Array.isArray(order.client) ? order.client[0]?.full_name : order.client?.full_name);
                   const offerTitle = Array.isArray(order.offer) ? order.offer[0]?.title : order.offer?.title;
                   const offerType = Array.isArray(order.offer) ? order.offer[0]?.type : order.offer?.type;
                   
@@ -166,15 +166,15 @@ export default function RestoVentes() {
                   return (
                     <tr key={order.id} style={{ borderBottom: '1px solid var(--border)' }}>
                       <td style={{ padding: '12px 8px' }}>{new Date(order.created_at).toLocaleString('fr-FR')}</td>
-                      <td style={{ padding: '12px 8px', fontWeight: 'bold' }}>{order.reservation_code}</td>
+                      <td style={{ padding: '12px 8px', fontWeight: 'bold', color: 'var(--primary)' }}>{order.reservation_code}</td>
                       <td style={{ padding: '12px 8px' }}>{clientName || '-'}</td>
                       <td style={{ padding: '12px 8px' }}>
                         {offerTitle} <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'capitalize' }}>({offerType})</span>
                       </td>
                       <td style={{ padding: '12px 8px', textAlign: 'center' }}>{order.quantity}</td>
-                      <td style={{ padding: '12px 8px', fontWeight: 'bold' }}>{order.total_amount?.toFixed(2)}€</td>
-                      <td style={{ padding: '12px 8px', color: 'var(--warning)' }}>{order.commission_amount?.toFixed(2)}€</td>
-                      <td style={{ padding: '12px 8px', color: 'var(--success)', fontWeight: 'bold' }}>{net.toFixed(2)}€</td>
+                      <td style={{ padding: '12px 8px', fontWeight: 'bold' }}>{Number(order.total_amount || 0).toLocaleString('fr-FR')} FCFA</td>
+                      <td style={{ padding: '12px 8px', color: 'var(--warning)' }}>- {Number(order.commission_amount || 0).toLocaleString('fr-FR')} FCFA</td>
+                      <td style={{ padding: '12px 8px', color: 'var(--success)', fontWeight: 'bold' }}>{Number(net).toLocaleString('fr-FR')} FCFA</td>
                       <td style={{ padding: '12px 8px' }}>
                         <span className={`badge`} style={{
                           padding: '4px 8px', borderRadius: 'var(--radius-sm)', fontSize: '12px',

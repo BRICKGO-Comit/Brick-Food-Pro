@@ -63,13 +63,13 @@ export default function RestoScanner() {
       const { data, error } = await supabase
         .from('orders')
         .select(`
-          id, reservation_code, total_amount, quantity, status, client_id,
-          client:profiles!client_id(full_name),
-          offer:offers!offer_id(title)
+          id, reservation_code, total_amount, quantity, status, client_id, client_name, client_phone, dining_option, delivery_address, created_at,
+          client:profiles!client_id(full_name, phone),
+          offer:offers!offer_id(title, type, pack_type)
         `)
         .eq('restaurant_id', profile.restaurant_id)
         .eq('reservation_code', reservationCode)
-        .single();
+        .maybeSingle();
       
       if (error || !data) {
         setScanMessage('Code non reconnu');
@@ -268,16 +268,18 @@ export default function RestoScanner() {
             <>
               <h2 style={{ fontSize: '20px', fontWeight: 'bold', marginBottom: '1.5rem', color: 'var(--text-primary)' }}>Détails de la Réservation</h2>
               
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem', textAlign: 'left', backgroundColor: 'var(--bg-app)', padding: '1.5rem', borderRadius: 'var(--radius-md)', marginBottom: '1.5rem' }}>
-                <p><strong>Code:</strong> <span style={{ fontSize: '1.2rem', color: 'var(--primary)', fontWeight: 'bold' }}>{orderFound.reservation_code}</span></p>
-                <p><strong>Client:</strong> {Array.isArray(orderFound.client) ? orderFound.client[0]?.full_name : orderFound.client?.full_name}</p>
-                <p><strong>Offre:</strong> {Array.isArray(orderFound.offer) ? orderFound.offer[0]?.title : orderFound.offer?.title}</p>
-                <p><strong>Quantité:</strong> {orderFound.quantity}</p>
-                <p><strong>Montant Payé:</strong> {orderFound.total_amount?.toFixed(2)}€</p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem', textAlign: 'left', backgroundColor: '#F8FAFC', padding: '1.5rem', borderRadius: '14px', border: '1px solid #E2E8F0', marginBottom: '1.5rem' }}>
+                <p style={{ margin: 0 }}><strong>Code Pass :</strong> <span style={{ fontSize: '1.4rem', color: 'var(--primary)', fontWeight: '900', letterSpacing: '1px' }}>{orderFound.reservation_code}</span></p>
+                <p style={{ margin: 0 }}><strong>Client :</strong> {orderFound.client_name || (Array.isArray(orderFound.client) ? orderFound.client[0]?.full_name : orderFound.client?.full_name) || 'Client'}</p>
+                <p style={{ margin: 0 }}><strong>Téléphone :</strong> {orderFound.client_phone || (Array.isArray(orderFound.client) ? orderFound.client[0]?.phone : orderFound.client?.phone) || 'Non renseigné'}</p>
+                <p style={{ margin: 0 }}><strong>Formule :</strong> {Array.isArray(orderFound.offer) ? orderFound.offer[0]?.title : orderFound.offer?.title}</p>
+                <p style={{ margin: 0 }}><strong>Mode de consommation :</strong> <span style={{ fontWeight: '700', color: '#0F172A' }}>{orderFound.dining_option === 'livraison' ? '📦 À emporter / Livraison' : '🍽️ Sur place (au restaurant)'}</span></p>
+                <p style={{ margin: 0 }}><strong>Quantité :</strong> {orderFound.quantity} formule(s)</p>
+                <p style={{ margin: 0 }}><strong>Montant Réglé :</strong> <span style={{ fontSize: '1.2rem', fontWeight: '800', color: 'var(--success)' }}>{Number(orderFound.total_amount || 0).toLocaleString('fr-FR')} FCFA</span></p>
                 
                 {orderFound.status === 'terminee' && (
-                  <div style={{ marginTop: '1rem', padding: '1rem', backgroundColor: 'var(--warning-bg)', color: 'var(--warning)', textAlign: 'center', borderRadius: 'var(--radius-sm)', fontWeight: 'bold' }}>
-                    ATTENTION : Ce pass a déjà été utilisé !
+                  <div style={{ marginTop: '1rem', padding: '1rem', backgroundColor: '#FEF2F2', color: '#DC2626', textAlign: 'center', borderRadius: '10px', fontWeight: 'bold', border: '1px solid #FECACA' }}>
+                    ⚠️ ATTENTION : Ce Pass a déjà été validé et consommé !
                   </div>
                 )}
               </div>
@@ -287,9 +289,9 @@ export default function RestoScanner() {
                   onClick={validateOrder}
                   disabled={loading}
                   className="btn btn-primary"
-                  style={{ width: '100%', padding: '16px', fontSize: '1.2rem', fontWeight: 'bold', backgroundColor: 'var(--success)', color: 'white', borderRadius: 'var(--radius-md)', border: 'none', cursor: 'pointer' }}
+                  style={{ width: '100%', padding: '16px', fontSize: '1.2rem', fontWeight: 'bold', backgroundColor: 'var(--success)', color: 'white', borderRadius: 'var(--radius-md)', border: 'none', cursor: 'pointer', boxShadow: '0 4px 14px rgba(16, 185, 129, 0.3)' }}
                 >
-                  {loading ? 'Validation en cours...' : 'Confirmer la réception'}
+                  {loading ? 'Validation en cours...' : '✅ Confirmer et Servir la Commande'}
                 </button>
               )}
             </>
