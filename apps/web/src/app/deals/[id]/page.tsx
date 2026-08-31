@@ -11,6 +11,9 @@ export async function generateMetadata({ params }: { params: { id: string } }) {
     title: `${offer.title} | BRICK DEAL`,
     description: offer.description?.substring(0, 150) + '...',
     openGraph: {
+      title: `${offer.title} | BRICK DEAL`,
+      description: offer.description?.substring(0, 150) + '...',
+      url: `https://www.brickdeal.store/deals/${params.id}`,
       images: offer.photos?.[0] ? [offer.photos[0]] : [],
     },
   };
@@ -115,7 +118,7 @@ export default async function DealDetailPage({ params }: { params: { id: string 
                 Commander maintenant
               </Link>
               
-              <button id="share-btn" data-title={offer.title} data-url={`https://brick-food-pro.com/deals/${offer.id}`} style={{ width: '60px', backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem' }}>
+              <button id="share-btn" data-title={offer.title} data-url={`https://www.brickdeal.store/deals/${offer.id}`} style={{ width: '60px', backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem' }}>
                 🔗
               </button>
             </div>
@@ -149,8 +152,8 @@ export default async function DealDetailPage({ params }: { params: { id: string 
         const shareBtn = document.getElementById('share-btn');
         if (shareBtn) {
           shareBtn.addEventListener('click', () => {
-            const title = shareBtn.getAttribute('data-title');
-            const url = shareBtn.getAttribute('data-url');
+            const title = shareBtn.getAttribute('data-title') || document.title;
+            const url = window.location.href || shareBtn.getAttribute('data-url') || 'https://www.brickdeal.store';
             if (navigator.share) {
               navigator.share({ title, url }).catch(console.error);
             } else {

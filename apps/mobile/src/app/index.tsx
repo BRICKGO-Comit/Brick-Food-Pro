@@ -1952,8 +1952,8 @@ const getCategoryLabel = (cat?: string) => {
               amount: Math.round(amount).toString(),
               currency: 'XOF',
               client_reference: orderId,
-              error_url: 'https://brick-food-pro-beta.vercel.app/payment/success',
-              success_url: 'https://brick-food-pro-beta.vercel.app/payment/success'
+              error_url: 'https://www.brickdeal.store/payment/success',
+              success_url: 'https://www.brickdeal.store/payment/success'
             })
           });
           const apiData = await resp.json();
