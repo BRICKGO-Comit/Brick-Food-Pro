@@ -31,25 +31,25 @@ export default function PublicNavbar() {
         </Link>
 
         {/* Navigation Links */}
-        <nav style={{ display: 'flex', alignItems: 'center', gap: '32px' }}>
+        <nav style={{ display: 'flex', alignItems: 'center', gap: '28px' }}>
+          <Link href="/deals" style={{ color: '#E30613', fontWeight: '800', fontSize: '14px', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span>🔥</span> Tous les Deals
+          </Link>
           <Link href="/#offres" style={{ color: '#475569', fontWeight: '600', fontSize: '14px', textDecoration: 'none', transition: 'color 0.2s' }}>
-            Offres & Deals
+            Comment ça marche
           </Link>
-          <Link href="/#partenaires" style={{ color: '#475569', fontWeight: '600', fontSize: '14px', textDecoration: 'none', transition: 'color 0.2s' }}>
-            Pour les Restaurants
+          <Link href="/resto" style={{ color: '#475569', fontWeight: '600', fontSize: '14px', textDecoration: 'none', transition: 'color 0.2s' }}>
+            Espace Restaurateurs
           </Link>
-          <Link href="/#agents" style={{ color: '#475569', fontWeight: '600', fontSize: '14px', textDecoration: 'none', transition: 'color 0.2s' }}>
-            Pour les Agents
-          </Link>
-          <Link href="/#download" style={{ color: '#475569', fontWeight: '600', fontSize: '14px', textDecoration: 'none', transition: 'color 0.2s' }}>
-            Télécharger l'App
+          <Link href="/agent-portal" style={{ color: '#475569', fontWeight: '600', fontSize: '14px', textDecoration: 'none', transition: 'color 0.2s' }}>
+            Espace Agents
           </Link>
         </nav>
 
         {/* Action Buttons */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <Link
-            href="/admin"
+            href="/login"
             style={{
               padding: '10px 18px',
               borderRadius: '10px',
@@ -62,10 +62,10 @@ export default function PublicNavbar() {
               transition: 'all 0.2s',
             }}
           >
-            Espace Admin (/admin)
+            🔐 Connexion Pro
           </Link>
           <Link
-            href="/#download"
+            href="/deals"
             style={{
               padding: '10px 20px',
               borderRadius: '10px',
@@ -78,7 +78,7 @@ export default function PublicNavbar() {
               transition: 'all 0.2s',
             }}
           >
-            📲 Obtenir l'App
+            🔥 Commander en Ligne
           </Link>
         </div>
       </div>

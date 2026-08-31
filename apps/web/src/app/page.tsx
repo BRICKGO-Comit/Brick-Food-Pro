@@ -50,8 +50,8 @@ export default function VitrinePage() {
             </p>
 
             <div id="download" style={{ display: 'flex', flexWrap: 'wrap', gap: '16px' }}>
-              <a
-                href="#download"
+              <Link
+                href="/deals"
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -66,8 +66,8 @@ export default function VitrinePage() {
                   boxShadow: '0 8px 20px rgba(227, 6, 19, 0.35)',
                 }}
               >
-                📱 Télécharger sur Android
-              </a>
+                🔥 Explorer les Deals en Ligne
+              </Link>
               <a
                 href="#download"
                 style={{
@@ -84,7 +84,7 @@ export default function VitrinePage() {
                   textDecoration: 'none',
                 }}
               >
-                🍏 Télécharger sur iOS
+                📱 Télécharger l'App (APK)
               </a>
             </div>
 
@@ -224,9 +224,9 @@ export default function VitrinePage() {
 
           <div style={{ backgroundColor: '#F8FAFC', padding: '32px', borderRadius: '24px', border: '1px solid #E2E8F0', textAlign: 'center' }}>
             <h3 style={{ fontSize: '24px', fontWeight: '900', marginBottom: '12px' }}>Devenez Établissement Partenaire</h3>
-            <p style={{ color: '#64748B', fontSize: '14px', marginBottom: '24px' }}>Rejoignez le réseau BRICK DEAL et développez votre chiffre d'affaires dès aujourd'hui.</p>
+            <p style={{ color: '#64748B', fontSize: '14px', marginBottom: '24px' }}>Rejoignez le réseau BRICK DEAL, publiez vos offres et gérez vos scans de Pass QR en direct.</p>
             <Link
-              href="/admin"
+              href="/resto"
               style={{
                 display: 'inline-block',
                 backgroundColor: '#0F172A',
@@ -239,7 +239,7 @@ export default function VitrinePage() {
                 width: '100%',
               }}
             >
-              🏢 Accès Espace Admin / Partenaire
+              🏢 Accès Espace Restaurateur (/resto)
             </Link>
           </div>
         </div>
@@ -255,10 +255,10 @@ export default function VitrinePage() {
           </p>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px', marginBottom: '36px' }}>
           <div style={{ backgroundColor: '#FFFFFF', padding: '28px', borderRadius: '16px', border: '1px solid #E2E8F0' }}>
             <h4 style={{ fontSize: '18px', fontWeight: '800', marginBottom: '8px' }}>👔 Inscription d'Établissements</h4>
-            <p style={{ color: '#64748B', fontSize: '14px', lineHeight: '1.5' }}>Inscrivez et gérez votre portefeuille de restaurants partenaires directement depuis l'application mobile.</p>
+            <p style={{ color: '#64748B', fontSize: '14px', lineHeight: '1.5' }}>Inscrivez et gérez votre portefeuille de restaurants partenaires directement depuis la plateforme web.</p>
           </div>
           <div style={{ backgroundColor: '#FFFFFF', padding: '28px', borderRadius: '16px', border: '1px solid #E2E8F0' }}>
             <h4 style={{ fontSize: '18px', fontWeight: '800', marginBottom: '8px' }}>💰 Commissions Automatisées</h4>
@@ -268,6 +268,25 @@ export default function VitrinePage() {
             <h4 style={{ fontSize: '18px', fontWeight: '800', marginBottom: '8px' }}>📱 Vente Assistée Terrain</h4>
             <p style={{ color: '#64748B', fontSize: '14px', lineHeight: '1.5' }}>Aidez les clients sur le terrain à réserver leurs packs et générez leur Pass QR en direct.</p>
           </div>
+        </div>
+
+        <div style={{ textAlign: 'center' }}>
+          <Link
+            href="/agent-portal"
+            style={{
+              display: 'inline-block',
+              backgroundColor: '#E30613',
+              color: '#FFFFFF',
+              padding: '14px 32px',
+              borderRadius: '12px',
+              fontWeight: '800',
+              fontSize: '15px',
+              textDecoration: 'none',
+              boxShadow: '0 6px 20px rgba(227, 6, 19, 0.3)',
+            }}
+          >
+            👔 Accès Espace Agent Commercial (/agent-portal)
+          </Link>
         </div>
       </section>
 
