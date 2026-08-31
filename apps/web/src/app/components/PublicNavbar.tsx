@@ -56,7 +56,7 @@ export default function PublicNavbar() {
     if (profile.role === 'admin') return '/admin';
     if (profile.role === 'restaurant') return '/resto';
     if (profile.role === 'agent') return '/agent-portal';
-    return '/deals';
+    return '/commandes';
   };
 
   const getRoleLabel = () => {
@@ -227,9 +227,9 @@ export default function PublicNavbar() {
         {/* --- DROITE : PASS QR & MENU UTILISATEUR --- */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexShrink: 0 }}>
           
-          {/* Bouton Mes Pass QR / Deals */}
+          {/* Bouton Mes Pass QR & Commandes */}
           <Link
-            href="/deals"
+            href="/commandes"
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -245,7 +245,7 @@ export default function PublicNavbar() {
             }}
           >
             <span>🎟️</span>
-            <span>Mes Pass & Deals</span>
+            <span>Mes Pass & Suivi</span>
           </Link>
 
           {!loading && user ? (
@@ -334,6 +334,25 @@ export default function PublicNavbar() {
                   >
                     <span>🏢</span>
                     <span>Accéder à mon Espace</span>
+                  </Link>
+
+                  <Link
+                    href="/commandes"
+                    onClick={() => setShowUserDropdown(false)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '10px',
+                      padding: '10px 12px',
+                      borderRadius: '8px',
+                      color: '#0F172A',
+                      fontSize: '13px',
+                      fontWeight: '700',
+                      textDecoration: 'none',
+                    }}
+                  >
+                    <span>🎟️</span>
+                    <span>Mes Pass & Suivi</span>
                   </Link>
 
                   <Link
