@@ -1,4 +1,4 @@
-// Types correspondant au schéma Supabase — Brick Food Pro
+// Types correspondant au schéma Supabase — BRICK DEAL
 
 export type UserRole = 'admin' | 'agent' | 'restaurant' | 'client';
 export type OfferType = 'flash' | 'deal';

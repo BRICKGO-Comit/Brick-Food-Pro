@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '../components/AuthProvider';
 import type { OrderWithRelations } from '@/types/database';
+import Link from 'next/link';
 
 interface DashboardStats {
   totalRestaurants: number;
@@ -13,6 +14,12 @@ interface DashboardStats {
   totalOrders: number;
   totalCA: number;
   salesDistribution: { flash: number; deals: number; classic: number };
+}
+
+interface Notification {
+  id: string;
+  message: string;
+  visible: boolean;
 }
 
 export default function AdminDashboard() {
@@ -27,6 +34,45 @@ export default function AdminDashboard() {
     salesDistribution: { flash: 0, deals: 0, classic: 0 },
   });
   const [orders, setOrders] = useState<OrderWithRelations[]>([]);
+  const [notification, setNotification] = useState<Notification | null>(null);
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  const audioCtxRef = useRef<AudioContext | null>(null);
+
+  useEffect(() => {
+    // Initialize audio context on first interaction or mount if allowed
+    try {
+      audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+    } catch (e) {
+      console.error("AudioContext not supported", e);
+    }
+  }, []);
+
+  const playNotificationSound = () => {
+    if (!audioCtxRef.current) return;
+    try {
+      if (audioCtxRef.current.state === 'suspended') {
+        audioCtxRef.current.resume();
+      }
+      const oscillator = audioCtxRef.current.createOscillator();
+      const gainNode = audioCtxRef.current.createGain();
+      
+      oscillator.type = 'sine';
+      oscillator.frequency.setValueAtTime(800, audioCtxRef.current.currentTime); // 800Hz
+      
+      gainNode.gain.setValueAtTime(0, audioCtxRef.current.currentTime);
+      gainNode.gain.linearRampToValueAtTime(0.5, audioCtxRef.current.currentTime + 0.05);
+      gainNode.gain.linearRampToValueAtTime(0, audioCtxRef.current.currentTime + 0.2); // 200ms duration
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(audioCtxRef.current.destination);
+      
+      oscillator.start(audioCtxRef.current.currentTime);
+      oscillator.stop(audioCtxRef.current.currentTime + 0.2);
+    } catch (e) {
+      console.error("Error playing sound", e);
+    }
+  };
 
   // Redirige vers /login si non authentifié
   useEffect(() => {
@@ -97,7 +143,29 @@ export default function AdminDashboard() {
     // Realtime : nouvelles commandes
     const channel = supabase
       .channel('orders-realtime')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders' }, () => {
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders' }, async (payload) => {
+        const newOrder = payload.new;
+        
+        // Fetch client details for notification
+        const { data: profile } = await supabase.from('profiles').select('full_name').eq('id', newOrder.client_id).single();
+        const clientName = profile?.full_name || 'Un client';
+        const amount = new Intl.NumberFormat('fr-FR').format(Math.round(newOrder.total_amount)) + ' FCFA';
+        
+        // Play sound & show notification
+        playNotificationSound();
+        const notifId = Date.now().toString();
+        setNotification({
+          id: notifId,
+          message: `Nouvelle commande de ${clientName} — ${amount}`,
+          visible: true
+        });
+        
+        setUnreadCount(prev => prev + 1);
+
+        setTimeout(() => {
+          setNotification(prev => prev?.id === notifId ? { ...prev, visible: false } : prev);
+        }, 5000);
+
         fetchOrders();
         fetchStats();
       })
@@ -113,8 +181,45 @@ export default function AdminDashboard() {
 
   const dist = stats.salesDistribution;
 
+  const isRecent = (dateStr: string) => {
+    const orderDate = new Date(dateStr);
+    const now = new Date();
+    const diffMs = now.getTime() - orderDate.getTime();
+    return diffMs < 5 * 60 * 1000; // < 5 minutes
+  };
+
   return (
     <>
+      {notification && notification.visible && (
+        <div style={{
+          position: 'fixed',
+          top: '20px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          background: 'linear-gradient(90deg, #10B981 0%, #059669 100%)',
+          color: 'white',
+          padding: '12px 24px',
+          borderRadius: 'var(--radius-md)',
+          boxShadow: '0 10px 25px rgba(16, 185, 129, 0.4)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px',
+          zIndex: 9999,
+          animation: 'slideDown 0.4s ease-out forwards',
+          fontWeight: '600'
+        }}>
+          <span style={{ fontSize: '20px' }}>🔔</span>
+          {notification.message}
+        </div>
+      )}
+
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+        <h1 style={{ fontSize: '24px', fontWeight: '800' }}>Tableau de bord</h1>
+        <Link href="/admin/audit" className="btn btn-outline" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span>📋</span> Logs d'Audit
+        </Link>
+      </div>
+
       {/* Metrics Cards */}
       <div className="metrics-grid">
         <div className="metric-card">
@@ -166,10 +271,27 @@ export default function AdminDashboard() {
       {/* Panels Area */}
       <div className="panels-grid">
         {/* Real-time Orders */}
-        <div className="panel">
-          <div className="panel-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', backgroundColor: 'var(--primary)', animation: 'pulse 1.5s infinite' }}></span>
-            Commandes en temps réel
+        <div className="panel" onClick={() => setUnreadCount(0)}>
+          <div className="panel-title" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', position: 'relative' }}>
+              <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', backgroundColor: 'var(--primary)', animation: 'pulse 1.5s infinite' }}></span>
+              Commandes récentes
+              {unreadCount > 0 && (
+                <span style={{ 
+                  backgroundColor: 'var(--primary)', 
+                  color: 'white', 
+                  fontSize: '11px', 
+                  padding: '2px 6px', 
+                  borderRadius: '10px', 
+                  animation: 'blink 1s infinite' 
+                }}>
+                  {unreadCount} nouv.
+                </span>
+              )}
+            </div>
+            <Link href="/orders" style={{ fontSize: '13px', color: 'var(--primary)', textDecoration: 'none', fontWeight: '600' }}>
+              Voir toutes les commandes →
+            </Link>
           </div>
 
           {orders.length === 0 ? (
@@ -189,26 +311,32 @@ export default function AdminDashboard() {
                 </tr>
               </thead>
               <tbody>
-                {orders.map((order) => (
-                  <tr key={order.id} style={{ transition: 'var(--transition)' }}>
-                    <td style={{ fontWeight: '600' }}>{order.reservation_code}</td>
-                    <td>{order.profiles?.full_name ?? '—'}</td>
-                    <td>{order.restaurants?.name ?? '—'}</td>
-                    <td style={{ fontWeight: '500' }}>
-                      {order.offers?.type === 'flash' ? 'Brick Flash' : 'Brick Deal'}
-                    </td>
-                    <td style={{ color: 'var(--primary)', fontWeight: '700' }}>{formatFCFA(Number(order.total_amount))}</td>
-                    <td>
-                      <span className={`badge ${order.status}`}>
-                        {order.status === 'nouvelle' && 'Nouvelle'}
-                        {order.status === 'en_preparation' && 'En préparation'}
-                        {order.status === 'prete' && 'Prête'}
-                        {order.status === 'terminee' && 'Terminée'}
-                        {order.status === 'livree' && 'Livrée'}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
+                {orders.map((order) => {
+                  const recent = isRecent(order.created_at);
+                  return (
+                    <tr key={order.id} style={{ 
+                      transition: 'var(--transition)', 
+                      backgroundColor: recent ? 'rgba(245, 158, 11, 0.05)' : 'transparent' 
+                    }}>
+                      <td style={{ fontWeight: '600' }}>{order.reservation_code}</td>
+                      <td>{order.profiles?.full_name ?? '—'}</td>
+                      <td>{order.restaurants?.name ?? '—'}</td>
+                      <td style={{ fontWeight: '500' }}>
+                        {order.offers?.type === 'flash' ? 'Brick Flash' : 'Brick Deal'}
+                      </td>
+                      <td style={{ color: 'var(--primary)', fontWeight: '700' }}>{formatFCFA(Number(order.total_amount))}</td>
+                      <td>
+                        <span className={`badge ${order.status}`}>
+                          {order.status === 'nouvelle' && 'Nouvelle'}
+                          {order.status === 'en_preparation' && 'En préparation'}
+                          {order.status === 'prete' && 'Prête'}
+                          {order.status === 'terminee' && 'Terminée'}
+                          {order.status === 'livree' && 'Livrée'}
+                        </span>
+                      </td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           )}
@@ -266,6 +394,14 @@ export default function AdminDashboard() {
           0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(227, 6, 19, 0.7); }
           70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(227, 6, 19, 0); }
           100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(227, 6, 19, 0); }
+        }
+        @keyframes slideDown {
+          0% { transform: translate(-50%, -100%); opacity: 0; }
+          100% { transform: translate(-50%, 0); opacity: 1; }
+        }
+        @keyframes blink {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.5; }
         }
       `}</style>
     </>

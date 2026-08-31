@@ -134,7 +134,7 @@ export default function PublicFooter() {
           fontSize: '13px',
         }}>
           <div>
-            © {new Date().getFullYear()} <strong style={{ color: '#FFFFFF' }}>BRICK DEAL</strong> (Brick Food Pro). Tous droits réservés.
+            © {new Date().getFullYear()} <strong style={{ color: '#FFFFFF' }}>BRICK DEAL</strong>. Tous droits réservés.
           </div>
           <div style={{ display: 'flex', gap: '20px' }}>
             <Link href="/legal/mentions-legales" style={{ color: '#64748B', textDecoration: 'none' }}>Mentions Légales</Link>

@@ -18,13 +18,13 @@ export default function MentionsLegalesPage() {
             <section>
               <h2 style={{ fontSize: '20px', fontWeight: '800', color: '#0F172A', marginBottom: '12px' }}>1. Éditeur du Site et de l'Application</h2>
               <p>
-                La plateforme et l'application mobile <strong>BRICK DEAL</strong> (développées par <strong>Brick Food Pro</strong>) sont éditées par la société Brick Food Pro SARL, enregistrée sous les lois en vigueur en Côte d'Ivoire.
+                La plateforme et l'application mobile <strong>BRICK DEAL</strong> sont éditées par la société BRICK DEAL SARL, enregistrée sous les lois en vigueur en Côte d'Ivoire.
               </p>
               <ul style={{ listStyle: 'square', paddingLeft: '20px', marginTop: '8px' }}>
                 <li><strong>Siège Social :</strong> Abidjan, Côte d'Ivoire</li>
                 <li><strong>Email de Contact :</strong> contact@brickdeal.app</li>
                 <li><strong>Téléphone :</strong> +225 07 00 00 00 00</li>
-                <li><strong>Directeur de la publication :</strong> Direction Générale Brick Food Pro</li>
+                <li><strong>Directeur de la publication :</strong> Direction Générale BRICK DEAL</li>
               </ul>
             </section>
 
@@ -43,14 +43,14 @@ export default function MentionsLegalesPage() {
             <section>
               <h2 style={{ fontSize: '20px', fontWeight: '800', color: '#0F172A', marginBottom: '12px' }}>3. Propriété Intellectuelle</h2>
               <p>
-                L'ensemble des éléments figurant sur le site web et l'application mobile BRICK DEAL (marques, logos, textes, graphismes, icônes, images, Pass QR, éléments d'interface et codes sources) sont la propriété exclusive de Brick Food Pro. Toute reproduction, représentation, modification ou adaptation totale ou partielle est strictement interdite sans autorisation écrite préalable.
+                L'ensemble des éléments figurant sur le site web et l'application mobile BRICK DEAL (marques, logos, textes, graphismes, icônes, images, Pass QR, éléments d'interface et codes sources) sont la propriété exclusive de BRICK DEAL. Toute reproduction, représentation, modification ou adaptation totale ou partielle est strictement interdite sans autorisation écrite préalable.
               </p>
             </section>
 
             <section>
               <h2 style={{ fontSize: '20px', fontWeight: '800', color: '#0F172A', marginBottom: '12px' }}>4. Limitations de Responsabilité</h2>
               <p>
-                Brick Food Pro s'efforce d'assurer la précision et la mise à jour des informations diffusées sur la plateforme. Toutefois, l'éditeur ne saurait être tenu responsable des retards, interruptions ou dysfonctionnements liés au réseau télécom, aux services Wave Mobile Money ou à la non-conformité des prestations fournies directement par les établissements partenaires.
+                BRICK DEAL s'efforce d'assurer la précision et la mise à jour des informations diffusées sur la plateforme. Toutefois, l'éditeur ne saurait être tenu responsable des retards, interruptions ou dysfonctionnements liés au réseau télécom, aux services Wave Mobile Money ou à la non-conformité des prestations fournies directement par les établissements partenaires.
               </p>
             </section>
           </div>

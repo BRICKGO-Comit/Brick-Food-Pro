@@ -21,6 +21,7 @@ export default function OrdersManagement() {
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [restaurants, setRestaurants] = useState<any[]>([]);
   const [restaurantFilter, setRestaurantFilter] = useState<string>('all');
+  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) router.replace('/login');
@@ -100,11 +101,110 @@ export default function OrdersManagement() {
       d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
   };
 
+  const handleExport = async (format: 'csv' | 'excel') => {
+    setExporting(true);
+    try {
+      // Fetch all orders without pagination limit (although in our current fetchOrders we also didn't limit, but just to be sure)
+      const { data } = await supabase
+        .from('orders')
+        .select('*, profiles!client_id(*), restaurants(*), offers(*)')
+        .order('created_at', { ascending: false });
+        
+      const allOrders = (data ?? []) as any[];
+
+      const dateStr = new Date().toISOString().split('T')[0];
+      const filename = `commandes_brickdeal_${dateStr}.${format === 'csv' ? 'csv' : 'xls'}`;
+
+      if (format === 'csv') {
+        const headers = ['Date', 'Code Réservation', 'Client', 'Email Client', 'Restaurant', 'Offre', 'Type', 'Quantité', 'Montant Total', 'Commission', 'Net Restaurant', 'Statut Commande', 'Statut Paiement'];
+        const csvContent = [
+          headers.join(';'),
+          ...allOrders.map(o => {
+            const date = new Date(o.created_at).toLocaleDateString('fr-FR');
+            const net = Number(o.total_amount) - Number(o.commission_amount);
+            const type = o.offers?.type === 'flash' ? 'Brick Flash' : 'Brick Deal';
+            return [
+              date,
+              o.reservation_code,
+              `"${o.profiles?.full_name || ''}"`,
+              o.profiles?.email || '',
+              `"${o.restaurants?.name || ''}"`,
+              `"${o.offers?.title || ''}"`,
+              type,
+              o.quantity,
+              o.total_amount,
+              o.commission_amount,
+              net,
+              o.status,
+              o.payment_status
+            ].join(';');
+          })
+        ].join('\n');
+
+        const blob = new Blob([`\uFEFF${csvContent}`], { type: 'text/csv;charset=utf-8;' }); // BOM for excel
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      } else {
+        // Excel format (HTML table)
+        let table = '<table border="1"><tr>' +
+          ['Date', 'Code Réservation', 'Client', 'Email Client', 'Restaurant', 'Offre', 'Type', 'Quantité', 'Montant Total', 'Commission', 'Net Restaurant', 'Statut Commande', 'Statut Paiement'].map(h => `<th>${h}</th>`).join('') +
+          '</tr>';
+          
+        allOrders.forEach(o => {
+          const date = new Date(o.created_at).toLocaleDateString('fr-FR');
+          const net = Number(o.total_amount) - Number(o.commission_amount);
+          const type = o.offers?.type === 'flash' ? 'Brick Flash' : 'Brick Deal';
+          table += '<tr>' +
+            [date, o.reservation_code, o.profiles?.full_name, o.profiles?.email, o.restaurants?.name, o.offers?.title, type, o.quantity, o.total_amount, o.commission_amount, net, o.status, o.payment_status]
+              .map(v => `<td>${v || ''}</td>`).join('') +
+            '</tr>';
+        });
+        table += '</table>';
+        
+        const html = `
+          <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+          <head><meta charset="utf-8"></head><body>${table}</body></html>
+        `;
+        
+        const blob = new Blob([html], { type: 'application/vnd.ms-excel' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      }
+    } catch (e) {
+      console.error(e);
+      alert('Erreur lors de l\'export');
+    } finally {
+      setExporting(false);
+    }
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-      <div>
-        <h1 style={{ fontSize: '24px', fontWeight: '800' }}>Supervision des Commandes</h1>
-        <p style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>Visualisez les commandes en temps réel, gérez les litiges et suivez les flux logistiques.</p>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <div>
+          <h1 style={{ fontSize: '24px', fontWeight: '800' }}>Supervision des Commandes</h1>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>Visualisez les commandes en temps réel, gérez les litiges et suivez les flux logistiques.</p>
+        </div>
+        <div style={{ display: 'flex', gap: '12px' }}>
+          <button className="btn btn-outline" onClick={() => handleExport('csv')} disabled={exporting} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {exporting ? <span className="spinner"></span> : '📥'} Exporter CSV
+          </button>
+          <button className="btn btn-outline" onClick={() => handleExport('excel')} disabled={exporting} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {exporting ? <span className="spinner"></span> : '📥'} Exporter Excel
+          </button>
+        </div>
       </div>
 
       {/* Filter Section */}
@@ -272,6 +372,18 @@ export default function OrdersManagement() {
         @keyframes slideIn {
           from { transform: translateX(20px); opacity: 0; }
           to { transform: translateX(0); opacity: 1; }
+        }
+        .spinner {
+          display: inline-block;
+          width: 14px;
+          height: 14px;
+          border: 2px solid rgba(0,0,0,0.1);
+          border-left-color: currentColor;
+          border-radius: 50%;
+          animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+          to { transform: rotate(360deg); }
         }
       `}</style>
     </div>

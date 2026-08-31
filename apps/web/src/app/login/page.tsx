@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '../components/AuthProvider';
 
 export default function LoginPage() {
-  const { signIn, user, loading: authLoading } = useAuth();
+  const { signIn, user, profile, loading: authLoading } = useAuth();
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -13,10 +13,13 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (!authLoading && user) {
-      router.replace('/');
+    if (!authLoading && user && profile) {
+      if (profile.role === 'admin') router.replace('/admin');
+      else if (profile.role === 'restaurant') router.replace('/resto');
+      else if (profile.role === 'agent') router.replace('/agent-portal');
+      else router.replace('/deals');
     }
-  }, [user, authLoading, router]);
+  }, [user, profile, authLoading, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,7 +30,6 @@ export default function LoginPage() {
       setError(error);
       setLoading(false);
     }
-    // Le redirect est géré par le layout une fois la session établie
   };
 
   if (user) {
@@ -44,8 +46,8 @@ export default function LoginPage() {
           </div>
         </div>
 
-        <h1>Administration Centrale</h1>
-        <p className="login-subtitle">Connectez-vous pour accéder au portail d'administration</p>
+        <h1>Connexion</h1>
+        <p className="login-subtitle">Connectez-vous pour accéder à votre espace</p>
 
         <form onSubmit={handleSubmit} className="login-form">
           <label className="login-field">
@@ -54,7 +56,7 @@ export default function LoginPage() {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="admin@brickdeal.com"
+              placeholder="email@exemple.com"
               required
               autoFocus
             />
