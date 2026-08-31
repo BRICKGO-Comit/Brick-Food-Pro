@@ -1,20 +1,29 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState, Suspense } from 'react';
 import { supabase } from '@/lib/supabase';
 import PublicNavbar from '@/app/components/PublicNavbar';
 import PublicFooter from '@/app/components/PublicFooter';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
-export default function DealsPage() {
+function DealsContent() {
+  const searchParams = useSearchParams();
+  const initialQuery = searchParams.get('q') || '';
   const [offers, setOffers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState(initialQuery);
   const [filterType, setFilterType] = useState('Tous');
   const [filterPack, setFilterPack] = useState('Tous');
   const [sortBy, setSortBy] = useState('Plus récents');
   const [now, setNow] = useState(new Date().getTime());
   const router = useRouter();
+
+  useEffect(() => {
+    const q = searchParams.get('q');
+    if (q !== null) {
+      setSearchTerm(q);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     const timer = setInterval(() => setNow(new Date().getTime()), 1000);
@@ -197,5 +206,21 @@ export default function DealsPage() {
       
       <PublicFooter />
     </div>
+  );
+}
+
+export default function DealsPage() {
+  return (
+    <Suspense fallback={
+      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: 'var(--bg-app)' }}>
+        <PublicNavbar />
+        <main style={{ flex: 1, padding: '3rem', textAlign: 'center', color: '#64748B' }}>
+          Chargement du catalogue...
+        </main>
+        <PublicFooter />
+      </div>
+    }>
+      <DealsContent />
+    </Suspense>
   );
 }
