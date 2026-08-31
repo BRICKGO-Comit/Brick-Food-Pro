@@ -122,21 +122,6 @@ export default function UnifiedHomePage() {
           alignItems: 'center',
         }}>
           <div>
-            <div style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '8px',
-              backgroundColor: 'rgba(227, 6, 19, 0.15)',
-              border: '1px solid rgba(227, 6, 19, 0.3)',
-              padding: '6px 14px',
-              borderRadius: '20px',
-              color: '#FF4D4D',
-              fontSize: '13px',
-              fontWeight: '700',
-              marginBottom: '20px',
-            }}>
-              🔥 L'application N°1 des bons plans gastronomiques
-            </div>
             <h1 style={{ fontSize: '44px', fontWeight: '900', lineHeight: '1.15', marginBottom: '20px', letterSpacing: '-1px' }}>
               Vos offres flash & deals repas au meilleur prix
             </h1>
