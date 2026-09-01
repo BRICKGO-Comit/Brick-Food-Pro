@@ -31,10 +31,6 @@
         "android.permission.CAMERA",
         "android.permission.ACCESS_FINE_LOCATION",
         "android.permission.ACCESS_COARSE_LOCATION"
-      ],
-      "blockedPermissions": [
-        "android.permission.RECORD_AUDIO"
-      ],
       "adaptiveIcon": {
         "foregroundImage": "./assets/Icone.png",
         "backgroundColor": "#D60309"
