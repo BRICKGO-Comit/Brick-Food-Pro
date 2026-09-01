@@ -4,7 +4,7 @@
     "slug": "brickdeal",
     "owner": "brickfood123s-team",
     "scheme": "brickdeal",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/Icone.png",
     "userInterfaceStyle": "light",
@@ -27,10 +27,12 @@
     },
     "android": {
       "package": "com.brickfood.brickdeal",
+      "versionCode": 2,
       "permissions": [
         "android.permission.CAMERA",
         "android.permission.ACCESS_FINE_LOCATION",
         "android.permission.ACCESS_COARSE_LOCATION"
+      ],
       "adaptiveIcon": {
         "foregroundImage": "./assets/Icone.png",
         "backgroundColor": "#D60309"
