@@ -53,7 +53,15 @@
         }
       ],
       "expo-font",
-      "expo-splash-screen"
+      "expo-splash-screen",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "proguardRules": "./proguard-rules.pro"
+          }
+        }
+      ]
     ],
     "extra": {
       "eas": {
