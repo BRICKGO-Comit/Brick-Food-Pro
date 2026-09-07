@@ -1,6 +1,7 @@
 import './globals.css';
 import React from 'react';
 import { AuthProvider } from './components/AuthProvider';
+import { NotificationProvider } from './components/NotificationProvider';
 import ShellClient from './components/ShellClient';
 
 export const metadata = {
@@ -25,7 +26,9 @@ export default function RootLayout({
     <html lang="fr">
       <body>
         <AuthProvider>
-          <ShellClient>{children}</ShellClient>
+          <NotificationProvider>
+            <ShellClient>{children}</ShellClient>
+          </NotificationProvider>
         </AuthProvider>
       </body>
     </html>

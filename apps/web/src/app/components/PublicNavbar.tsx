@@ -4,18 +4,22 @@ import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from './AuthProvider';
+import { useNotifications } from './NotificationProvider';
 
 export default function PublicNavbar() {
   const { user, profile, loading, signOut } = useAuth();
+  const { notifications, unreadCount, markAsRead, markAllAsRead, requestBrowserPermission } = useNotifications();
   const router = useRouter();
 
   const [selectedCity, setSelectedCity] = useState('Abidjan (Toutes communes)');
   const [showCityDropdown, setShowCityDropdown] = useState(false);
   const [showUserDropdown, setShowUserDropdown] = useState(false);
+  const [showNotifDropdown, setShowNotifDropdown] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
   const cityDropdownRef = useRef<HTMLDivElement>(null);
   const userDropdownRef = useRef<HTMLDivElement>(null);
+  const notifDropdownRef = useRef<HTMLDivElement>(null);
 
   const communes = [
     'Abidjan (Toutes communes)',
@@ -36,6 +40,9 @@ export default function PublicNavbar() {
       }
       if (userDropdownRef.current && !userDropdownRef.current.contains(event.target as Node)) {
         setShowUserDropdown(false);
+      }
+      if (notifDropdownRef.current && !notifDropdownRef.current.contains(event.target as Node)) {
+        setShowNotifDropdown(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -247,6 +254,134 @@ export default function PublicNavbar() {
             <span>🎟️</span>
             <span>Mes Pass & Suivi</span>
           </Link>
+
+          {/* Cloche de Notifications Temps Réel */}
+          {user && (
+            <div ref={notifDropdownRef} style={{ position: 'relative' }}>
+              <button
+                type="button"
+                onClick={() => setShowNotifDropdown(!showNotifDropdown)}
+                style={{
+                  position: 'relative',
+                  width: '42px',
+                  height: '42px',
+                  borderRadius: '12px',
+                  backgroundColor: '#F8FAFC',
+                  border: '1px solid #E2E8F0',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '18px',
+                  cursor: 'pointer',
+                  transition: 'background-color 0.2s',
+                }}
+                title="Notifications"
+              >
+                🔔
+                {unreadCount > 0 && (
+                  <span style={{
+                    position: 'absolute',
+                    top: '-4px',
+                    right: '-4px',
+                    backgroundColor: '#E30613',
+                    color: '#FFFFFF',
+                    fontSize: '11px',
+                    fontWeight: '900',
+                    width: '18px',
+                    height: '18px',
+                    borderRadius: '50%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    border: '2px solid #FFFFFF',
+                  }}>
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </span>
+                )}
+              </button>
+
+              {/* Menu Déroulant Notifications */}
+              {showNotifDropdown && (
+                <div style={{
+                  position: 'absolute',
+                  top: 'calc(100% + 10px)',
+                  right: 0,
+                  width: '340px',
+                  backgroundColor: '#FFFFFF',
+                  borderRadius: '18px',
+                  boxShadow: '0 15px 40px rgba(0, 0, 0, 0.15)',
+                  border: '1px solid #E2E8F0',
+                  padding: '12px',
+                  zIndex: 1002,
+                  maxHeight: '440px',
+                  overflowY: 'auto',
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 8px 10px 8px', borderBottom: '1px solid #F1F5F9' }}>
+                    <span style={{ fontWeight: '900', fontSize: '14px', color: '#0F172A' }}>Notifications</span>
+                    {unreadCount > 0 && (
+                      <button
+                        onClick={() => markAllAsRead()}
+                        style={{ background: 'none', border: 'none', color: '#E30613', fontSize: '12px', fontWeight: '700', cursor: 'pointer' }}
+                      >
+                        Tout marquer comme lu
+                      </button>
+                    )}
+                  </div>
+
+                  {notifications.length === 0 ? (
+                    <div style={{ padding: '24px 12px', textAlign: 'center', color: '#94A3B8', fontSize: '13px' }}>
+                      <div style={{ fontSize: '28px', marginBottom: '6px' }}>🔕</div>
+                      Aucune notification pour le moment.
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '8px' }}>
+                      {notifications.map((notif) => (
+                        <div
+                          key={notif.id}
+                          onClick={() => {
+                            if (!notif.is_read) markAsRead(notif.id);
+                            if (notif.order_id) router.push('/commandes');
+                          }}
+                          style={{
+                            padding: '10px',
+                            borderRadius: '12px',
+                            backgroundColor: notif.is_read ? '#FFFFFF' : '#FFF5F5',
+                            border: notif.is_read ? '1px solid #F1F5F9' : '1px solid #FFEBEB',
+                            cursor: 'pointer',
+                            transition: 'background-color 0.15s',
+                          }}
+                        >
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
+                            <span style={{ fontSize: '13px', fontWeight: '800', color: '#0F172A' }}>
+                              {notif.title}
+                            </span>
+                            {!notif.is_read && (
+                              <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#E30613', marginTop: '4px', flexShrink: 0 }} />
+                            )}
+                          </div>
+                          <p style={{ fontSize: '12px', color: '#64748B', margin: '4px 0 0 0', lineHeight: '1.4' }}>
+                            {notif.body}
+                          </p>
+                          <span style={{ fontSize: '10px', color: '#94A3B8', marginTop: '4px', display: 'block' }}>
+                            {new Date(notif.created_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <div style={{ borderTop: '1px solid #F1F5F9', marginTop: '10px', paddingTop: '8px', textAlign: 'center' }}>
+                    <button
+                      onClick={() => requestBrowserPermission()}
+                      style={{ background: 'none', border: 'none', color: '#64748B', fontSize: '11px', fontWeight: '600', cursor: 'pointer' }}
+                    >
+                      🔔 Activer les notifications de bureau
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           {!loading && user ? (
             /* Utilisateur Connecté — Avatar & Dropdown */
