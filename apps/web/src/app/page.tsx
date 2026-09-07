@@ -29,10 +29,11 @@ export default function UnifiedHomePage() {
   const [offers, setOffers] = useState<any[]>([]);
   const [loadingOffers, setLoadingOffers] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCommune, setSelectedCommune] = useState('Toutes les communes');
   const [selectedCategory, setSelectedCategory] = useState('Tous');
   const [now, setNow] = useState(new Date().getTime());
 
-  // Horloge temps réel pour le compte à rebours Flash
+  // Horloge temps réel pour les comptes à rebours
   useEffect(() => {
     const timer = setInterval(() => setNow(new Date().getTime()), 1000);
     return () => clearInterval(timer);
@@ -46,7 +47,7 @@ export default function UnifiedHomePage() {
           .from('offers')
           .select(`
             *,
-            restaurant:restaurants(name, address, photos)
+            restaurant:restaurants(name, address, photos, phone, category)
           `)
           .eq('is_published', true)
           .eq('status', 'validee')
@@ -72,233 +73,526 @@ export default function UnifiedHomePage() {
     fetchOffers();
   }, []);
 
-  // Filtrage des offres
+  // Filtrage combiné (Recherche + Catégorie + Commune)
   const filteredOffers = offers.filter((offer) => {
-    const matchesSearch =
-      offer.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (offer.restaurant?.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (offer.description || '').toLowerCase().includes(searchTerm.toLowerCase());
+    const term = searchTerm.toLowerCase().trim();
+    const matchesSearch = !term ||
+      offer.title?.toLowerCase().includes(term) ||
+      offer.restaurant?.name?.toLowerCase().includes(term) ||
+      offer.restaurant?.address?.toLowerCase().includes(term) ||
+      offer.description?.toLowerCase().includes(term);
 
-    if (selectedCategory === 'Tous') return matchesSearch;
-    if (selectedCategory === '⚡ Flash') return matchesSearch && offer.type === 'flash';
-    if (selectedCategory === '💑 Couple') return matchesSearch && offer.pack_type === 'couple';
-    if (selectedCategory === '👨‍👩‍👧‍👦 Famille') return matchesSearch && offer.pack_type === 'famille';
-    if (selectedCategory === '🎂 Anniversaire') return matchesSearch && offer.pack_type === 'anniversaire';
-    if (selectedCategory === '👑 VIP') return matchesSearch && offer.pack_type === 'vip';
-    if (selectedCategory === '💼 Business') return matchesSearch && offer.pack_type === 'business';
+    const matchesCommune = selectedCommune === 'Toutes les communes' ||
+      offer.restaurant?.address?.toLowerCase().includes(selectedCommune.toLowerCase()) ||
+      offer.title?.toLowerCase().includes(selectedCommune.toLowerCase());
 
-    return matchesSearch;
+    if (!matchesSearch || !matchesCommune) return false;
+
+    if (selectedCategory === 'Tous') return true;
+    if (selectedCategory === '⚡ Flash') return offer.type === 'flash';
+    if (selectedCategory === '🍔 Fast Good') return offer.title?.toLowerCase().includes('burger') || offer.description?.toLowerCase().includes('burger') || offer.title?.toLowerCase().includes('pizza');
+    if (selectedCategory === '🍗 Grillades') return offer.title?.toLowerCase().includes('grill') || offer.title?.toLowerCase().includes('poulet') || offer.title?.toLowerCase().includes('choukouya') || offer.description?.toLowerCase().includes('brais');
+    if (selectedCategory === '🍣 Sushis') return offer.title?.toLowerCase().includes('sushi') || offer.title?.toLowerCase().includes('asian') || offer.description?.toLowerCase().includes('saumon');
+    if (selectedCategory === '🍹 Lounges') return offer.pack_type === 'vip' || offer.title?.toLowerCase().includes('lounge') || offer.title?.toLowerCase().includes('cocktail');
+    if (selectedCategory === '💑 Menus Duo') return offer.pack_type === 'couple';
+    if (selectedCategory === '👨‍👩‍👧‍👦 Famille') return offer.pack_type === 'famille';
+
+    return true;
   });
 
-  const formatTimeLeft = (endTime: string) => {
+  const formatCountdown = (endTime?: string) => {
+    if (!endTime) return { h: '05', m: '42', s: '18' };
     const distance = new Date(endTime).getTime() - now;
-    if (distance <= 0) return 'Expiré';
+    if (distance <= 0) return { h: '00', m: '00', s: '00' };
     const h = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
     const m = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
     const s = Math.floor((distance % (1000 * 60)) / 1000);
-    return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+    return {
+      h: h.toString().padStart(2, '0'),
+      m: m.toString().padStart(2, '0'),
+      s: s.toString().padStart(2, '0'),
+    };
   };
 
-  const categories = ['Tous', '⚡ Flash', '💑 Couple', '👨‍👩‍👧‍👦 Famille', '🎂 Anniversaire', '👑 VIP', '💼 Business'];
+  const categories = [
+    { label: 'Tous', icon: '🍽️' },
+    { label: '⚡ Flash', icon: '⚡' },
+    { label: '🍔 Fast Good', icon: '🍔' },
+    { label: '🍗 Grillades', icon: '🍗' },
+    { label: '🍣 Sushis', icon: '🍣' },
+    { label: '🍹 Lounges', icon: '🍹' },
+    { label: '💑 Menus Duo', icon: '💑' },
+    { label: '👨‍👩‍👧‍👦 Famille', icon: '👨‍👩‍👧‍👦' },
+  ];
+
+  const communesList = [
+    'Toutes les communes',
+    'Cocody',
+    'Marcory / Zone 4',
+    'Plateau',
+    'Yopougon',
+    'Deux Plateaux / Angré',
+    'Treichville',
+  ];
+
+  // Sélection de l'offre héro mise en avant (première offre flash disponible ou fallback gourmand)
+  const featuredOffer = offers.find((o) => o.type === 'flash') || offers[0];
+  const featuredPricePromo = featuredOffer ? (featuredOffer.price_promo || featuredOffer.price || 7800) : 7800;
+  const featuredPriceNormal = featuredOffer ? (featuredOffer.price_normal || 12000) : 12000;
+  const featuredDiscount = Math.round(((featuredPriceNormal - featuredPricePromo) / featuredPriceNormal) * 100);
+  const featuredCountdown = formatCountdown(featuredOffer?.end_timestamp);
+  const featuredStockRemaining = featuredOffer?.quantity_remaining ?? 4;
+  const featuredStockInitial = featuredOffer?.quantity_initial ?? 12;
+  const featuredStockPercent = Math.min(100, Math.max(20, (featuredStockRemaining / featuredStockInitial) * 100));
 
   return (
-    <div style={{ backgroundColor: '#F8FAFC', minHeight: '100vh', display: 'flex', flexDirection: 'column', color: '#0F172A', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+    <div style={{ backgroundColor: '#FAF8F5', minHeight: '100vh', display: 'flex', flexDirection: 'column', color: '#0F172A', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
       <PublicNavbar />
 
-      {/* Hero Section */}
+      {/* ========================================================================= */}
+      {/* NOUVEAU HERO GOURMET LUMINEUX & ÉLITE (DESIGN VALIDÉ) */}
+      {/* ========================================================================= */}
       <section style={{
-        background: 'linear-gradient(135deg, #0F172A 0%, #1E293B 100%)',
-        color: '#FFFFFF',
-        padding: '70px 24px 90px 24px',
+        background: 'radial-gradient(circle at 15% 25%, #FFF0ED 0%, #FAF8F5 70%)',
+        padding: '50px 20px 80px 20px',
         position: 'relative',
         overflow: 'hidden',
+        borderBottom: '1px solid #F1EBE4',
       }}>
+        
+        {/* Éléments décoratifs en arrière-plan */}
         <div style={{
-          maxWidth: '1200px',
+          position: 'absolute',
+          top: '-100px',
+          right: '-100px',
+          width: '500px',
+          height: '500px',
+          borderRadius: '50%',
+          background: 'radial-gradient(circle, rgba(227, 6, 19, 0.04) 0%, rgba(250, 248, 245, 0) 70%)',
+          pointerEvents: 'none',
+        }} />
+
+        <div style={{
+          maxWidth: '1240px',
           margin: '0 auto',
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
-          gap: '48px',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))',
+          gap: '50px',
           alignItems: 'center',
         }}>
+          
+          {/* COLONNE GAUCHE : TITRE & MOTEUR DE RECHERCHE CONCIERGE */}
           <div>
-            <h1 style={{ fontSize: '44px', fontWeight: '900', lineHeight: '1.15', marginBottom: '20px', letterSpacing: '-1px' }}>
-              Vos offres flash & deals repas au meilleur prix
+            
+            {/* Pill Badge Lumineux */}
+            <div style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px',
+              backgroundColor: '#FEE2E2',
+              border: '1.5px solid #FECACA',
+              padding: '6px 16px',
+              borderRadius: '30px',
+              marginBottom: '20px',
+              boxShadow: '0 4px 14px rgba(227, 6, 19, 0.12)',
+            }}>
+              <span style={{ fontSize: '14px' }}>🔥</span>
+              <span style={{ fontSize: '12px', fontWeight: '900', color: '#D60309', letterSpacing: '0.5px', textTransform: 'uppercase' }}>
+                -30% à -70% de réduction du jour
+              </span>
+            </div>
+
+            {/* Grand Titre Gourmet */}
+            <h1 style={{
+              fontSize: '48px',
+              fontWeight: '950',
+              lineHeight: '1.12',
+              color: '#0F172A',
+              letterSpacing: '-1.5px',
+              marginBottom: '18px',
+            }}>
+              Les meilleures tables <br />
+              d’Abidjan à <span style={{ color: '#D60309' }}>prix privilégié</span>
             </h1>
-            <p style={{ fontSize: '17px', color: '#94A3B8', lineHeight: '1.6', marginBottom: '32px' }}>
-              Découvrez les promotions exclusives de vos restaurants préférés. Réservez en un clic, payez en toute sécurité via Wave Mobile Money et présentez votre Pass QR instantané.
+
+            {/* Sous-titre rassurant */}
+            <p style={{
+              fontSize: '17px',
+              color: '#64748B',
+              lineHeight: '1.6',
+              marginBottom: '32px',
+              maxWidth: '520px',
+            }}>
+              Découvrez chaque jour des offres exclusives négociées avec les meilleurs restaurants, maquis chics et lounges d'Abidjan. Réservez en 1 clic, payez par Wave et présentez votre Pass QR.
             </p>
 
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px' }}>
+            {/* MOTEUR DE RECHERCHE CONCIERGE GOURMET */}
+            <div style={{
+              backgroundColor: '#FFFFFF',
+              borderRadius: '24px',
+              padding: '10px 12px',
+              border: '1.5px solid #E2E8F0',
+              boxShadow: '0 12px 36px rgba(15, 23, 42, 0.08)',
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: '10px',
+              alignItems: 'center',
+              maxWidth: '580px',
+              marginBottom: '32px',
+            }}>
+              
+              {/* Sélecteur Commune */}
+              <div style={{ flex: '1 1 180px', display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 12px', borderRight: '1px solid #F1F5F9' }}>
+                <span style={{ fontSize: '18px' }}>📍</span>
+                <select
+                  value={selectedCommune}
+                  onChange={(e) => setSelectedCommune(e.target.value)}
+                  style={{
+                    border: 'none',
+                    backgroundColor: 'transparent',
+                    fontSize: '13.5px',
+                    fontWeight: '700',
+                    color: '#0F172A',
+                    outline: 'none',
+                    width: '100%',
+                    cursor: 'pointer',
+                  }}
+                >
+                  {communesList.map((comm) => (
+                    <option key={comm} value={comm}>{comm}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Champ Spécialité ou Envie */}
+              <div style={{ flex: '1 1 180px', display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 12px' }}>
+                <span style={{ fontSize: '18px' }}>🍽️</span>
+                <input
+                  type="text"
+                  placeholder="Spécialité culinaire..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  style={{
+                    border: 'none',
+                    backgroundColor: 'transparent',
+                    fontSize: '13.5px',
+                    color: '#0F172A',
+                    outline: 'none',
+                    width: '100%',
+                    fontWeight: '600',
+                  }}
+                />
+              </div>
+
+              {/* Bouton Action Trouver */}
               <a
                 href="#deals"
                 style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '10px',
-                  backgroundColor: '#E30613',
+                  backgroundColor: '#D60309',
                   color: '#FFFFFF',
-                  padding: '14px 28px',
-                  borderRadius: '12px',
-                  fontWeight: '800',
-                  fontSize: '15px',
+                  padding: '12px 22px',
+                  borderRadius: '16px',
+                  fontWeight: '900',
+                  fontSize: '14px',
                   textDecoration: 'none',
-                  boxShadow: '0 8px 20px rgba(227, 6, 19, 0.35)',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  boxShadow: '0 6px 18px rgba(214, 3, 9, 0.35)',
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap',
                 }}
               >
-                🔥 Découvrir les Deals en Direct
-              </a>
-              <a
-                href="#download"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '10px',
-                  backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                  border: '1px solid rgba(255, 255, 255, 0.2)',
-                  color: '#FFFFFF',
-                  padding: '14px 28px',
-                  borderRadius: '12px',
-                  fontWeight: '700',
-                  fontSize: '15px',
-                  textDecoration: 'none',
-                }}
-              >
-                📱 Télécharger l'App (APK)
+                <span>Trouver mon Deal</span>
+                <span>→</span>
               </a>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '24px', marginTop: '36px', paddingTop: '24px', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
-              <div>
-                <span style={{ display: 'block', fontSize: '22px', fontWeight: '900', color: '#FFFFFF' }}>+10 000</span>
-                <span style={{ fontSize: '12px', color: '#94A3B8' }}>Clients actifs</span>
+            {/* PREUVE SOCIALE EN DIRECT */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center' }}>
+                <img
+                  src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop"
+                  alt="Client"
+                  style={{ width: '38px', height: '38px', borderRadius: '50%', border: '2.5px solid #FFFFFF', objectFit: 'cover' }}
+                />
+                <img
+                  src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop"
+                  alt="Client"
+                  style={{ width: '38px', height: '38px', borderRadius: '50%', border: '2.5px solid #FFFFFF', objectFit: 'cover', marginLeft: '-12px' }}
+                />
+                <img
+                  src="https://images.unsplash.com/photo-1517841905240-472988babdf9?w=100&h=100&fit=crop"
+                  alt="Client"
+                  style={{ width: '38px', height: '38px', borderRadius: '50%', border: '2.5px solid #FFFFFF', objectFit: 'cover', marginLeft: '-12px' }}
+                />
+                <img
+                  src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&h=100&fit=crop"
+                  alt="Client"
+                  style={{ width: '38px', height: '38px', borderRadius: '50%', border: '2.5px solid #FFFFFF', objectFit: 'cover', marginLeft: '-12px' }}
+                />
               </div>
-              <div style={{ height: '30px', width: '1px', backgroundColor: 'rgba(255,255,255,0.1)' }} />
+
               <div>
-                <span style={{ display: 'block', fontSize: '22px', fontWeight: '900', color: '#FFFFFF' }}>100%</span>
-                <span style={{ fontSize: '12px', color: '#94A3B8' }}>Paiement Wave</span>
-              </div>
-              <div style={{ height: '30px', width: '1px', backgroundColor: 'rgba(255,255,255,0.1)' }} />
-              <div>
-                <span style={{ display: 'block', fontSize: '22px', fontWeight: '900', color: '#10B981' }}>Pass QR</span>
-                <span style={{ fontSize: '12px', color: '#94A3B8' }}>Scan instantané</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#10B981', display: 'inline-block' }} />
+                  <span style={{ fontSize: '13.5px', fontWeight: '800', color: '#0F172A' }}>
+                    +450 réservations aujourd'hui
+                  </span>
+                </div>
+                <span style={{ fontSize: '11.5px', color: '#64748B' }}>
+                  Restaurants partenaires vérifiés à Abidjan
+                </span>
               </div>
             </div>
+
           </div>
 
-          {/* App Preview Card */}
+          {/* COLONNE DROITE : CARTE INTERACTIVE GOURMETTE FLOTTANTE (MOCKUP 1 VALIDÉ) */}
           <div style={{ display: 'flex', justifyContent: 'center' }}>
             <div style={{
-              backgroundColor: '#1E293B',
-              borderRadius: '24px',
-              padding: '24px',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
-              boxShadow: '0 20px 50px rgba(0, 0, 0, 0.5)',
-              maxWidth: '380px',
+              backgroundColor: '#FFFFFF',
+              borderRadius: '28px',
+              padding: '22px',
+              border: '1.5px solid #F1EBE4',
+              boxShadow: '0 25px 60px rgba(15, 23, 42, 0.08)',
+              maxWidth: '420px',
               width: '100%',
+              position: 'relative',
             }}>
-              <div style={{ backgroundColor: '#0F172A', borderRadius: '16px', padding: '16px', marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ color: '#E30613', fontWeight: '900', fontSize: '15px' }}>⚡ BRICK FLASH DU JOUR</span>
-                <span style={{ backgroundColor: '#EF4444', color: '#FFF', fontSize: '11px', fontWeight: '800', padding: '4px 8px', borderRadius: '6px' }}>-35%</span>
-              </div>
+              
+              {/* Image Culinaire Grand Angle avec Badges Flottants */}
+              <div style={{ position: 'relative', width: '100%', height: '220px', borderRadius: '20px', overflow: 'hidden', marginBottom: '18px' }}>
+                <img
+                  src={featuredOffer?.photos?.[0] || 'https://images.unsplash.com/photo-1544025162-d76694265947?w=800'}
+                  alt="Plat Vedette Gourmet"
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                />
 
-              <img
-                src="https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=800"
-                alt="Offre gourmande Menu Duo"
-                style={{ width: '100%', height: '180px', objectFit: 'cover', borderRadius: '12px', marginBottom: '16px' }}
-              />
-
-              <h3 style={{ color: '#FFF', fontSize: '18px', fontWeight: '800', marginBottom: '6px' }}>Menu Duo Gourmet & Boissons</h3>
-              <p style={{ color: '#94A3B8', fontSize: '13px', marginBottom: '14px' }}>🏢 Établissement Partenaire Privilège</p>
-
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#0F172A', padding: '12px 16px', borderRadius: '12px' }}>
-                <div>
-                  <span style={{ fontSize: '11px', color: '#94A3B8', textDecoration: 'line-through', display: 'block' }}>12 000 FCFA</span>
-                  <span style={{ fontSize: '20px', fontWeight: '900', color: '#10B981' }}>7 800 FCFA</span>
+                {/* Badge Réduction & Type */}
+                <div style={{ position: 'absolute', top: '12px', left: '12px', display: 'flex', gap: '6px' }}>
+                  <span style={{ backgroundColor: '#D60309', color: '#FFFFFF', padding: '5px 12px', borderRadius: '10px', fontSize: '11.5px', fontWeight: '900' }}>
+                    -{featuredDiscount}% ÉCONOMIE
+                  </span>
+                  <span style={{ backgroundColor: 'rgba(15, 23, 42, 0.85)', color: '#FFFFFF', padding: '5px 10px', borderRadius: '10px', fontSize: '11px', fontWeight: '800', backdropFilter: 'blur(4px)' }}>
+                    ⚡ FLASH DU JOUR
+                  </span>
                 </div>
-                <a href="#deals" style={{ backgroundColor: '#10B981', color: '#FFF', padding: '8px 14px', borderRadius: '8px', fontSize: '12px', fontWeight: '800', textDecoration: 'none' }}>
-                  Pass QR Prêt
-                </a>
+
+                {/* Badges Flottants Officiels Wave & Pass QR */}
+                <div style={{ position: 'absolute', bottom: '12px', right: '12px', display: 'flex', gap: '8px' }}>
+                  <div style={{
+                    backgroundColor: '#E0F7FC',
+                    border: '1px solid #1DC4E9',
+                    borderRadius: '10px',
+                    padding: '4px 10px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                  }}>
+                    <img src="/wave-icon.png" alt="Wave" style={{ width: '16px', height: '16px', objectFit: 'contain' }} />
+                    <span style={{ fontSize: '11px', fontWeight: '900', color: '#0084A8' }}>Wave</span>
+                  </div>
+
+                  <div style={{
+                    backgroundColor: '#DCFCE7',
+                    border: '1px solid #16A34A',
+                    borderRadius: '10px',
+                    padding: '4px 10px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                  }}>
+                    <span style={{ fontSize: '12px' }}>🎟️</span>
+                    <span style={{ fontSize: '11px', fontWeight: '900', color: '#15803D' }}>Pass QR Prêt</span>
+                  </div>
+                </div>
               </div>
+
+              {/* Titre & Établissement */}
+              <div style={{ marginBottom: '14px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                  <span style={{ fontSize: '12px', color: '#64748B', fontWeight: '700' }}>
+                    📍 {featuredOffer?.restaurant?.name || 'Restaurant Partenaire Privilège'}
+                  </span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px', backgroundColor: '#FEF3C7', padding: '2px 8px', borderRadius: '6px' }}>
+                    <span style={{ fontSize: '11px', color: '#D97706', fontWeight: '800' }}>⭐ 4.9 (142 avis)</span>
+                  </div>
+                </div>
+
+                <h3 style={{ fontSize: '18px', fontWeight: '900', color: '#0F172A', margin: '2px 0 0 0', lineHeight: '1.3' }}>
+                  {featuredOffer?.title || 'Menu Duo Gourmet & Boissons'}
+                </h3>
+              </div>
+
+              {/* JAUGE DE STOCK EN DIRECT */}
+              <div style={{ backgroundColor: '#FAF8F5', padding: '12px 14px', borderRadius: '14px', border: '1px solid #F1EBE4', marginBottom: '14px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                  <span style={{ fontSize: '11.5px', color: '#64748B', fontWeight: '600' }}>Disponibilité en direct</span>
+                  <span style={{ fontSize: '11.5px', color: '#D60309', fontWeight: '900' }}>
+                    🔥 Plus que {featuredStockRemaining} formule(s) !
+                  </span>
+                </div>
+
+                <div style={{ height: '6px', backgroundColor: '#E2E8F0', borderRadius: '3px', overflow: 'hidden' }}>
+                  <div style={{
+                    width: `${featuredStockPercent}%`,
+                    height: '100%',
+                    backgroundColor: '#D60309',
+                    borderRadius: '3px',
+                    transition: 'width 0.3s ease',
+                  }} />
+                </div>
+              </div>
+
+              {/* COMPTE À REBOURS ÉLÉGANT */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#F8FAFC', padding: '10px 14px', borderRadius: '14px', border: '1px solid #E2E8F0', marginBottom: '16px' }}>
+                <span style={{ fontSize: '11.5px', fontWeight: '800', color: '#64748B', textTransform: 'uppercase' }}>
+                  ⏱ Expire dans :
+                </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ backgroundColor: '#0F172A', color: '#FFFFFF', padding: '4px 8px', borderRadius: '6px', fontWeight: '900', fontSize: '13px', fontFamily: 'monospace' }}>
+                    {featuredCountdown.h}h
+                  </span>
+                  <span style={{ fontWeight: '900', color: '#0F172A' }}>:</span>
+                  <span style={{ backgroundColor: '#0F172A', color: '#FFFFFF', padding: '4px 8px', borderRadius: '6px', fontWeight: '900', fontSize: '13px', fontFamily: 'monospace' }}>
+                    {featuredCountdown.m}m
+                  </span>
+                  <span style={{ fontWeight: '900', color: '#0F172A' }}>:</span>
+                  <span style={{ backgroundColor: '#0F172A', color: '#FFFFFF', padding: '4px 8px', borderRadius: '6px', fontWeight: '900', fontSize: '13px', fontFamily: 'monospace' }}>
+                    {featuredCountdown.s}s
+                  </span>
+                </div>
+              </div>
+
+              {/* PRIX & BOUTON D'ACTION IMMÉDIAT */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '10px', borderTop: '1px dashed #E2E8F0' }}>
+                <div>
+                  <span style={{ fontSize: '12px', color: '#94A3B8', textDecoration: 'line-through', display: 'block' }}>
+                    {Number(featuredPriceNormal).toLocaleString('fr-FR')} FCFA
+                  </span>
+                  <span style={{ fontSize: '22px', fontWeight: '950', color: '#D60309' }}>
+                    {Number(featuredPricePromo).toLocaleString('fr-FR')} FCFA
+                  </span>
+                </div>
+
+                <Link
+                  href={featuredOffer ? `/checkout/${featuredOffer.id}` : '#deals'}
+                  style={{
+                    backgroundColor: '#D60309',
+                    color: '#FFFFFF',
+                    padding: '12px 20px',
+                    borderRadius: '14px',
+                    fontWeight: '900',
+                    fontSize: '13.5px',
+                    textDecoration: 'none',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    boxShadow: '0 6px 18px rgba(214, 3, 9, 0.35)',
+                    transition: 'transform 0.15s ease',
+                  }}
+                >
+                  <span>⚡ Réserver mon Pass</span>
+                </Link>
+              </div>
+
             </div>
           </div>
+
         </div>
       </section>
 
-      {/* Section Interactive des Bons Plans en Direct */}
-      <section id="deals" style={{ padding: '70px 24px', maxWidth: '1200px', margin: '0 auto', width: '100%' }}>
-        <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'flex-end', gap: '20px', marginBottom: '32px' }}>
+      {/* ========================================================================= */}
+      {/* SECTION CATALOGUE DES FORMULES EN DIRECT AVEC FILTRES GOURMETS */}
+      {/* ========================================================================= */}
+      <section id="deals" style={{ padding: '60px 20px', maxWidth: '1240px', margin: '0 auto', width: '100%' }}>
+        
+        {/* En-tête de section */}
+        <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'flex-end', gap: '20px', marginBottom: '28px' }}>
           <div>
-            <span style={{ color: '#E30613', fontWeight: '800', fontSize: '14px', textTransform: 'uppercase', letterSpacing: '1px' }}>
-              OFFRES EN DIRECT
-            </span>
-            <h2 style={{ fontSize: '32px', fontWeight: '900', margin: '8px 0 0 0', letterSpacing: '-0.5px' }}>
-              Nos Deals & Formules Disponibles
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+              <span style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#D60309' }} />
+              <span style={{ color: '#D60309', fontWeight: '900', fontSize: '13px', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                OFFRES EN DIRECT DU JOUR
+              </span>
+            </div>
+            <h2 style={{ fontSize: '32px', fontWeight: '950', margin: 0, letterSpacing: '-0.5px', color: '#0F172A' }}>
+              Explorez nos Deals & Menus du Moment
             </h2>
-            <p style={{ color: '#64748B', fontSize: '15px', marginTop: '6px' }}>
-              Réservez votre formule et profitez immédiatement de votre Pass QR au restaurant.
-            </p>
           </div>
 
-          {/* Recherche */}
-          <div style={{ minWidth: '280px' }}>
-            <input
-              type="text"
-              placeholder="🔍 Rechercher un plat, un restaurant..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              style={{
-                width: '100%',
-                padding: '12px 18px',
-                borderRadius: '12px',
-                border: '1.5px solid #E2E8F0',
-                fontSize: '14px',
-                outline: 'none',
-                backgroundColor: '#FFFFFF',
-              }}
-            />
+          <div style={{ fontSize: '14px', fontWeight: '700', color: '#64748B' }}>
+            {filteredOffers.length} formule(s) disponible(s) aujourd'hui
           </div>
         </div>
 
-        {/* Filtres par Catégorie */}
-        <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '16px', marginBottom: '24px' }}>
-          {categories.map((cat) => (
-            <button
-              key={cat}
-              onClick={() => setSelectedCategory(cat)}
-              style={{
-                padding: '10px 18px',
-                borderRadius: '24px',
-                fontSize: '13px',
-                fontWeight: '700',
-                border: selectedCategory === cat ? 'none' : '1px solid #E2E8F0',
-                backgroundColor: selectedCategory === cat ? '#E30613' : '#FFFFFF',
-                color: selectedCategory === cat ? '#FFFFFF' : '#475569',
-                cursor: 'pointer',
-                whiteSpace: 'nowrap',
-                transition: 'all 0.2s',
-                boxShadow: selectedCategory === cat ? '0 4px 12px rgba(227, 6, 19, 0.25)' : 'none',
-              }}
-            >
-              {cat}
-            </button>
-          ))}
+        {/* BARRE DES CATÉGORIES EN PILULES INTERACTIVES */}
+        <div style={{
+          display: 'flex',
+          gap: '10px',
+          overflowX: 'auto',
+          paddingBottom: '14px',
+          marginBottom: '28px',
+          scrollbarWidth: 'none',
+        }}>
+          {categories.map((cat) => {
+            const isSelected = selectedCategory === cat.label;
+            return (
+              <button
+                key={cat.label}
+                type="button"
+                onClick={() => setSelectedCategory(cat.label)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '10px 18px',
+                  borderRadius: '30px',
+                  fontSize: '13.5px',
+                  fontWeight: '800',
+                  border: isSelected ? '1.5px solid #D60309' : '1.5px solid #E2E8F0',
+                  backgroundColor: isSelected ? '#D60309' : '#FFFFFF',
+                  color: isSelected ? '#FFFFFF' : '#475569',
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap',
+                  boxShadow: isSelected ? '0 6px 16px rgba(214, 3, 9, 0.25)' : '0 2px 6px rgba(0,0,0,0.02)',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                <span>{cat.icon}</span>
+                <span>{cat.label}</span>
+              </button>
+            );
+          })}
         </div>
 
-        {/* Grille des Offres */}
+        {/* GRILLE DES OFFRES */}
         {loadingOffers ? (
-          <div style={{ padding: '60px', textAlign: 'center', color: '#64748B' }}>
-            <div style={{ fontSize: '28px', marginBottom: '12px' }}>⏳</div>
-            Chargement des offres en direct...
+          <div style={{ padding: '80px 20px', textAlign: 'center', color: '#64748B' }}>
+            <div style={{ width: '40px', height: '40px', border: '3px solid #E2E8F0', borderTopColor: '#D60309', borderRadius: '50%', margin: '0 auto 16px auto', animation: 'spin 1s linear infinite' }} />
+            <p style={{ fontWeight: '800', fontSize: '15px' }}>Chargement des offres en direct d'Abidjan...</p>
           </div>
         ) : filteredOffers.length === 0 ? (
-          <div style={{ backgroundColor: '#FFFFFF', borderRadius: '20px', padding: '60px', textAlign: 'center', border: '1px solid #E2E8F0' }}>
-            <div style={{ fontSize: '48px', marginBottom: '16px' }}>🍽️</div>
-            <h3 style={{ fontSize: '20px', fontWeight: '800', marginBottom: '8px' }}>Aucune offre disponible</h3>
-            <p style={{ color: '#64748B', fontSize: '14px' }}>De nouvelles formules et offres flash arrivent très vite.</p>
+          <div style={{ backgroundColor: '#FFFFFF', borderRadius: '24px', padding: '60px 20px', textAlign: 'center', border: '1.5px solid #E2E8F0', boxShadow: '0 4px 20px rgba(0,0,0,0.03)' }}>
+            <div style={{ fontSize: '48px', marginBottom: '14px' }}>🍽️</div>
+            <h3 style={{ fontSize: '20px', fontWeight: '900', marginBottom: '8px', color: '#0F172A' }}>Aucune offre trouvée pour ces critères</h3>
+            <p style={{ color: '#64748B', fontSize: '14px', marginBottom: '20px' }}>Essayez d'ajuster votre commune ou de réinitialiser la recherche.</p>
+            <button
+              onClick={() => {
+                setSearchTerm('');
+                setSelectedCommune('Toutes les communes');
+                setSelectedCategory('Tous');
+              }}
+              style={{ padding: '10px 20px', backgroundColor: '#D60309', color: '#FFFFFF', border: 'none', borderRadius: '12px', fontWeight: '800', cursor: 'pointer' }}
+            >
+              Afficher toutes les offres
+            </button>
           </div>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '28px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '26px' }}>
             {filteredOffers.map((offer) => {
               const isFlash = offer.type === 'flash';
               const pricePromo = isFlash ? offer.price_promo : offer.price;
@@ -311,30 +605,31 @@ export default function UnifiedHomePage() {
                   key={offer.id}
                   style={{
                     backgroundColor: '#FFFFFF',
-                    borderRadius: '20px',
+                    borderRadius: '24px',
                     overflow: 'hidden',
-                    border: '1px solid #E2E8F0',
-                    boxShadow: '0 4px 16px rgba(0,0,0,0.04)',
+                    border: '1.5px solid #F1EBE4',
+                    boxShadow: '0 8px 24px rgba(15, 23, 42, 0.04)',
                     display: 'flex',
                     flexDirection: 'column',
-                    transition: 'transform 0.2s, box-shadow 0.2s',
+                    transition: 'all 0.2s ease',
                   }}
                 >
                   {/* Photo & Badges */}
-                  <div style={{ position: 'relative', height: '200px' }}>
+                  <div style={{ position: 'relative', height: '210px' }}>
                     <img
                       src={photoUrl}
                       alt={offer.title}
                       style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                     />
-                    <div style={{ position: 'absolute', top: '12px', left: '12px', display: 'flex', gap: '8px' }}>
+                    
+                    <div style={{ position: 'absolute', top: '12px', left: '12px', display: 'flex', gap: '6px' }}>
                       <span style={{
-                        backgroundColor: isFlash ? '#E30613' : '#3B82F6',
+                        backgroundColor: isFlash ? '#D60309' : '#2563EB',
                         color: '#FFFFFF',
                         padding: '4px 10px',
                         borderRadius: '8px',
                         fontSize: '11px',
-                        fontWeight: '800',
+                        fontWeight: '900',
                       }}>
                         {isFlash ? '⚡ FLASH' : `🎁 ${offer.pack_type?.toUpperCase() || 'DEAL'}`}
                       </span>
@@ -349,76 +644,80 @@ export default function UnifiedHomePage() {
                         color: '#FFFFFF',
                         padding: '4px 10px',
                         borderRadius: '8px',
-                        fontSize: '12px',
+                        fontSize: '11.5px',
                         fontWeight: '900',
                       }}>
                         -{discountPercent}%
                       </div>
                     )}
 
-                    {/* Timer Flash */}
+                    {/* Timer Flash si actif */}
                     {isFlash && offer.end_timestamp && (
                       <div style={{
                         position: 'absolute',
-                        bottom: '12px',
-                        left: '12px',
-                        right: '12px',
-                        backgroundColor: 'rgba(15, 23, 42, 0.85)',
+                        bottom: '10px',
+                        left: '10px',
+                        right: '10px',
+                        backgroundColor: 'rgba(15, 23, 42, 0.88)',
                         backdropFilter: 'blur(4px)',
                         color: '#FFFFFF',
                         padding: '6px 12px',
-                        borderRadius: '8px',
-                        fontSize: '12px',
-                        fontWeight: '700',
+                        borderRadius: '10px',
+                        fontSize: '11.5px',
+                        fontWeight: '800',
                         display: 'flex',
                         justifyContent: 'space-between',
                         alignItems: 'center',
                       }}>
                         <span>⏳ Expire dans :</span>
-                        <span style={{ color: '#FF4D4D', fontWeight: '900' }}>{formatTimeLeft(offer.end_timestamp)}</span>
+                        <span style={{ color: '#FCA5A5', fontWeight: '900' }}>
+                          {formatCountdown(offer.end_timestamp).h}h : {formatCountdown(offer.end_timestamp).m}m : {formatCountdown(offer.end_timestamp).s}s
+                        </span>
                       </div>
                     )}
                   </div>
 
-                  {/* Body */}
+                  {/* Corps de Carte */}
                   <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', flex: 1 }}>
-                    <div style={{ fontSize: '13px', color: '#64748B', fontWeight: '600', marginBottom: '4px' }}>
-                      🏢 {offer.restaurant?.name || 'Restaurant Partenaire'}
+                    <div style={{ fontSize: '12.5px', color: '#64748B', fontWeight: '700', marginBottom: '4px' }}>
+                      📍 {offer.restaurant?.name || 'Restaurant Partenaire'}
                     </div>
-                    <h3 style={{ fontSize: '18px', fontWeight: '800', marginBottom: '8px', color: '#0F172A', lineHeight: '1.3' }}>
+
+                    <h3 style={{ fontSize: '17px', fontWeight: '900', marginBottom: '8px', color: '#0F172A', lineHeight: '1.3' }}>
                       {offer.title}
                     </h3>
+
                     <p style={{ fontSize: '13px', color: '#64748B', lineHeight: '1.5', marginBottom: '16px', flex: 1 }}>
                       {offer.description?.substring(0, 95)}...
                     </p>
 
-                    {/* Prix & Bouton Commande */}
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '16px', borderTop: '1px solid #F1F5F9' }}>
+                    {/* Prix & Bouton Réserver */}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '14px', borderTop: '1px dashed #F1F5F9' }}>
                       <div>
                         {priceNormal && (
-                          <span style={{ fontSize: '12px', color: '#94A3B8', textDecoration: 'line-through', display: 'block' }}>
-                            {Number(priceNormal).toLocaleString()} FCFA
+                          <span style={{ fontSize: '11.5px', color: '#94A3B8', textDecoration: 'line-through', display: 'block' }}>
+                            {Number(priceNormal).toLocaleString('fr-FR')} FCFA
                           </span>
                         )}
-                        <span style={{ fontSize: '20px', fontWeight: '900', color: '#10B981' }}>
-                          {Number(pricePromo).toLocaleString()} FCFA
+                        <span style={{ fontSize: '19px', fontWeight: '950', color: '#D60309' }}>
+                          {Number(pricePromo).toLocaleString('fr-FR')} FCFA
                         </span>
                       </div>
 
                       <Link
-                        href={`/deals/${offer.id}`}
+                        href={`/checkout/${offer.id}`}
                         style={{
-                          backgroundColor: '#E30613',
+                          backgroundColor: '#D60309',
                           color: '#FFFFFF',
                           padding: '10px 18px',
-                          borderRadius: '10px',
-                          fontWeight: '800',
+                          borderRadius: '12px',
+                          fontWeight: '900',
                           fontSize: '13px',
                           textDecoration: 'none',
-                          boxShadow: '0 4px 12px rgba(227, 6, 19, 0.25)',
+                          boxShadow: '0 4px 14px rgba(214, 3, 9, 0.25)',
                         }}
                       >
-                        Commander →
+                        Réserver →
                       </Link>
                     </div>
                   </div>
@@ -429,160 +728,151 @@ export default function UnifiedHomePage() {
         )}
       </section>
 
-      {/* Section Comment ça marche */}
-      <section id="comment-ca-marche" style={{ backgroundColor: '#FFFFFF', padding: '80px 24px', borderTop: '1px solid #E2E8F0', borderBottom: '1px solid #E2E8F0' }}>
-        <div style={{ maxWidth: '1200px', margin: '0 auto', width: '100%' }}>
+      {/* ========================================================================= */}
+      {/* SECTION COMMENT ÇA MARCHE EN 4 ÉTAPES VISUELLES CLAIRES */}
+      {/* ========================================================================= */}
+      <section id="comment-ca-marche" style={{ backgroundColor: '#FFFFFF', padding: '80px 20px', borderTop: '1px solid #F1EBE4', borderBottom: '1px solid #F1EBE4' }}>
+        <div style={{ maxWidth: '1240px', margin: '0 auto', width: '100%' }}>
+          
           <div style={{ textAlign: 'center', marginBottom: '56px' }}>
-            <h2 style={{ fontSize: '36px', fontWeight: '900', marginBottom: '16px' }}>Comment ça marche ?</h2>
-            <p style={{ color: '#64748B', fontSize: '16px', maxWidth: '600px', margin: '0 auto' }}>
-              Une expérience fluide et 100% numérique pour profiter de vos repas préférés au meilleur prix.
+            <span style={{ color: '#D60309', fontWeight: '900', fontSize: '12.5px', textTransform: 'uppercase', letterSpacing: '1px' }}>
+              EXPÉRIENCE 100% NUMÉRIQUE & SÉCURISÉE
+            </span>
+            <h2 style={{ fontSize: '36px', fontWeight: '950', marginTop: '8px', color: '#0F172A' }}>
+              Comment fonctionne BRICK DEAL ?
+            </h2>
+            <p style={{ color: '#64748B', fontSize: '15px', maxWidth: '580px', margin: '8px auto 0 auto' }}>
+              Profitez d'une formule d'exception en 4 étapes simples et sans attente au restaurant.
             </p>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '32px' }}>
-            <div style={{ backgroundColor: '#F8FAFC', padding: '32px', borderRadius: '20px', border: '1px solid #E2E8F0' }}>
-              <div style={{ width: '48px', height: '48px', borderRadius: '12px', backgroundColor: '#FFEBEB', color: '#E30613', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', marginBottom: '20px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '26px' }}>
+            
+            <div style={{ backgroundColor: '#FAF8F5', padding: '30px 24px', borderRadius: '22px', border: '1.5px solid #F1EBE4' }}>
+              <div style={{ width: '48px', height: '48px', borderRadius: '14px', backgroundColor: '#FEE2E2', color: '#D60309', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', marginBottom: '18px' }}>
                 🔍
               </div>
-              <h3 style={{ fontSize: '20px', fontWeight: '800', marginBottom: '12px' }}>1. Choisissez votre Deal</h3>
-              <p style={{ color: '#64748B', fontSize: '14px', lineHeight: '1.6' }}>
-                Parcourez les offres flash éphémères et les deals exclusifs proposés par les meilleurs restaurants partenaires.
+              <h3 style={{ fontSize: '18px', fontWeight: '900', color: '#0F172A', marginBottom: '8px' }}>
+                1. Choisissez votre Deal
+              </h3>
+              <p style={{ color: '#64748B', fontSize: '13.5px', lineHeight: '1.6', margin: 0 }}>
+                Parcourez les offres flash et menus négociés sur les restaurants réputés d'Abidjan.
               </p>
             </div>
 
-            <div style={{ backgroundColor: '#F8FAFC', padding: '32px', borderRadius: '20px', border: '1px solid #E2E8F0' }}>
-              <div style={{ width: '48px', height: '48px', borderRadius: '12px', backgroundColor: '#E0F2FE', color: '#0284C7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', marginBottom: '20px' }}>
+            <div style={{ backgroundColor: '#FAF8F5', padding: '30px 24px', borderRadius: '22px', border: '1.5px solid #F1EBE4' }}>
+              <div style={{ width: '48px', height: '48px', borderRadius: '14px', backgroundColor: '#E0F7FC', color: '#0084A8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', marginBottom: '18px' }}>
                 💳
               </div>
-              <h3 style={{ fontSize: '20px', fontWeight: '800', marginBottom: '12px' }}>2. Payez via Wave</h3>
-              <p style={{ color: '#64748B', fontSize: '14px', lineHeight: '1.6' }}>
-                Réglez en toute sécurité directement sur la plateforme avec Wave Mobile Money. Validation instantanée.
+              <h3 style={{ fontSize: '18px', fontWeight: '900', color: '#0F172A', marginBottom: '8px' }}>
+                2. Payez par Wave (0%)
+              </h3>
+              <p style={{ color: '#64748B', fontSize: '13.5px', lineHeight: '1.6', margin: 0 }}>
+                Paiement instantané sécurisé par Wave Mobile Money, sans aucuns frais supplémentaires.
               </p>
             </div>
 
-            <div style={{ backgroundColor: '#F8FAFC', padding: '32px', borderRadius: '20px', border: '1px solid #E2E8F0' }}>
-              <div style={{ width: '48px', height: '48px', borderRadius: '12px', backgroundColor: '#D1FAE5', color: '#059669', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', marginBottom: '20px' }}>
+            <div style={{ backgroundColor: '#FAF8F5', padding: '30px 24px', borderRadius: '22px', border: '1.5px solid #F1EBE4' }}>
+              <div style={{ width: '48px', height: '48px', borderRadius: '14px', backgroundColor: '#DCFCE7', color: '#16A34A', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', marginBottom: '18px' }}>
                 🎟️
               </div>
-              <h3 style={{ fontSize: '20px', fontWeight: '800', marginBottom: '12px' }}>3. Obtenez votre Pass QR</h3>
-              <p style={{ color: '#64748B', fontSize: '14px', lineHeight: '1.6' }}>
-                Votre Pass QR officiel est immédiatement généré avec votre code unique de réservation.
+              <h3 style={{ fontSize: '18px', fontWeight: '900', color: '#0F172A', marginBottom: '8px' }}>
+                3. Obtenez votre Pass QR
+              </h3>
+              <p style={{ color: '#64748B', fontSize: '13.5px', lineHeight: '1.6', margin: 0 }}>
+                Votre Pass de réservation avec QR Code officiel et reçu PDF est immédiatement généré.
               </p>
             </div>
 
-            <div style={{ backgroundColor: '#F8FAFC', padding: '32px', borderRadius: '20px', border: '1px solid #E2E8F0' }}>
-              <div style={{ width: '48px', height: '48px', borderRadius: '12px', backgroundColor: '#FEF3C7', color: '#D97706', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', marginBottom: '20px' }}>
+            <div style={{ backgroundColor: '#FAF8F5', padding: '30px 24px', borderRadius: '22px', border: '1.5px solid #F1EBE4' }}>
+              <div style={{ width: '48px', height: '48px', borderRadius: '14px', backgroundColor: '#FEF3C7', color: '#D97706', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', marginBottom: '18px' }}>
                 🍽️
               </div>
-              <h3 style={{ fontSize: '20px', fontWeight: '800', marginBottom: '12px' }}>4. Savourez sur place</h3>
-              <p style={{ color: '#64748B', fontSize: '14px', lineHeight: '1.6' }}>
-                Présentez simplement votre Pass QR ou votre code de réservation au restaurant pour consommer votre formule.
+              <h3 style={{ fontSize: '18px', fontWeight: '900', color: '#0F172A', marginBottom: '8px' }}>
+                4. Dégustez sur place
+              </h3>
+              <p style={{ color: '#64748B', fontSize: '13.5px', lineHeight: '1.6', margin: 0 }}>
+                Présentez votre Pass QR au restaurateur lors de votre venue et savourez votre repas.
               </p>
             </div>
+
           </div>
         </div>
       </section>
 
-      {/* Section Établissements Partenaires & Agents */}
-      <section id="partenaires" style={{ padding: '80px 24px', maxWidth: '1200px', margin: '0 auto', width: '100%' }}>
+      {/* ========================================================================= */}
+      {/* SECTION PROFESSIONNELS (RESTAURANTS & AGENTS) */}
+      {/* ========================================================================= */}
+      <section id="partenaires" style={{ padding: '80px 20px', maxWidth: '1240px', margin: '0 auto', width: '100%' }}>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '48px', alignItems: 'center' }}>
           <div>
-            <span style={{ color: '#E30613', fontWeight: '800', fontSize: '14px', textTransform: 'uppercase', letterSpacing: '1px' }}>
-              POUR LES PROFESSIONNELS
+            <span style={{ color: '#D60309', fontWeight: '900', fontSize: '12.5px', textTransform: 'uppercase', letterSpacing: '1px' }}>
+              ESPACE PROFESSIONNEL
             </span>
-            <h2 style={{ fontSize: '36px', fontWeight: '900', margin: '12px 0 20px 0', lineHeight: '1.2' }}>
+            <h2 style={{ fontSize: '36px', fontWeight: '950', margin: '10px 0 16px 0', lineHeight: '1.2', color: '#0F172A' }}>
               Développez votre activité avec BRICK DEAL
             </h2>
-            <p style={{ color: '#64748B', fontSize: '16px', lineHeight: '1.6', marginBottom: '24px' }}>
-              Que vous soyez restaurateur souhaitant booster votre fréquentation ou agent commercial développant votre portefeuille, BRICK DEAL met à votre disposition des outils numériques dédiés.
+            <p style={{ color: '#64748B', fontSize: '15px', lineHeight: '1.6', marginBottom: '24px' }}>
+              Restaurateur à la recherche de clients qualifiés ou agent commercial développant votre portefeuille : nos outils vous permettent de piloter vos ventes en temps réel.
             </p>
 
-            <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              <li style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '15px', fontWeight: '600', color: '#0F172A' }}>
-                <span style={{ color: '#10B981', fontSize: '18px' }}>✅</span> Validation sécurisée des Pass QR par scan caméra ou saisie
-              </li>
-              <li style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '15px', fontWeight: '600', color: '#0F172A' }}>
-                <span style={{ color: '#10B981', fontSize: '18px' }}>✅</span> Suivi analytique des ventes, commissions et versements
-              </li>
-              <li style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '15px', fontWeight: '600', color: '#0F172A' }}>
-                <span style={{ color: '#10B981', fontSize: '18px' }}>✅</span> Soumission et publication instantanée de packs promotionnels
-              </li>
-            </ul>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '14.5px', fontWeight: '700', color: '#0F172A' }}>
+                <span style={{ color: '#16A34A', fontSize: '18px' }}>✓</span> Validation instantanée des Pass QR par scan caméra
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '14.5px', fontWeight: '700', color: '#0F172A' }}>
+                <span style={{ color: '#16A34A', fontSize: '18px' }}>✓</span> Notifications sonores et alertes en direct dès chaque commande
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '14.5px', fontWeight: '700', color: '#0F172A' }}>
+                <span style={{ color: '#16A34A', fontSize: '18px' }}>✓</span> Encaissement automatique et calcul transparent des commissions
+              </div>
+            </div>
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-            <div style={{ backgroundColor: '#FFFFFF', padding: '32px', borderRadius: '24px', border: '1px solid #E2E8F0', textAlign: 'center' }}>
-              <h3 style={{ fontSize: '22px', fontWeight: '900', marginBottom: '10px' }}>🏢 Établissements Partenaires</h3>
-              <p style={{ color: '#64748B', fontSize: '14px', marginBottom: '20px' }}>Accédez à votre caisse numérique et validez les Pass QR des clients.</p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ backgroundColor: '#FFFFFF', padding: '28px', borderRadius: '22px', border: '1.5px solid #F1EBE4', boxShadow: '0 4px 16px rgba(0,0,0,0.03)' }}>
+              <h3 style={{ fontSize: '20px', fontWeight: '900', color: '#0F172A', marginBottom: '6px' }}>🏢 Restaurateurs Partenaires</h3>
+              <p style={{ color: '#64748B', fontSize: '13.5px', marginBottom: '18px' }}>Accédez à votre caisse numérique, suivez les commandes en cuisine et validez les Pass QR.</p>
               <Link
                 href="/login"
                 style={{
                   display: 'inline-block',
                   backgroundColor: '#0F172A',
                   color: '#FFFFFF',
-                  padding: '14px 28px',
+                  padding: '12px 24px',
                   borderRadius: '12px',
                   fontWeight: '800',
-                  fontSize: '14px',
+                  fontSize: '13.5px',
                   textDecoration: 'none',
+                  textAlign: 'center',
                   width: '100%',
                 }}
               >
-                Accès Espace Restaurateur
+                Accès Espace Restaurant →
               </Link>
             </div>
 
-            <div style={{ backgroundColor: '#FFFFFF', padding: '32px', borderRadius: '24px', border: '1px solid #E2E8F0', textAlign: 'center' }}>
-              <h3 style={{ fontSize: '22px', fontWeight: '900', marginBottom: '10px' }}>👔 Agents Commerciaux</h3>
-              <p style={{ color: '#64748B', fontSize: '14px', marginBottom: '20px' }}>Pilotez vos restaurants affiliés et suivez vos commissions.</p>
+            <div style={{ backgroundColor: '#FFFFFF', padding: '28px', borderRadius: '22px', border: '1.5px solid #F1EBE4', boxShadow: '0 4px 16px rgba(0,0,0,0.03)' }}>
+              <h3 style={{ fontSize: '20px', fontWeight: '900', color: '#0F172A', marginBottom: '6px' }}>👔 Agents Commerciaux</h3>
+              <p style={{ color: '#64748B', fontSize: '13.5px', marginBottom: '18px' }}>Enregistrez de nouveaux restaurants partenaires et suivez vos commissions en direct.</p>
               <Link
                 href="/login"
                 style={{
                   display: 'inline-block',
-                  backgroundColor: '#E30613',
+                  backgroundColor: '#D60309',
                   color: '#FFFFFF',
-                  padding: '14px 28px',
+                  padding: '12px 24px',
                   borderRadius: '12px',
                   fontWeight: '800',
-                  fontSize: '14px',
+                  fontSize: '13.5px',
                   textDecoration: 'none',
+                  textAlign: 'center',
                   width: '100%',
                 }}
               >
-                Accès Espace Agent Commercial
+                Accès Espace Agent Commercial →
               </Link>
             </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Section Téléchargement App */}
-      <section id="download" style={{ backgroundColor: '#0F172A', color: '#FFFFFF', padding: '70px 24px', textAlign: 'center' }}>
-        <div style={{ maxWidth: '800px', margin: '0 auto' }}>
-          <h2 style={{ fontSize: '36px', fontWeight: '900', marginBottom: '16px' }}>
-            Emportez BRICK DEAL partout avec vous
-          </h2>
-          <p style={{ color: '#94A3B8', fontSize: '16px', marginBottom: '32px' }}>
-            Téléchargez l'application officielle Android et iOS pour recevoir des alertes lors de chaque nouvelle offre flash.
-          </p>
-          <div style={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: '16px' }}>
-            <a
-              href="#download"
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '10px',
-                backgroundColor: '#E30613',
-                color: '#FFFFFF',
-                padding: '14px 28px',
-                borderRadius: '12px',
-                fontWeight: '800',
-                fontSize: '15px',
-                textDecoration: 'none',
-              }}
-            >
-              📱 Télécharger l'Application APK
-            </a>
           </div>
         </div>
       </section>
