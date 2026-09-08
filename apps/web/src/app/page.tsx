@@ -308,44 +308,6 @@ export default function UnifiedHomePage() {
               </a>
             </div>
 
-            {/* PREUVE SOCIALE EN DIRECT */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-              <div style={{ display: 'flex', alignItems: 'center' }}>
-                <img
-                  src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop"
-                  alt="Client"
-                  style={{ width: '38px', height: '38px', borderRadius: '50%', border: '2.5px solid #FFFFFF', objectFit: 'cover' }}
-                />
-                <img
-                  src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop"
-                  alt="Client"
-                  style={{ width: '38px', height: '38px', borderRadius: '50%', border: '2.5px solid #FFFFFF', objectFit: 'cover', marginLeft: '-12px' }}
-                />
-                <img
-                  src="https://images.unsplash.com/photo-1517841905240-472988babdf9?w=100&h=100&fit=crop"
-                  alt="Client"
-                  style={{ width: '38px', height: '38px', borderRadius: '50%', border: '2.5px solid #FFFFFF', objectFit: 'cover', marginLeft: '-12px' }}
-                />
-                <img
-                  src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&h=100&fit=crop"
-                  alt="Client"
-                  style={{ width: '38px', height: '38px', borderRadius: '50%', border: '2.5px solid #FFFFFF', objectFit: 'cover', marginLeft: '-12px' }}
-                />
-              </div>
-
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#10B981', display: 'inline-block' }} />
-                  <span style={{ fontSize: '13.5px', fontWeight: '800', color: '#0F172A' }}>
-                    +450 réservations aujourd'hui
-                  </span>
-                </div>
-                <span style={{ fontSize: '11.5px', color: '#64748B' }}>
-                  Restaurants partenaires vérifiés à Abidjan
-                </span>
-              </div>
-            </div>
-
           </div>
 
           {/* COLONNE DROITE : CARTE INTERACTIVE GOURMETTE FLOTTANTE (MOCKUP 1 VALIDÉ) */}
