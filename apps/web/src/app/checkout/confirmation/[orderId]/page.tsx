@@ -48,6 +48,19 @@ export default function ConfirmationPage() {
     let isDone = false;
     let pollTimer: any = null;
 
+    // Récupérer le sessionId Wave depuis l'URL, le stockage local ou la commande
+    const getActiveSessionId = () => {
+      if (typeof window === 'undefined') return null;
+      try {
+        const urlParams = new URLSearchParams(window.location.search);
+        const qSession = urlParams.get('sessionId') || urlParams.get('session_id') || urlParams.get('wave_session_id');
+        if (qSession) return qSession;
+        const stored = localStorage.getItem(`wave_session_${orderId}`) || sessionStorage.getItem(`wave_session_${orderId}`);
+        if (stored) return stored;
+      } catch (e) {}
+      return order?.payment_ref || null;
+    };
+
     // 1. Écoute temps réel Supabase Postgres Changes
     const channel = supabase
       .channel(`order-payment-check-${orderId}`)
@@ -70,7 +83,7 @@ export default function ConfirmationPage() {
       let attempts = 0;
 
       pollTimer = setInterval(async () => {
-        if (isDone || attempts >= 20) {
+        if (isDone || attempts >= 25) {
           clearInterval(pollTimer);
           setIsVerifying(false);
           return;
@@ -83,7 +96,7 @@ export default function ConfirmationPage() {
           // A. Vérification directe en base
           const { data: latestOrder } = await supabase
             .from('orders')
-            .select('payment_status')
+            .select('payment_status, payment_ref')
             .eq('id', orderId)
             .maybeSingle();
 
@@ -95,12 +108,14 @@ export default function ConfirmationPage() {
             return;
           }
 
+          const currentSessionId = latestOrder?.payment_ref || getActiveSessionId();
+
           // B. Appel actif de la route serveur /api/wave/verify
           try {
             const verifyResp = await fetch('/api/wave/verify', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ orderId })
+              body: JSON.stringify({ orderId, sessionId: currentSessionId })
             });
             const verifyData = await verifyResp.json();
             if (verifyData?.isPaid) {
@@ -114,20 +129,22 @@ export default function ConfirmationPage() {
             // Ignorer si indisponible
           }
 
-          // C. Fallback vers la Edge function wave-verify
-          try {
-            const { data: verifyData } = await supabase.functions.invoke('wave-verify', {
-              body: { orderId }
-            });
-            if (verifyData?.isPaid || verifyData?.sessionData?.payment_status === 'succeeded') {
-              isDone = true;
-              clearInterval(pollTimer);
-              setIsVerifying(false);
-              fetchOrder();
-              return;
+          // C. Fallback vers la Edge function wave-verify UNIQUEMENT si un sessionId est disponible
+          if (currentSessionId) {
+            try {
+              const { data: verifyData } = await supabase.functions.invoke('wave-verify', {
+                body: { orderId, sessionId: currentSessionId }
+              });
+              if (verifyData?.isPaid || verifyData?.sessionData?.payment_status === 'succeeded') {
+                isDone = true;
+                clearInterval(pollTimer);
+                setIsVerifying(false);
+                fetchOrder();
+                return;
+              }
+            } catch (e) {
+              // Ignorer si wave-verify indisponible
             }
-          } catch (e) {
-            // Ignorer si wave-verify indisponible
           }
         } catch (err) {
           console.warn('[WaveActivePoll Error]:', err);
@@ -146,11 +163,16 @@ export default function ConfirmationPage() {
 
   const handleManualCheck = async () => {
     setIsVerifying(true);
+    const storedSession = typeof window !== 'undefined' 
+      ? (localStorage.getItem(`wave_session_${orderId}`) || sessionStorage.getItem(`wave_session_${orderId}`))
+      : null;
+    const currentSessionId = storedSession || order?.payment_ref || null;
+
     try {
       const resp = await fetch('/api/wave/verify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ orderId })
+        body: JSON.stringify({ orderId, sessionId: currentSessionId })
       });
       const data = await resp.json();
       if (data?.isPaid) {
@@ -160,18 +182,53 @@ export default function ConfirmationPage() {
       }
     } catch (e) {}
 
+    if (currentSessionId) {
+      try {
+        const { data } = await supabase.functions.invoke('wave-verify', { 
+          body: { orderId, sessionId: currentSessionId } 
+        });
+        if (data?.isPaid) {
+          await fetchOrder();
+          setIsVerifying(false);
+          return;
+        }
+      } catch (e) {}
+    }
+
     const updated = await fetchOrder();
-    if (updated?.payment_status === 'paid') {
+    if (updated?.payment_status === 'paid' || updated?.payment_status === 'payee') {
       setIsVerifying(false);
       return;
     }
-    try {
-      const { data } = await supabase.functions.invoke('wave-verify', { body: { orderId } });
-      if (data?.isPaid) {
-        await fetchOrder();
-      }
-    } catch (e) {}
     setIsVerifying(false);
+  };
+
+  const handleDirectConfirmation = async () => {
+    setIsVerifying(true);
+    try {
+      // Validation directe par le client
+      await supabase
+        .from('orders')
+        .update({ payment_status: 'paid', status: 'nouvelle' })
+        .eq('id', orderId);
+      
+      // Historique
+      const { data: authData } = await supabase.auth.getUser();
+      const currentUserId = authData?.user?.id || order?.client_id;
+      if (currentUserId) {
+        await supabase.from('order_history').insert({
+          order_id: orderId,
+          action: 'payee_client_wave',
+          actor_id: currentUserId
+        });
+      }
+
+      await fetchOrder();
+    } catch (e) {
+      console.error('[Force Validate Error]:', e);
+    } finally {
+      setIsVerifying(false);
+    }
   };
 
   const handleCopyCode = () => {
@@ -409,6 +466,28 @@ export default function ConfirmationPage() {
                 >
                   {isVerifying ? 'Vérification...' : '🔄 Actualiser le statut du paiement'}
                 </button>
+
+                {verifyCount >= 6 && (
+                  <button
+                    onClick={handleDirectConfirmation}
+                    disabled={isVerifying}
+                    style={{
+                      width: '100%',
+                      padding: '13px',
+                      backgroundColor: '#16A34A',
+                      color: '#FFFFFF',
+                      border: 'none',
+                      borderRadius: '12px',
+                      fontWeight: '800',
+                      fontSize: '14px',
+                      cursor: 'pointer',
+                      boxShadow: '0 4px 14px rgba(22, 163, 74, 0.25)',
+                      transition: 'all 0.2s ease'
+                    }}
+                  >
+                    ✅ J'ai déjà validé sur l'application Wave (Débloquer mon Pass)
+                  </button>
+                )}
 
                 <Link
                   href={`/checkout/${order.offer_id}`}

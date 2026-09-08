@@ -259,6 +259,14 @@ export default function CheckoutPage() {
         const apiData = await apiResp.json();
         if (apiData?.wave_launch_url) {
           checkoutUrl = apiData.wave_launch_url;
+          const sessId = apiData.sessionId || apiData.raw?.id;
+          if (sessId && typeof window !== 'undefined') {
+            try {
+              localStorage.setItem(`wave_session_${order.id}`, sessId);
+              sessionStorage.setItem(`wave_session_${order.id}`, sessId);
+              await supabase.from('orders').update({ payment_ref: sessId }).eq('id', order.id);
+            } catch (e) {}
+          }
         }
       } catch (internalApiErr) {
         console.warn('[Internal Wave Checkout API Error]:', internalApiErr);
@@ -277,6 +285,14 @@ export default function CheckoutPage() {
           });
           if (!edgeErr && edgeData) {
             checkoutUrl = edgeData.wave_launch_url || edgeData.wave_checkout_url || edgeData.checkout_url;
+            const sessId = edgeData.sessionId || edgeData.id;
+            if (sessId && typeof window !== 'undefined') {
+              try {
+                localStorage.setItem(`wave_session_${order.id}`, sessId);
+                sessionStorage.setItem(`wave_session_${order.id}`, sessId);
+                await supabase.from('orders').update({ payment_ref: sessId }).eq('id', order.id);
+              } catch (e) {}
+            }
           }
         } catch (e) {
           console.warn('[Wave Edge Function Fallback]:', e);

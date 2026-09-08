@@ -10,7 +10,7 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { orderId, sessionId } = body;
+    let { orderId, sessionId } = body;
 
     if (!orderId && !sessionId) {
       return NextResponse.json(
@@ -20,12 +20,15 @@ export async function POST(request: Request) {
     }
 
     // 1. Vérifier si la commande est déjà marquée comme 'paid' en base
+    let currentOrder: any = null;
     if (orderId) {
-      const { data: currentOrder } = await supabase
+      const { data } = await supabase
         .from('orders')
         .select('*, offer:offers(*)')
         .eq('id', orderId)
         .maybeSingle();
+
+      currentOrder = data;
 
       if (currentOrder?.payment_status === 'paid' || currentOrder?.payment_status === 'payee') {
         return NextResponse.json({
@@ -33,11 +36,17 @@ export async function POST(request: Request) {
           order: currentOrder
         });
       }
+
+      // Si sessionId n'a pas été passé explicitement, le chercher dans payment_ref
+      if (!sessionId && currentOrder?.payment_ref) {
+        sessionId = currentOrder.payment_ref;
+      }
     }
 
     // 2. Si un sessionId Wave est disponible, interroger directement l'API Wave
     if (sessionId) {
       try {
+        console.log(`[Wave Verify] Interrogation Wave API pour session: ${sessionId}...`);
         const waveResponse = await fetch(`https://api.wave.com/v1/checkout/sessions/${sessionId}`, {
           method: 'GET',
           headers: {
@@ -56,7 +65,7 @@ export async function POST(request: Request) {
               // Mettre à jour la commande en paid
               const { data: updatedOrder } = await supabase
                 .from('orders')
-                .update({ payment_status: 'paid', status: 'nouvelle' })
+                .update({ payment_status: 'paid', status: 'nouvelle', payment_ref: sessionId })
                 .eq('id', targetOrderId)
                 .select('*, offer:offers(*)')
                 .single();
@@ -92,30 +101,30 @@ export async function POST(request: Request) {
       } catch (waveApiErr: any) {
         console.warn('[Wave Verify API Direct Warning]:', waveApiErr.message);
       }
-    }
 
-    // 3. Fallback vers la fonction Edge Supabase wave-verify
-    try {
-      const edgeResponse = await fetch(`${SUPABASE_URL}/functions/v1/wave-verify`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ orderId, sessionId })
-      });
+      // 3. Fallback vers la fonction Edge Supabase wave-verify UNIQUEMENT si sessionId existe
+      try {
+        const edgeResponse = await fetch(`${SUPABASE_URL}/functions/v1/wave-verify`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ orderId, sessionId })
+        });
 
-      if (edgeResponse.ok) {
-        const edgeData = await edgeResponse.json();
-        if (edgeData.isPaid) {
-          return NextResponse.json({
-            isPaid: true,
-            raw: edgeData
-          });
+        if (edgeResponse.ok) {
+          const edgeData = await edgeResponse.json();
+          if (edgeData.isPaid) {
+            return NextResponse.json({
+              isPaid: true,
+              raw: edgeData
+            });
+          }
         }
+      } catch (edgeErr: any) {
+        console.warn('[Wave Verify Edge Function Warning]:', edgeErr.message);
       }
-    } catch (edgeErr: any) {
-      console.warn('[Wave Verify Edge Function Warning]:', edgeErr.message);
     }
 
     return NextResponse.json({

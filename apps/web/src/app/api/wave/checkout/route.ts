@@ -22,6 +22,10 @@ export async function POST(request: Request) {
     const validSuccess = success_url || defaultSuccess;
     const validError = error_url || defaultError;
 
+    // 0. Initialisation Supabase
+    const { createClient } = await import('@supabase/supabase-js');
+    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
     // 1. Tenter d'abord l'appel direct à l'API Wave officielle
     try {
       console.log(`[Wave API Server] Création de session pour commande ${orderId} (${amount} XOF)...`);
@@ -43,10 +47,24 @@ export async function POST(request: Request) {
       const waveData = await waveResponse.json();
 
       if (waveResponse.ok && (waveData.wave_launch_url || waveData.wave_checkout_url)) {
+        const sessionId = waveData.id;
+
+        // Persister immédiatement le sessionId Wave dans payment_ref de la commande
+        if (sessionId) {
+          try {
+            await supabase
+              .from('orders')
+              .update({ payment_ref: sessionId })
+              .eq('id', orderId);
+          } catch (dbErr) {
+            console.warn('[Wave Checkout DB Update Warning]:', dbErr);
+          }
+        }
+
         return NextResponse.json({
           success: true,
           wave_launch_url: waveData.wave_launch_url || waveData.wave_checkout_url,
-          sessionId: waveData.id,
+          sessionId: sessionId,
           raw: waveData
         });
       } else {
@@ -74,10 +92,23 @@ export async function POST(request: Request) {
 
       const edgeData = await edgeResponse.json();
       if (edgeResponse.ok && (edgeData.wave_launch_url || edgeData.wave_checkout_url)) {
+        const sessionId = edgeData.id || edgeData.sessionId;
+
+        if (sessionId) {
+          try {
+            await supabase
+              .from('orders')
+              .update({ payment_ref: sessionId })
+              .eq('id', orderId);
+          } catch (dbErr) {
+            console.warn('[Wave Checkout Edge DB Update Warning]:', dbErr);
+          }
+        }
+
         return NextResponse.json({
           success: true,
           wave_launch_url: edgeData.wave_launch_url || edgeData.wave_checkout_url,
-          sessionId: edgeData.id || edgeData.sessionId,
+          sessionId: sessionId,
           raw: edgeData
         });
       }
