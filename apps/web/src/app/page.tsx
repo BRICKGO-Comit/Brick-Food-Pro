@@ -100,8 +100,9 @@ export default function UnifiedHomePage() {
     { id: 'all', label: 'Toutes les offres', icon: '🌐', desc: 'Tout voir à Abidjan' },
   ];
 
-  // Offres de démonstration pour garantir un rendu riche et complet
+  // Offres de démonstration pour garantir un rendu riche et complet par catégorie mobile
   const demoDeals = [
+    // FAST FOOD
     {
       id: 'demo-1',
       title: 'Menu burger + frites + boisson',
@@ -117,6 +118,35 @@ export default function UnifiedHomePage() {
       category: 'fast_food',
     },
     {
+      id: 'demo-ff2',
+      title: 'Pizza Royale Feu de Bois',
+      restaurant_name: 'Bella Pizza Abidjan',
+      commune: 'Deux Plateaux',
+      rating: '4.6',
+      reviews: 180,
+      price_promo: 5500,
+      price_normal: 8000,
+      discount: '-31%',
+      image: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?w=600&auto=format&fit=crop',
+      expiry: '05h 45m',
+      category: 'fast_food',
+    },
+    {
+      id: 'demo-ff3',
+      title: 'Maxi Tacos 3 Viandes + Boisson',
+      restaurant_name: "O'Tacos Angré",
+      commune: 'Angré 8e Tranche',
+      rating: '4.4',
+      reviews: 140,
+      price_promo: 4000,
+      price_normal: 6000,
+      discount: '-33%',
+      image: 'https://images.unsplash.com/photo-1551504734-5ee1c4a1479b?w=600&auto=format&fit=crop',
+      expiry: '09h 15m',
+      category: 'fast_food',
+    },
+    // MAQUIS & GRILLADES
+    {
       id: 'demo-2',
       title: 'Tchep poisson + Alloco',
       restaurant_name: 'Le Maquis des Amis',
@@ -131,19 +161,34 @@ export default function UnifiedHomePage() {
       category: 'maquis',
     },
     {
-      id: 'demo-3',
-      title: 'Séjour Détente & Petit-déj',
-      restaurant_name: 'Hôtel Résidence Palm',
-      commune: 'Riviera 4',
-      rating: '4.7',
-      reviews: 98,
-      price_promo: 25000,
-      price_normal: 40000,
-      discount: '-38%',
-      image: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=600&auto=format&fit=crop',
-      expiry: '10h 01m',
-      category: 'hotel',
+      id: 'demo-mq2',
+      title: 'Poulet Braisé Entier + Alloco',
+      restaurant_name: 'Maquis Le Village',
+      commune: 'Cocody - Angré',
+      rating: '4.8',
+      reviews: 285,
+      price_promo: 4500,
+      price_normal: 7500,
+      discount: '-40%',
+      image: 'https://images.unsplash.com/photo-1598515214211-89d3c73ae83b?w=600&auto=format&fit=crop',
+      expiry: '06h 20m',
+      category: 'maquis',
     },
+    {
+      id: 'demo-mq3',
+      title: 'Choukouya de Mouton Assaisonné',
+      restaurant_name: 'Chez Tantie Grillades',
+      commune: 'Yopougon',
+      rating: '4.5',
+      reviews: 190,
+      price_promo: 4000,
+      price_normal: 6500,
+      discount: '-38%',
+      image: 'https://images.unsplash.com/photo-1529193591184-b1d58069ecdd?w=600&auto=format&fit=crop',
+      expiry: '08h 10m',
+      category: 'maquis',
+    },
+    // RESTAURANTS
     {
       id: 'demo-4',
       title: 'Mix Grillades + Frites + Boisson',
@@ -159,6 +204,50 @@ export default function UnifiedHomePage() {
       category: 'restaurant',
     },
     {
+      id: 'demo-res2',
+      title: 'Menu Dégustation Gastronomique',
+      restaurant_name: "L'Éléphant Blanc",
+      commune: 'Marcory Zone 4',
+      rating: '4.9',
+      reviews: 230,
+      price_promo: 12000,
+      price_normal: 18000,
+      discount: '-33%',
+      image: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=600&auto=format&fit=crop',
+      expiry: '11h 00m',
+      category: 'restaurant',
+    },
+    // HOTELS & SEJOURS
+    {
+      id: 'demo-3',
+      title: 'Séjour Détente & Petit-déj',
+      restaurant_name: 'Hôtel Résidence Palm',
+      commune: 'Riviera 4',
+      rating: '4.7',
+      reviews: 98,
+      price_promo: 25000,
+      price_normal: 40000,
+      discount: '-38%',
+      image: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=600&auto=format&fit=crop',
+      expiry: '10h 01m',
+      category: 'hotel',
+    },
+    {
+      id: 'demo-ht2',
+      title: 'Pass Piscine VIP + Déjeuner',
+      restaurant_name: 'Hôtel Ivotel Abidjan',
+      commune: 'Plateau',
+      rating: '4.6',
+      reviews: 412,
+      price_promo: 15000,
+      price_normal: 25000,
+      discount: '-40%',
+      image: 'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=600&auto=format&fit=crop',
+      expiry: '14h 30m',
+      category: 'hotel',
+    },
+    // LOUNGE & BARS
+    {
       id: 'demo-5',
       title: 'Cocktail Signature + Tapas Duo',
       restaurant_name: 'Skyline Lounge Bar',
@@ -171,6 +260,21 @@ export default function UnifiedHomePage() {
       image: 'https://images.unsplash.com/photo-1514933651103-005eec06c04b?w=600&auto=format&fit=crop',
       expiry: '12h 20m',
       category: 'lounge_bar',
+    },
+    // PATISSERIES
+    {
+      id: 'demo-pat1',
+      title: 'Boîte 12 Macarons + 2 Thés',
+      restaurant_name: 'La Maison du Macaron',
+      commune: 'Cocody Danga',
+      rating: '4.9',
+      reviews: 165,
+      price_promo: 6000,
+      price_normal: 9500,
+      discount: '-37%',
+      image: 'https://images.unsplash.com/photo-1569864358642-9d1684040f43?w=600&auto=format&fit=crop',
+      expiry: '09h 00m',
+      category: 'patisserie',
     },
   ];
 
@@ -615,13 +719,14 @@ export default function UnifiedHomePage() {
             </Link>
           </div>
 
-          {/* Grille des 5 cartes de Deals */}
+          {/* Grille des cartes de Deals (Taille compacte fixe 240px, ne s'étire jamais) */}
           <div style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 240px))',
             gap: '20px',
+            justifyContent: 'start',
           }}>
-            {filteredDeals.slice(0, 5).map((deal) => (
+            {filteredDeals.slice(0, 10).map((deal) => (
               <div
                 key={deal.id}
                 style={{
@@ -633,6 +738,8 @@ export default function UnifiedHomePage() {
                   display: 'flex',
                   flexDirection: 'column',
                   transition: 'transform 0.2s, box-shadow 0.2s',
+                  width: '100%',
+                  maxWidth: '240px',
                 }}
               >
                 {/* Image du plat avec badge % et cœur favoris */}
@@ -739,6 +846,41 @@ export default function UnifiedHomePage() {
                 </div>
               </div>
             ))}
+
+            {filteredDeals.length === 0 && (
+              <div style={{
+                padding: '48px 24px',
+                textAlign: 'center',
+                gridColumn: '1 / -1',
+                backgroundColor: '#FAF8F5',
+                borderRadius: '18px',
+                border: '1.5px dashed #E2E8F0',
+                width: '100%',
+              }}>
+                <div style={{ fontSize: '36px', marginBottom: '10px' }}>🍽️</div>
+                <div style={{ fontSize: '16px', fontWeight: '800', color: '#0F172A', marginBottom: '6px' }}>
+                  Aucune offre disponible dans cette catégorie pour le moment
+                </div>
+                <p style={{ fontSize: '13.5px', color: '#64748B', marginBottom: '16px' }}>
+                  Consultez toutes les autres formules exclusives disponibles aujourd'hui.
+                </p>
+                <button
+                  onClick={() => setSelectedCategory('all')}
+                  style={{
+                    backgroundColor: '#D60309',
+                    color: '#FFFFFF',
+                    border: 'none',
+                    padding: '10px 22px',
+                    borderRadius: '10px',
+                    fontWeight: '800',
+                    fontSize: '13px',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Voir toutes les offres
+                </button>
+              </div>
+            )}
           </div>
         </section>
 
